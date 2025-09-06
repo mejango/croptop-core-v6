@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
-import {JB721Tier} from "@bananapus/721-hook/src/structs/JB721Tier.sol";
-import {JB721TierConfig} from "@bananapus/721-hook/src/structs/JB721TierConfig.sol";
-import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
-import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
-import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
-import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
-import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
-import {JBMetadataResolver} from "@bananapus/core/src/libraries/JBMetadataResolver.sol";
-import {JBOwnable} from "@bananapus/ownable/src/JBOwnable.sol";
-import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
+import {JB721Tier} from "@bananapus/721-hook-v5/src/structs/JB721Tier.sol";
+import {JB721TierConfig} from "@bananapus/721-hook-v5/src/structs/JB721TierConfig.sol";
+import {JBPermissioned} from "@bananapus/core-v5/src/abstract/JBPermissioned.sol";
+import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
+import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
+import {IJBTerminal} from "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
+import {JBMetadataResolver} from "@bananapus/core-v5/src/libraries/JBMetadataResolver.sol";
+import {JBOwnable} from "@bananapus/ownable-v5/src/JBOwnable.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids-v5/src/JBPermissionIds.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
@@ -47,8 +47,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
 
-    /// @notice The controller that directs the projects being posted to.
-    IJBController public immutable override CONTROLLER;
+    /// @notice The directory that contains the projects being posted to.
+    IJBDirectory public immutable override DIRECTORY;
 
     /// @notice The ID of the project to which fees will be routed.
     uint256 public immutable override FEE_PROJECT_ID;
@@ -81,12 +81,12 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
-    /// @param controller The controller that directs the projects being posted to.
+    /// @param directory The directory that contains the projects being posted to.
     /// @param permissions A contract storing permissions.
     /// @param feeProjectId The ID of the project to which fees will be routed.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
-        IJBController controller,
+        IJBDirectory directory,
         IJBPermissions permissions,
         uint256 feeProjectId,
         address trustedForwarder
@@ -94,7 +94,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         JBPermissioned(permissions)
         ERC2771Context(trustedForwarder)
     {
-        CONTROLLER = controller;
+        DIRECTORY = directory;
         FEE_PROJECT_ID = feeProjectId;
     }
 
@@ -354,7 +354,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         {
             // Get a reference to the project's current ETH payment terminal.
-            IJBTerminal projectTerminal = CONTROLLER.DIRECTORY().primaryTerminalOf(projectId, JBConstants.NATIVE_TOKEN);
+            IJBTerminal projectTerminal = DIRECTORY.primaryTerminalOf(projectId, JBConstants.NATIVE_TOKEN);
 
             // Make the payment.
             // slither-disable-next-line unused-return
@@ -372,7 +372,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         // Pay a fee if there are funds left.
         if (address(this).balance != 0) {
             // Get a reference to the fee project's current ETH payment terminal.
-            IJBTerminal feeTerminal = CONTROLLER.DIRECTORY().primaryTerminalOf(FEE_PROJECT_ID, JBConstants.NATIVE_TOKEN);
+            IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_PROJECT_ID, JBConstants.NATIVE_TOKEN);
 
             // Make the fee payment.
             // slither-disable-next-line unused-return

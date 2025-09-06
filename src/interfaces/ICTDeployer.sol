@@ -1,28 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
-import {IJB721TiersHookProjectDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookProjectDeployer.sol";
-import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
-import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
+import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHookDeployer.sol";
+import {IJBController} from "@bananapus/core-v5/src/interfaces/IJBController.sol";
+import {IJBProjects} from "@bananapus/core-v5/src/interfaces/IJBProjects.sol";
 
 import {ICTPublisher} from "./ICTPublisher.sol";
-import {CTDeployerAllowedPost} from "../structs/CTDeployerAllowedPost.sol";
 import {CTSuckerDeploymentConfig} from "../structs/CTSuckerDeploymentConfig.sol";
 import {CTProjectConfig} from "../structs/CTProjectConfig.sol";
 
 interface ICTDeployer {
-    function CONTROLLER() external view returns (IJBController);
-    function DEPLOYER() external view returns (IJB721TiersHookProjectDeployer);
+    function PROJECTS() external view returns (IJBProjects);
+    function DEPLOYER() external view returns (IJB721TiersHookDeployer);
     function PUBLISHER() external view returns (ICTPublisher);
 
     function deployProjectFor(
         address owner,
         CTProjectConfig calldata projectConfigurations,
-        CTSuckerDeploymentConfig calldata deployerConfigurations
+        CTSuckerDeploymentConfig calldata deployerConfigurations,
+        IJBController controller
     )
         external
         returns (uint256 projectId, IJB721TiersHook hook);
+
+    function claimCollectionOwnershipOf(IJB721TiersHook hook) external;
 
     function deploySuckersFor(
         uint256 projectId,

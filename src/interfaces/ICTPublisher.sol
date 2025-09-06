@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
-import {JB721Tier} from "@bananapus/721-hook/src/structs/JB721Tier.sol";
-import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
+import {JB721Tier} from "@bananapus/721-hook-v5/src/structs/JB721Tier.sol";
+import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
 
 import {CTAllowedPost} from "../structs/CTAllowedPost.sol";
 import {CTPost} from "../structs/CTPost.sol";
@@ -23,7 +23,7 @@ interface ICTPublisher {
 
     function FEE_DIVISOR() external view returns (uint256);
 
-    function CONTROLLER() external view returns (IJBController);
+    function DIRECTORY() external view returns (IJBDirectory);
 
     function FEE_PROJECT_ID() external view returns (uint256);
 
