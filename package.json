@@ -25,6 +25,8 @@
         "@bananapus/permission-ids-v5": "^0.0.1",
         "@bananapus/ownable-v5": "^0.0.1",
         "@bananapus/suckers-v5": "^0.0.1",
+        "@bananapus/buyback-hook-v5": "^0.0.1",
+        "@bananapus/swap-terminal-v5": "^0.0.1",
         "@openzeppelin/contracts": "^5.2.0",
         "@rev-net/core-v5": "^0.0.1"
     },
