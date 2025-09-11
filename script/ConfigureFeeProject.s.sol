@@ -125,16 +125,6 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         OPERATOR = safeAddress();
         TRUSTED_FORWARDER = core.controller.trustedForwarder();
 
-        // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to
-        production
-            .vm
-            // We force simulations to make the assumption that the `START_TIME` has not occured,
-            // and is not the current time.
-            // Because of the cross-chain allowing components of nana-core, all chains require the same start_time,
-            // for this reason we can't rely on the simulations block.time and we need a shared timestamp across all
-            // simulations.
-            .warp(realTimestamp);
-
         // Get the fee project id from the croptop deployment.
         FEE_PROJECT_ID = croptop.publisher.FEE_PROJECT_ID();
 
