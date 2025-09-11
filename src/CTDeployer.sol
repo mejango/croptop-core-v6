@@ -3,13 +3,14 @@ pragma solidity 0.8.23;
 
 import {JBPermissioned} from "@bananapus/core-v5/src/abstract/JBPermissioned.sol";
 import {IJBRulesetDataHook} from "@bananapus/core-v5/src/interfaces/IJBRulesetDataHook.sol";
-import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers-v5/src/interfaces/IJBSuckerRegistry.sol";
 import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core-v5/src/structs/JBBeforePayRecordedContext.sol";
 import {JBCashOutHookSpecification} from "@bananapus/core-v5/src/structs/JBCashOutHookSpecification.sol";
 import {JBPayHookSpecification} from "@bananapus/core-v5/src/structs/JBPayHookSpecification.sol";
 import {JBBeforeCashOutRecordedContext} from "@bananapus/core-v5/src/structs/JBBeforeCashOutRecordedContext.sol";
 import {JBPermissionsData} from "@bananapus/core-v5/src/structs/JBPermissionsData.sol";
+import {JBRuleset} from "@bananapus/core-v5/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
 import {JBOwnable} from "@bananapus/ownable-v5/src/JBOwnable.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
@@ -79,16 +80,16 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @param deployer The deployer to launch Croptop projects from.
     /// @param publisher The croptop publisher.
     /// @param suckerRegistry The sucker registry.
-    /// @param trusted_forwarder The trusted forwarder.
+    /// @param trustedForwarder The trusted forwarder.
     constructor(
         IJBPermissions permissions,
         IJBProjects projects,
         IJB721TiersHookDeployer deployer,
         ICTPublisher publisher,
         IJBSuckerRegistry suckerRegistry,
-        address trusted_forwarder
+        address trustedForwarder
     )
-        ERC2771Context(trusted_forwarder)
+        ERC2771Context(trustedForwarder)
         JBPermissioned(permissions)
     {
         PROJECTS = projects;
@@ -174,7 +175,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @param projectId The ID of the project whose token can be minted.
     /// @param addr The address to check the token minting permission of.
     /// @return flag A flag indicating whether the address has permission to mint the project's tokens on-demand.
-    function hasMintPermissionFor(uint256 projectId, address addr) external view returns (bool flag) {
+    function hasMintPermissionFor(uint256 projectId, JBRuleset memory, address addr) external view returns (bool flag) {
         // If the address is a sucker for this project.
         return SUCKER_REGISTRY.isSuckerOf(projectId, addr);
     }

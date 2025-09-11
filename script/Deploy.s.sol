@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import "@bananapus/721-hook/script/helpers/Hook721DeploymentLib.sol";
-import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
-import "@bananapus/suckers/script/helpers/SuckerDeploymentLib.sol";
+import "@bananapus/721-hook-v5/script/helpers/Hook721DeploymentLib.sol";
+import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
+import "@bananapus/suckers-v5/script/helpers/SuckerDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
@@ -40,15 +40,15 @@ contract DeployScript is Script, Sphinx {
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
         );
         // Get the deployment addresses for the 721 hook contracts for this chain.
         hook = Hook721DeploymentLib.getDeployment(
-            vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook/deployments/"))
+            vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook-v5/deployments/"))
         );
         // Get the deployment addresses for the suckers contracts for this chain.
         suckers = SuckerDeploymentLib.getDeployment(
-            vm.envOr("NANA_SUCKERS_DEPLOYMENT_PATH", string("node_modules/@bananapus/suckers/deployments/"))
+            vm.envOr("NANA_SUCKERS_DEPLOYMENT_PATH", string("node_modules/@bananapus/suckers-v5/deployments/"))
         );
 
         // We use the same trusted forwarder as the core deployment.
@@ -70,13 +70,13 @@ contract DeployScript is Script, Sphinx {
             (address _publisher, bool _publisherIsDeployed) = _isDeployed(
                 PUBLISHER_SALT,
                 type(CTPublisher).creationCode,
-                abi.encode(core.controller, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER)
+                abi.encode(core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER)
             );
 
             // Deploy it if it has not been deployed yet.
             publisher = !_publisherIsDeployed
                 ? new CTPublisher{salt: PUBLISHER_SALT}(
-                    core.controller, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER
+                    core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER
                 )
                 : CTPublisher(_publisher);
         }
@@ -87,13 +87,13 @@ contract DeployScript is Script, Sphinx {
             (address _deployer, bool _deployerIsDeployed) = _isDeployed(
                 DEPLOYER_SALT,
                 type(CTDeployer).creationCode,
-                abi.encode(core.controller, hook.project_deployer, publisher, suckers.registry, TRUSTED_FORWARDER)
+                abi.encode(core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER)
             );
 
             // Deploy it if it has not been deployed yet.
             deployer = !_deployerIsDeployed
                 ? new CTDeployer{salt: DEPLOYER_SALT}(
-                    core.controller, hook.project_deployer, publisher, suckers.registry, TRUSTED_FORWARDER
+                    core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER
                 )
                 : CTDeployer(_deployer);
         }
