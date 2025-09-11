@@ -1,6 +1,6 @@
 {
     "name": "@croptop/core-v5",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "license": "MIT",
     "repository": {
         "type": "git",
@@ -11,13 +11,9 @@
         "coverage:integration": "forge coverage --match-path \"./src/*.sol\" --report lcov --report summary",
         "deploy:mainnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks mainnets",
         "deploy:mainnets:project": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/ConfigureFeeProject.s.sol --networks mainnets",
-        "deploy:mainnets:fix": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/DeployFix.s.sol --networks mainnets",
-        "deploy:mainnets:4_1": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/Deploy4_1.s.sol --networks mainnets",
         "deploy:testnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks testnets",
         "deploy:testnets:project": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/ConfigureFeeProject.s.sol --networks testnets",
-        "deploy:testnets:fix": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/DeployFix.s.sol --networks testnets",
-        "deploy:testnets:4_1": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/Deploy4_1.s.sol --networks testnets",
-        "artifacts": "source ./.env && npx sphinx artifacts --org-id 'ea165b21-7cdc-4d7b-be59-ecdd4c26bee4' --project-name 'croptop-core'"
+        "artifacts": "source ./.env && npx sphinx artifacts --org-id 'ea165b21-7cdc-4d7b-be59-ecdd4c26bee4' --project-name 'croptop-core-v5'"
     },
     "dependencies": {
         "@bananapus/core-v5": "^0.0.4",
@@ -27,7 +23,8 @@
         "@bananapus/suckers-v5": "^0.0.2",
         "@bananapus/buyback-hook-v5": "^0.0.2",
         "@bananapus/swap-terminal-v5": "^0.0.2",
-        "@openzeppelin/contracts": "^5.2.0"
+        "@openzeppelin/contracts": "^5.2.0",
+        "@rev-net/core-v5": "^0.0.1"
     },
     "devDependencies": {
         "@sphinx-labs/plugins": "^0.33.1"

@@ -31,7 +31,7 @@ contract DeployScript is Script, Sphinx {
     address TRUSTED_FORWARDER;
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "croptop-core";
+        sphinxConfig.projectName = "croptop-core-v5";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
