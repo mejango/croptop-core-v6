@@ -50,8 +50,9 @@ contract ForkTest is Test {
 
         // Deploy the croptop contracts.
         publisher = new CTPublisher(core.directory, core.permissions, 1, TRUSTED_FORWARDER);
-        deployer =
-            new CTDeployer(core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER);
+        deployer = new CTDeployer(
+            core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER
+        );
     }
 
     function testDeployProject(address owner) public {

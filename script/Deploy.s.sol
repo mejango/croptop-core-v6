@@ -75,9 +75,7 @@ contract DeployScript is Script, Sphinx {
 
             // Deploy it if it has not been deployed yet.
             publisher = !_publisherIsDeployed
-                ? new CTPublisher{salt: PUBLISHER_SALT}(
-                    core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER
-                )
+                ? new CTPublisher{salt: PUBLISHER_SALT}(core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER)
                 : CTPublisher(_publisher);
         }
 
@@ -87,7 +85,9 @@ contract DeployScript is Script, Sphinx {
             (address _deployer, bool _deployerIsDeployed) = _isDeployed(
                 DEPLOYER_SALT,
                 type(CTDeployer).creationCode,
-                abi.encode(core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER)
+                abi.encode(
+                    core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER
+                )
             );
 
             // Deploy it if it has not been deployed yet.

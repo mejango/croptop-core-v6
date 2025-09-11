@@ -175,7 +175,15 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @param projectId The ID of the project whose token can be minted.
     /// @param addr The address to check the token minting permission of.
     /// @return flag A flag indicating whether the address has permission to mint the project's tokens on-demand.
-    function hasMintPermissionFor(uint256 projectId, JBRuleset memory, address addr) external view returns (bool flag) {
+    function hasMintPermissionFor(
+        uint256 projectId,
+        JBRuleset memory,
+        address addr
+    )
+        external
+        view
+        returns (bool flag)
+    {
         // If the address is a sucker for this project.
         return SUCKER_REGISTRY.isSuckerOf(projectId, addr);
     }

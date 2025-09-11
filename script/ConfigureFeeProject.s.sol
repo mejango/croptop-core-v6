@@ -111,20 +111,23 @@ pragma solidity 0.8.23;
 //         );
 //         // Get the deployment addresses for the 721 hook contracts for this chain.
 //         swapTerminal = SwapTerminalDeploymentLib.getDeployment(
-//             vm.envOr("NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal/deployments/"))
+//             vm.envOr("NANA_SWAP_TERMINAL_DEPLOYMENT_PATH",
+// string("node_modules/@bananapus/swap-terminal/deployments/"))
 //         );
 
 //         // We do a quick sanity check to make sure revnet and croptop use the same juicebox core contracts.
 //         require(
 //             revnet.basic_deployer.CONTROLLER() == croptop.publisher.CONTROLLER(),
-//             "The revnet package artifacts are using a different version of the core contracts than the croptop artifacts."
+//             "The revnet package artifacts are using a different version of the core contracts than the croptop
+// artifacts."
 //         );
 
 //         // Set the operator address to be the multisig.
 //         OPERATOR = safeAddress();
 //         TRUSTED_FORWARDER = core.controller.trustedForwarder();
 
-//         // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to production.
+//         // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to
+// production.
 //         // We force simulations to make the assumption that the `START_TIME` has not occured,
 //         // and is not the current time.
 //         // Because of the cross-chain allowing components of nana-core, all chains require the same start_time,
@@ -276,7 +279,8 @@ pragma solidity 0.8.23;
 //                 suckerDeployerConfigurations[0] = JBSuckerDeployerConfig({
 //                     deployer: address(suckers.optimismDeployer) != address(0)
 //                         ? suckers.optimismDeployer
-//                         : address(suckers.baseDeployer) != address(0) ? suckers.baseDeployer : suckers.arbitrumDeployer,
+//                         : address(suckers.baseDeployer) != address(0) ? suckers.baseDeployer :
+// suckers.arbitrumDeployer,
 //                     mappings: tokenMappings
 //                 });
 
