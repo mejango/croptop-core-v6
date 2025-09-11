@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-
 import "@bananapus/721-hook/script/helpers/Hook721DeploymentLib.sol";
 import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
@@ -81,11 +80,11 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     bytes32 HOOK_SALT = "_CPN_HOOK_SALT_";
     address OPERATOR;
     address TRUSTED_FORWARDER;
-    uint256 CPN_START_TIME = 1739836091;
-    uint256 CPN_MAINNET_AUTO_ISSUANCE_ = 957932309500316260835082;
-    uint256 CPN_BASE_AUTO_ISSUANCE_ = 1000000000000000000000000;
-    uint256 CPN_OP_AUTO_ISSUANCE_ = 1000000000000000000000000;
-    uint256 NANA_ARB_AUTO_ISSUANCE_ = 1000000000000000000000000;
+    uint256 CPN_START_TIME = 1_739_836_091;
+    uint256 CPN_MAINNET_AUTO_ISSUANCE_ = 957_932_309_500_316_260_835_082;
+    uint256 CPN_BASE_AUTO_ISSUANCE_ = 1_000_000_000_000_000_000_000_000;
+    uint256 CPN_OP_AUTO_ISSUANCE_ = 1_000_000_000_000_000_000_000_000;
+    uint256 NANA_ARB_AUTO_ISSUANCE_ = 1_000_000_000_000_000_000_000_000;
 
     function configureSphinx() public override {
         // TODO: Update to contain croptop devs.
@@ -116,35 +115,25 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         );
         // Get the deployment addresses for the 721 hook contracts for this chain.
         swapTerminal = SwapTerminalDeploymentLib.getDeployment(
-            vm.envOr("NANA_SWAP_TERMINAL_DEPLOYMENT_PATH",
-string("node_modules/@bananapus/swap-terminal/deployments/"))
+            vm.envOr("NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal/deployments/"))
         );
 
         // We do a quick sanity check to make sure revnet and croptop use the same juicebox core contracts.
-        require(
-            revnet.basic_deployer.CONTROLLER() == croptop.publisher.CONTROLLER(),
-            "The revnet package artifacts are using a different version of the core contracts than the croptop
-artifacts."
-        );
+        require(revnet.basic_deployer.DIRECTORY() == croptop.publisher.DIRECTORY());
 
         // Set the operator address to be the multisig.
         OPERATOR = safeAddress();
         TRUSTED_FORWARDER = core.controller.trustedForwarder();
 
         // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to
-production.
-        // We force simulations to make the assumption that the `START_TIME` has not occured,
-        // and is not the current time.
-        // Because of the cross-chain allowing components of nana-core, all chains require the same start_time,
-        // for this reason we can't rely on the simulations block.time and we need a shared timestamp across all
-        // simulations.
-        // uint256 realTimestamp = vm.envUint("START_TIME");
-        uint256 realTimestamp = 1_739_830_244; // timestamp hardcoded at time of deploy.
-        if (realTimestamp <= block.timestamp - TIME_UNTIL_START) {
-            revert("Something went wrong while setting the 'START_TIME' environment variable.");
-        }
-
-        vm.warp(realTimestamp);
+        production
+            .vm
+            // We force simulations to make the assumption that the `START_TIME` has not occured,
+            // and is not the current time.
+            // Because of the cross-chain allowing components of nana-core, all chains require the same start_time,
+            // for this reason we can't rely on the simulations block.time and we need a shared timestamp across all
+            // simulations.
+            .warp(realTimestamp);
 
         // Get the fee project id from the croptop deployment.
         FEE_PROJECT_ID = croptop.publisher.FEE_PROJECT_ID();
@@ -172,26 +161,10 @@ production.
         });
 
         REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](4);
-        issuanceConfs[0] = REVAutoIssuance({
-            chainId: 1,
-            count: NANA_MAINNET_AUTO_ISSUANCE_,
-            beneficiary: OPERATOR
-        });
-        issuanceConfs[1] = REVAutoIssuance({
-            chainId: 8453,
-            count: NANA_BASE_AUTO_ISSUANCE_,
-            beneficiary: OPERATOR
-        });
-        issuanceConfs[2] = REVAutoIssuance({
-            chainId: 10,
-            count: NANA_OP_AUTO_ISSUANCE_,
-            beneficiary: OPERATOR
-        });
-        issuanceConfs[3] = REVAutoIssuance({
-            chainId: 42161,
-            count: NANA_ARB_AUTO_ISSUANCE_,
-            beneficiary: OPERATOR
-        });
+        issuanceConfs[0] = REVAutoIssuance({chainId: 1, count: NANA_MAINNET_AUTO_ISSUANCE_, beneficiary: OPERATOR});
+        issuanceConfs[1] = REVAutoIssuance({chainId: 8453, count: NANA_BASE_AUTO_ISSUANCE_, beneficiary: OPERATOR});
+        issuanceConfs[2] = REVAutoIssuance({chainId: 10, count: NANA_OP_AUTO_ISSUANCE_, beneficiary: OPERATOR});
+        issuanceConfs[3] = REVAutoIssuance({chainId: 42_161, count: NANA_ARB_AUTO_ISSUANCE_, beneficiary: OPERATOR});
 
         JBSplit[] memory splits = new JBSplit[](1);
         splits[0] = JBSplit({
@@ -299,8 +272,7 @@ production.
                 suckerDeployerConfigurations[0] = JBSuckerDeployerConfig({
                     deployer: address(suckers.optimismDeployer) != address(0)
                         ? suckers.optimismDeployer
-                        : address(suckers.baseDeployer) != address(0) ? suckers.baseDeployer :
-suckers.arbitrumDeployer,
+                        : address(suckers.baseDeployer) != address(0) ? suckers.baseDeployer : suckers.arbitrumDeployer,
                     mappings: tokenMappings
                 });
 
