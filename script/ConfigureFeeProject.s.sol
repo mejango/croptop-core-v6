@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+
 // import "@bananapus/721-hook/script/helpers/Hook721DeploymentLib.sol";
 // import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 // import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
@@ -70,7 +71,7 @@ pragma solidity 0.8.23;
 //     uint32 PREMINT_CHAIN_ID = 1;
 //     string NAME = "Croptop Publishing Network";
 //     string SYMBOL = "CPN";
-//     string PROJECT_URI = "ipfs://QmNXa96G26ZHxw5AP8oYcQ9q32Aw4F46sAfzZJ2PYYYFeY";
+//     string PROJECT_URI = "ipfs://QmUAFevoMn1iqSEQR8LogQYRxm39TNxQTPYnuLuq5BmfEi";
 //     uint32 NATIVE_CURRENCY = uint32(uint160(JBConstants.NATIVE_TOKEN));
 //     uint32 ETH_CURRENCY = JBCurrencyIds.ETH;
 //     uint8 DECIMALS = 18;
@@ -80,7 +81,11 @@ pragma solidity 0.8.23;
 //     bytes32 HOOK_SALT = "_CPN_HOOK_SALT_";
 //     address OPERATOR;
 //     address TRUSTED_FORWARDER;
-//     uint256 TIME_UNTIL_START = 3 days;
+//     uint256 CPN_START_TIME = 1739836091;
+//     uint256 CPN_MAINNET_AUTO_ISSUANCE_ = 957932309500316260835082;
+//     uint256 CPN_BASE_AUTO_ISSUANCE_ = 1000000000000000000000000;
+//     uint256 CPN_OP_AUTO_ISSUANCE_ = 1000000000000000000000000;
+//     uint256 NANA_ARB_AUTO_ISSUANCE_ = 1000000000000000000000000;
 
 //     function configureSphinx() public override {
 //         // TODO: Update to contain croptop devs.
@@ -166,10 +171,25 @@ pragma solidity 0.8.23;
 //             accountingContextsToAccept: new JBAccountingContext[](0)
 //         });
 
-//         REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
+//         REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](4);
 //         issuanceConfs[0] = REVAutoIssuance({
-//             chainId: PREMINT_CHAIN_ID,
-//             count: uint104(250_000 * DECIMAL_MULTIPLIER),
+//             chainId: 1,
+//             count: NANA_MAINNET_AUTO_ISSUANCE_,
+//             beneficiary: OPERATOR
+//         });
+//         issuanceConfs[1] = REVAutoIssuance({
+//             chainId: 8453,
+//             count: NANA_BASE_AUTO_ISSUANCE_,
+//             beneficiary: OPERATOR
+//         });
+//         issuanceConfs[2] = REVAutoIssuance({
+//             chainId: 10,
+//             count: NANA_OP_AUTO_ISSUANCE_,
+//             beneficiary: OPERATOR
+//         });
+//         issuanceConfs[3] = REVAutoIssuance({
+//             chainId: 42161,
+//             count: NANA_ARB_AUTO_ISSUANCE_,
 //             beneficiary: OPERATOR
 //         });
 
@@ -186,7 +206,7 @@ pragma solidity 0.8.23;
 //         // The project's revnet stage configurations.
 //         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 //         stageConfigurations[0] = REVStageConfig({
-//             startsAtOrAfter: uint40(block.timestamp + TIME_UNTIL_START),
+//             startsAtOrAfter: CPN_START_TIME,
 //             autoIssuances: issuanceConfs,
 //             splitPercent: 3800, // 38%
 //             splits: splits,
