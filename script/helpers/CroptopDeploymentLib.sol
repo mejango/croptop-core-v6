@@ -7,16 +7,12 @@ import {Vm} from "forge-std/Vm.sol";
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstants.sol";
 
 import {CTPublisher} from "../../src/CTPublisher.sol";
-import {CTPublisher4_1} from "../../src/CTPublisher4_1.sol";
 import {CTDeployer} from "../../src/CTDeployer.sol";
-import {CTDeployer4_1} from "../../src/CTDeployer4_1.sol";
 import {CTProjectOwner} from "../../src/CTProjectOwner.sol";
 
 struct CroptopDeployment {
     CTPublisher publisher;
-    CTPublisher4_1 publisher4_1;
     CTDeployer deployer;
-    CTDeployer4_1 deployer4_1;
     CTProjectOwner project_owner;
 }
 
@@ -51,14 +47,10 @@ library CroptopDeploymentLib {
         view
         returns (CroptopDeployment memory deployment)
     {
-        deployment.publisher = CTPublisher(_getDeploymentAddress(path, "croptop-core", network_name, "CTPublisher"));
-        deployment.publisher4_1 =
-            CTPublisher4_1(_getDeploymentAddress(path, "croptop-core", network_name, "CTPublisher4_1"));
-        deployment.deployer = CTDeployer(_getDeploymentAddress(path, "croptop-core", network_name, "CTDeployer"));
-        deployment.deployer4_1 =
-            CTDeployer4_1(_getDeploymentAddress(path, "croptop-core", network_name, "CTDeployer4_1"));
+        deployment.publisher = CTPublisher(_getDeploymentAddress(path, "croptop-core-v5", network_name, "CTPublisher"));
+        deployment.deployer = CTDeployer(_getDeploymentAddress(path, "croptop-core-v5", network_name, "CTDeployer"));
         deployment.project_owner =
-            CTProjectOwner(_getDeploymentAddress(path, "croptop-core", network_name, "CTProjectOwner"));
+            CTProjectOwner(_getDeploymentAddress(path, "croptop-core-v5", network_name, "CTProjectOwner"));
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
