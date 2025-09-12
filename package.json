@@ -22,8 +22,9 @@
         "@bananapus/ownable-v5": "^0.0.2",
         "@bananapus/suckers-v5": "^0.0.2",
         "@bananapus/buyback-hook-v5": "^0.0.2",
-        "@bananapus/swap-terminal-v5": "^0.0.2",
-        "@openzeppelin/contracts": "^5.2.0"
+        "@bananapus/swap-terminal-v5": "^0.0.3",
+        "@openzeppelin/contracts": "^5.2.0",
+        "@rev-net/core-v5": "^0.0.2"
     },
     "devDependencies": {
         "@sphinx-labs/plugins": "^0.33.1"
