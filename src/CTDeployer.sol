@@ -13,6 +13,7 @@ import {JBPermissionsData} from "@bananapus/core-v5/src/structs/JBPermissionsDat
 import {JBRuleset} from "@bananapus/core-v5/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
 import {JBOwnable} from "@bananapus/ownable-v5/src/JBOwnable.sol";
+import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
 import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
@@ -279,6 +280,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             salt: keccak256(abi.encode(projectConfig.salt, _msgSender()))
         });
 
+        rulesetConfigurations[0].metadata.cashOutTaxRate = JBConstants.MAX_CASH_OUT_TAX_RATE;
         rulesetConfigurations[0].metadata.dataHook = address(hook);
         rulesetConfigurations[0].metadata.useDataHookForPay = true;
 
