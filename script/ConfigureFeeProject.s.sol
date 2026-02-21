@@ -214,8 +214,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             baseCurrency: ETH_CURRENCY,
             splitOperator: OPERATOR,
             stageConfigurations: stageConfigurations,
-            loanSources: loanSources,
-            loans: address(revnet.loans)
+            loanSources: loanSources
         });
 
         REVBuybackHookConfig memory buybackHookConfiguration;
