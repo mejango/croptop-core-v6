@@ -184,6 +184,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     }
 
     /// @notice Check if an address is included in an allow list.
+    /// @dev Uses an O(n) linear scan over the `addresses` array. This is acceptable for typical allow list sizes
+    /// (fewer than ~100 addresses), where gas cost is negligible. For very large allow lists, a Merkle proof
+    /// pattern would scale better, but the added complexity is not warranted for the expected use case.
     /// @param addrs The candidate address.
     /// @param addresses An array of allowed addresses.
     function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
