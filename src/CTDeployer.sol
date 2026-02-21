@@ -281,7 +281,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         });
 
         rulesetConfigurations[0].metadata.cashOutTaxRate = JBConstants.MAX_CASH_OUT_TAX_RATE;
-        rulesetConfigurations[0].metadata.dataHook = address(hook);
+        rulesetConfigurations[0].metadata.dataHook = address(this);
         rulesetConfigurations[0].metadata.useDataHookForPay = true;
 
         // Launch the project, and sanity check the project ID.
