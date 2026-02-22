@@ -355,7 +355,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         core.projects.approve(address(revnet.basic_deployer), FEE_PROJECT_ID);
 
         // Deploy the NANA fee project.
-        revnet.basic_deployer.deployWith721sFor({
+        revnet.basic_deployer.deployFor({
             revnetId: FEE_PROJECT_ID,
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
