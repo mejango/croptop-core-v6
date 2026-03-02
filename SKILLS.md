@@ -31,11 +31,11 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 
 | Dependency | Import | Used For |
 |------------|--------|----------|
-| `@bananapus/core-v5` | `IJBDirectory`, `IJBPermissions`, `IJBTerminal`, `IJBProjects`, `IJBController` | Project lookup, permission enforcement, payment routing, project creation. |
-| `@bananapus/721-hook-v5` | `IJB721TiersHook`, `IJB721TiersHookDeployer`, `JB721TierConfig`, `JB721Tier` | Tier creation/adjustment, hook deployment, tier data resolution. |
-| `@bananapus/ownable-v5` | `JBOwnable` | Ownership checks and transfers for hooks. |
-| `@bananapus/suckers-v5` | `IJBSuckerRegistry`, `JBSuckerDeployerConfig` | Cross-chain sucker deployment and fee-free cash-out detection. |
-| `@bananapus/permission-ids-v5` | `JBPermissionIds` | Permission ID constants (`ADJUST_721_TIERS`, `DEPLOY_SUCKERS`, `MAP_SUCKER_TOKEN`, etc.). |
+| `@bananapus/core-v6` | `IJBDirectory`, `IJBPermissions`, `IJBTerminal`, `IJBProjects`, `IJBController` | Project lookup, permission enforcement, payment routing, project creation. |
+| `@bananapus/721-hook-v6` | `IJB721TiersHook`, `IJB721TiersHookDeployer`, `JB721TierConfig`, `JB721Tier` | Tier creation/adjustment, hook deployment, tier data resolution. |
+| `@bananapus/ownable-v6` | `JBOwnable` | Ownership checks and transfers for hooks. |
+| `@bananapus/suckers-v6` | `IJBSuckerRegistry`, `JBSuckerDeployerConfig` | Cross-chain sucker deployment and fee-free cash-out detection. |
+| `@bananapus/permission-ids-v6` | `JBPermissionIds` | Permission ID constants (`ADJUST_721_TIERS`, `DEPLOY_SUCKERS`, `MAP_SUCKER_TOKEN`, etc.). |
 | `@openzeppelin/contracts` | `ERC2771Context`, `IERC721Receiver` | Meta-transaction support, safe project NFT receipt. |
 
 ## Key Types
@@ -61,9 +61,9 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 ## Example Integration
 
 ```solidity
-import {ICTPublisher} from "@croptop/core-v5/src/interfaces/ICTPublisher.sol";
-import {CTPost} from "@croptop/core-v5/src/structs/CTPost.sol";
-import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
+import {ICTPublisher} from "@croptop/core-v6/src/interfaces/ICTPublisher.sol";
+import {CTPost} from "@croptop/core-v6/src/structs/CTPost.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 
 // Mint a post from a Croptop-enabled project
 CTPost[] memory posts = new CTPost[](1);
