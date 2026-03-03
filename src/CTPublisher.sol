@@ -31,6 +31,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
+    error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
     error CTPublisher_TotalSupplyTooSmall(uint256 totalSupply, uint256 minimumTotalSupply);
     error CTPublisher_UnauthorizedToPostInCategory();
@@ -147,6 +148,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// NFT.
     /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. Leave as 0 for
     /// max.
+    /// @return maximumSplitPercent The maximum split percent that a poster can set. 0 means splits are not allowed.
     /// @return allowedAddresses The addresses allowed to post. Returns empty if all addresses are allowed.
     function allowanceFor(
         address hook,
@@ -159,6 +161,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             uint256 minimumPrice,
             uint256 minimumTotalSupply,
             uint256 maximumTotalSupply,
+            uint256 maximumSplitPercent,
             address[] memory allowedAddresses
         )
     {
@@ -169,8 +172,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         minimumPrice = uint256(uint104(packed));
         // minimum supply in bits 104-135 (32 bits).
         minimumTotalSupply = uint256(uint32(packed >> 104));
-        // minimum supply in bits 136-67 (32 bits).
+        // maximum supply in bits 136-167 (32 bits).
         maximumTotalSupply = uint256(uint32(packed >> 136));
+        // maximum split percent in bits 168-199 (32 bits).
+        maximumSplitPercent = uint256(uint32(packed >> 168));
 
         allowedAddresses = _allowedAddresses[hook][category];
     }
@@ -255,6 +260,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             packed |= uint256(allowedPost.minimumTotalSupply) << 104;
             // maximum total supply in bits 136-167 (32 bits).
             packed |= uint256(allowedPost.maximumTotalSupply) << 136;
+            // maximum split percent in bits 168-199 (32 bits).
+            packed |= uint256(allowedPost.maximumSplitPercent) << 168;
             // Store the packed value.
             _packedAllowanceFor[allowedPost.hook][allowedPost.category] = packed;
 
@@ -447,6 +454,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         uint256 minimumPrice,
                         uint256 minimumTotalSupply,
                         uint256 maximumTotalSupply,
+                        uint256 maximumSplitPercent,
                         address[] memory addresses
                     ) = allowanceFor(address(hook), post.category);
 
@@ -472,6 +480,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         revert CTPublisher_TotalSupplyTooBig(post.totalSupply, maximumTotalSupply);
                     }
 
+                    // Make sure the split percent is within the allowed maximum.
+                    if (post.splitPercent > maximumSplitPercent) {
+                        revert CTPublisher_SplitPercentExceedsMaximum(post.splitPercent, maximumSplitPercent);
+                    }
+
                     // Make sure the address is allowed to post.
                     if (addresses.length != 0 && !_isAllowed(_msgSender(), addresses)) {
                         revert CTPublisher_NotInAllowList(_msgSender(), addresses);
@@ -494,8 +507,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     useVotingUnits: true,
                     cannotBeRemoved: false,
                     cannotIncreaseDiscountPercent: false,
-                    splitPercent: 0,
-                    splits: new JBSplit[](0)
+                    splitPercent: post.splitPercent,
+                    splits: post.splits
                 });
 
                 // Set the ID of the tier to mint.

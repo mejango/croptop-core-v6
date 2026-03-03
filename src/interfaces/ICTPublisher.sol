@@ -39,6 +39,7 @@ interface ICTPublisher {
             uint256 minimumPrice,
             uint256 minimumTotalSupply,
             uint256 maximumTotalSupply,
+            uint256 maximumSplitPercent,
             address[] memory allowedAddresses
         );
 
