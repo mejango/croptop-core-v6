@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
 import {JB721Tier} from "@bananapus/721-hook-v5/src/structs/JB721Tier.sol";
 import {JB721TierConfig} from "@bananapus/721-hook-v5/src/structs/JB721TierConfig.sol";
+import {JBSplit} from "@bananapus/core-v5/src/structs/JBSplit.sol";
 import {JBPermissioned} from "@bananapus/core-v5/src/abstract/JBPermissioned.sol";
 import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
@@ -492,7 +493,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     transfersPausable: false,
                     useVotingUnits: true,
                     cannotBeRemoved: false,
-                    cannotIncreaseDiscountPercent: false
+                    cannotIncreaseDiscountPercent: false,
+                    splitPercent: 0,
+                    splits: new JBSplit[](0)
                 });
 
                 // Set the ID of the tier to mint.
