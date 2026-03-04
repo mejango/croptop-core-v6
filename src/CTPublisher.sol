@@ -309,6 +309,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             if (projectId != FEE_PROJECT_ID) {
                 // Keep a reference to the fee that will be paid.
+                // Note: integer division truncates, so the fee loses up to (FEE_DIVISOR - 1) wei of dust.
+                // For example, a totalPrice of 39 wei with FEE_DIVISOR=20 yields a fee of 1 wei instead of 1.95.
+                // This rounding is in the payer's favor and the loss is negligible for practical amounts.
                 payValue -= totalPrice / FEE_DIVISOR;
             }
 
