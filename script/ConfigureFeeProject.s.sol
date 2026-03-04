@@ -75,9 +75,9 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     uint32 ETH_CURRENCY = JBCurrencyIds.ETH;
     uint8 DECIMALS = 18;
     uint256 DECIMAL_MULTIPLIER = 10 ** DECIMALS;
-    bytes32 SUCKER_SALT = "_CPN_SUCKER__";
-    bytes32 ERC20_SALT = "_CPN_ERC20_SALT__";
-    bytes32 HOOK_SALT = "_CPN_HOOK_SALT__";
+    bytes32 SUCKER_SALT = "_CPN_SUCKERV6__";
+    bytes32 ERC20_SALT = "_CPN_ERC20_SALTV6__";
+    bytes32 HOOK_SALT = "_CPN_HOOK_SALTV6__";
     address OPERATOR;
     address TRUSTED_FORWARDER;
     uint48 CPN_START_TIME = 1_740_089_444;
