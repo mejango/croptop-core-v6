@@ -17,8 +17,8 @@ interface ICTDeployer {
 
     function deployProjectFor(
         address owner,
-        CTProjectConfig calldata projectConfigurations,
-        CTSuckerDeploymentConfig calldata deployerConfigurations,
+        CTProjectConfig calldata projectConfig,
+        CTSuckerDeploymentConfig calldata suckerDeploymentConfiguration,
         IJBController controller
     )
         external
