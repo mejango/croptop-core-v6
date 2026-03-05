@@ -1,10 +1,10 @@
 {
-    "name": "@bananapus/croptop-core-v6",
+    "name": "@croptop/core-v6",
     "version": "0.0.1",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/Bananapus/croptop-core-v6"
+        "url": "git+https://github.com/mejango/croptop-core-v6"
     },
     "scripts": {
         "test": "forge test",
