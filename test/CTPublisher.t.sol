@@ -39,9 +39,7 @@ contract TestCTPublisher is Test {
 
         // Mock permissions to return true by default.
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(true)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(true)
         );
     }
 
@@ -100,7 +98,7 @@ contract TestCTPublisher is Test {
         vm.prank(hookOwner);
         publisher.configurePostingCriteriaFor(posts);
 
-        (,,,address[] memory allowed) = publisher.allowanceFor(hookAddr, 3);
+        (,,, address[] memory allowed) = publisher.allowanceFor(hookAddr, 3);
         assertEq(allowed.length, 2, "should have 2 allowed addresses");
         assertEq(allowed[0], poster);
         assertEq(allowed[1], hookOwner);
@@ -198,9 +196,7 @@ contract TestCTPublisher is Test {
         });
 
         vm.prank(hookOwner);
-        vm.expectRevert(
-            abi.encodeWithSelector(CTPublisher.CTPublisher_MaxTotalSupplyLessThanMin.selector, 100, 50)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_MaxTotalSupplyLessThanMin.selector, 100, 50));
         publisher.configurePostingCriteriaFor(posts);
     }
 
@@ -211,9 +207,7 @@ contract TestCTPublisher is Test {
     function test_configureReverts_ifUnauthorized() public {
         // Mock permissions to return false.
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(false)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(false)
         );
 
         CTAllowedPost[] memory posts = new CTAllowedPost[](1);

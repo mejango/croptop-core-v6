@@ -49,9 +49,7 @@ contract CroptopAttacks is Test {
 
         // Mock permissions to return true by default.
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(true)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(true)
         );
 
         // Fund test accounts so they can send ETH with mintFrom.
@@ -97,12 +95,7 @@ contract CroptopAttacks is Test {
     function test_mintFrom_unconfiguredCategory_reverts() public {
         // Category 999 is not configured.
         CTPost[] memory posts = new CTPost[](1);
-        posts[0] = CTPost({
-            encodedIPFSUri: keccak256("test-content"),
-            totalSupply: 10,
-            price: 0.1 ether,
-            category: 999
-        });
+        posts[0] = CTPost({encodedIPFSUri: keccak256("test-content"), totalSupply: 10, price: 0.1 ether, category: 999});
 
         // Mock adjustTiers (won't be reached if validation works).
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
@@ -185,12 +178,8 @@ contract CroptopAttacks is Test {
         _configureCategoryWithAllowlist(7, allowed);
 
         CTPost[] memory posts = new CTPost[](1);
-        posts[0] = CTPost({
-            encodedIPFSUri: keccak256("sneaky-content"),
-            totalSupply: 10,
-            price: 0.01 ether,
-            category: 7
-        });
+        posts[0] =
+            CTPost({encodedIPFSUri: keccak256("sneaky-content"), totalSupply: 10, price: 0.01 ether, category: 7});
 
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
 
@@ -246,9 +235,7 @@ contract CroptopAttacks is Test {
     function test_configure_noPermission_reverts() public {
         // Mock permissions to return false.
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(false)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(false)
         );
 
         CTAllowedPost[] memory posts = new CTAllowedPost[](1);
