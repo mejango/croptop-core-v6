@@ -129,7 +129,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // If there's a tier ID stored, resolve it.
             if (tierId != 0) {
                 // slither-disable-next-line calls-loop
-                tiers[i] = IJB721TiersHook(hook).STORE().tierOf(hook, tierId, false);
+                tiers[i] =
+                    IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
             }
         }
     }
@@ -325,7 +326,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Add the new tiers.
             // slither-disable-next-line reentrancy-events
-            hook.adjustTiers(tiersToAdd, new uint256[](0));
+            hook.adjustTiers({tierDataToAdd: tiersToAdd, tierIdsToRemove: new uint256[](0)});
 
             // Keep a reference to the metadata ID target.
             address metadataIdTarget = hook.METADATA_ID_TARGET();
@@ -335,7 +336,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // the specifications from the JBMetadataResolver library.
             mintMetadata = JBMetadataResolver.addToMetadata({
                 originalMetadata: additionalPayMetadata,
-                idToAdd: JBMetadataResolver.getId("pay", metadataIdTarget),
+                idToAdd: JBMetadataResolver.getId({purpose: "pay", target: metadataIdTarget}),
                 dataToAdd: abi.encode(true, tierIdsToMint)
             });
 
@@ -360,7 +361,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         {
             // Get a reference to the project's current ETH payment terminal.
-            IJBTerminal projectTerminal = DIRECTORY.primaryTerminalOf(projectId, JBConstants.NATIVE_TOKEN);
+            IJBTerminal projectTerminal =
+                DIRECTORY.primaryTerminalOf({projectId: projectId, token: JBConstants.NATIVE_TOKEN});
 
             // Make the payment.
             // slither-disable-next-line unused-return
@@ -378,7 +380,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         // Pay a fee if there are funds left.
         if (address(this).balance != 0) {
             // Get a reference to the fee project's current ETH payment terminal.
-            IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_PROJECT_ID, JBConstants.NATIVE_TOKEN);
+            IJBTerminal feeTerminal =
+                DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
 
             // Make the fee payment.
             // slither-disable-next-line unused-return
@@ -453,7 +456,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         uint256 minimumTotalSupply,
                         uint256 maximumTotalSupply,
                         address[] memory addresses
-                    ) = allowanceFor(address(hook), post.category);
+                    ) = allowanceFor({hook: address(hook), category: post.category});
 
                     // Make sure the category being posted to allows publishing.
                     if (minimumTotalSupply == 0) {

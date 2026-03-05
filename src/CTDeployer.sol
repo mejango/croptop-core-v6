@@ -162,7 +162,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         )
     {
         // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
-        if (SUCKER_REGISTRY.isSuckerOf(context.projectId, context.holder)) {
+        if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, addr: context.holder})) {
             return (0, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
@@ -186,7 +186,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         returns (bool flag)
     {
         // If the address is a sucker for this project.
-        return SUCKER_REGISTRY.isSuckerOf(projectId, addr);
+        return SUCKER_REGISTRY.isSuckerOf({projectId: projectId, addr: addr});
     }
 
     /// @dev Make sure only mints can be received.
