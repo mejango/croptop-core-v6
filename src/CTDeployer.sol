@@ -176,15 +176,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @param projectId The ID of the project whose token can be minted.
     /// @param addr The address to check the token minting permission of.
     /// @return flag A flag indicating whether the address has permission to mint the project's tokens on-demand.
-    function hasMintPermissionFor(
-        uint256 projectId,
-        JBRuleset memory,
-        address addr
-    )
-        external
-        view
-        returns (bool flag)
-    {
+    function hasMintPermissionFor(uint256 projectId, JBRuleset memory, address addr) external view returns (bool flag) {
         // If the address is a sucker for this project.
         return SUCKER_REGISTRY.isSuckerOf({projectId: projectId, addr: addr});
     }
@@ -327,9 +319,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(owner),
-                projectId: uint64(projectId),
-                permissionIds: permissionIds
+                operator: address(owner), projectId: uint64(projectId), permissionIds: permissionIds
             })
         });
     }
@@ -362,9 +352,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     {
         // Enforce permissions.
         _requirePermissionFrom({
-            account: PROJECTS.ownerOf(projectId),
-            projectId: projectId,
-            permissionId: JBPermissionIds.DEPLOY_SUCKERS
+            account: PROJECTS.ownerOf(projectId), projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS
         });
 
         // Deploy the suckers.

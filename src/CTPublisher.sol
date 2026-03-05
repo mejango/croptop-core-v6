@@ -129,8 +129,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // If there's a tier ID stored, resolve it.
             if (tierId != 0) {
                 // slither-disable-next-line calls-loop
-                tiers[i] =
-                    IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
+                tiers[i] = IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
             }
         }
     }

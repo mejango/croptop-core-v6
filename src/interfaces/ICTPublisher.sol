@@ -62,14 +62,9 @@ interface ICTPublisher {
     /// @notice Get the tiers for the provided encoded IPFS URIs.
     /// @param hook The hook from which to get tiers.
     /// @param encodedIPFSUris The URIs to get tiers of.
-    /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. Empty tiers are returned for URIs without a tier.
-    function tiersFor(
-        address hook,
-        bytes32[] memory encodedIPFSUris
-    )
-        external
-        view
-        returns (JB721Tier[] memory tiers);
+    /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. Empty tiers are returned for URIs
+    /// without a tier.
+    function tiersFor(address hook, bytes32[] memory encodedIPFSUris) external view returns (JB721Tier[] memory tiers);
 
     /// @notice Configure the allowed criteria for publishing new NFTs to a hook.
     /// @param allowedPosts An array of criteria for allowed posts.
