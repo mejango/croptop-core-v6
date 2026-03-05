@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {JBTerminalConfig} from "@bananapus/core-v5/src/structs/JBTerminalConfig.sol";
+import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
 import {CTDeployerAllowedPost} from "../structs/CTDeployerAllowedPost.sol";
 
 /// @param terminalConfigurations The terminals that the network uses to accept payments through.
