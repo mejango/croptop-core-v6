@@ -137,7 +137,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         override
         returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
     {
-        // Otherwise, forward the call to the datahook.
+        // Forward the call to the data hook.
         // slither-disable-next-line unused-return
         return dataHookOf[context.projectId].beforePayRecordedWith(context);
     }

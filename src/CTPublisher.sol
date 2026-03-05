@@ -168,7 +168,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         minimumPrice = uint256(uint104(packed));
         // minimum supply in bits 104-135 (32 bits).
         minimumTotalSupply = uint256(uint32(packed >> 104));
-        // minimum supply in bits 136-67 (32 bits).
+        // maximum supply in bits 136-167 (32 bits).
         maximumTotalSupply = uint256(uint32(packed >> 136));
 
         allowedAddresses = _allowedAddresses[hook][category];
