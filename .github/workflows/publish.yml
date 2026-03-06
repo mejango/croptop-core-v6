@@ -9,6 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - uses: bahmutov/npm-install@v1
+        with:
+          install-command: npm ci --ignore-scripts
       # Publish deploy artifacts NPM packages. This will only run if there are new deploys.
       - name: Publish NPM package
         uses: JS-DevTools/npm-publish@v1
