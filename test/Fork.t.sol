@@ -95,7 +95,7 @@ contract ForkTest is Test {
         tokens[0] = JBTokenMapping({
             localToken: address(JBConstants.NATIVE_TOKEN),
             minGas: 200_000,
-            remoteToken: bytes32(uint256(uint160(address(JBConstants.NATIVE_TOKEN)))),
+            remoteToken: bytes32(uint256(uint160(JBConstants.NATIVE_TOKEN))),
             minBridgeAmount: 0.001 ether
         });
 

@@ -2,7 +2,6 @@
 pragma solidity 0.8.23;
 
 import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
-import "@bananapus/buyback-hook-v6/script/helpers/BuybackDeploymentLib.sol";
 import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
 import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
 import "@bananapus/swap-terminal-v6/script/helpers/SwapTerminalDeploymentLib.sol";
@@ -28,28 +27,22 @@ import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol"
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
 import {JBTokenMapping} from "@bananapus/suckers-v6/src/structs/JBTokenMapping.sol";
 import {REVAutoIssuance} from "@rev-net/core-v6/src/structs/REVAutoIssuance.sol";
-import {REVBuybackHookConfig} from "@rev-net/core-v6/src/structs/REVBuybackHookConfig.sol";
-import {REVBuybackPoolConfig} from "@rev-net/core-v6/src/structs/REVBuybackPoolConfig.sol";
 import {REVConfig} from "@rev-net/core-v6/src/structs/REVConfig.sol";
 import {REVCroptopAllowedPost} from "@rev-net/core-v6/src/structs/REVCroptopAllowedPost.sol";
 import {REVDeploy721TiersHookConfig} from "@rev-net/core-v6/src/structs/REVDeploy721TiersHookConfig.sol";
 import {REVDescription} from "@rev-net/core-v6/src/structs/REVDescription.sol";
-import {REVLoanSource} from "@rev-net/core-v6/src/structs/REVLoanSource.sol";
 import {REVStageConfig} from "@rev-net/core-v6/src/structs/REVStageConfig.sol";
 import {REVSuckerDeploymentConfig} from "@rev-net/core-v6/src/structs/REVSuckerDeploymentConfig.sol";
 
 struct FeeProjectConfig {
     REVConfig configuration;
     JBTerminalConfig[] terminalConfigurations;
-    REVBuybackHookConfig buybackHookConfiguration;
     REVSuckerDeploymentConfig suckerDeploymentConfiguration;
     REVDeploy721TiersHookConfig hookConfiguration;
     REVCroptopAllowedPost[] allowedPosts;
 }
 
 contract ConfigureFeeProjectScript is Script, Sphinx {
-    /// @notice tracks the deployment of the buyback hook.
-    BuybackDeployment buybackHook;
     /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
     CoreDeployment core;
     /// @notice tracks the latest croptop deployment.
@@ -104,7 +97,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         hook = Hook721DeploymentLib.getDeployment(
             vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook-v6/deployments/"))
         );
-        // Get the deployment addresses for the 721 hook contracts for this chain.
+        // Get the deployment addresses for the revnet contracts for this chain.
         revnet = RevnetCoreDeploymentLib.getDeployment(
             vm.envOr("REVNET_CORE_DEPLOYMENT_PATH", string("node_modules/@rev-net/core-v6/deployments/"))
         );
@@ -112,7 +105,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         suckers = SuckerDeploymentLib.getDeployment(
             vm.envOr("NANA_SUCKERS_DEPLOYMENT_PATH", string("node_modules/@bananapus/suckers-v6/deployments/"))
         );
-        // Get the deployment addresses for the 721 hook contracts for this chain.
+        // Get the deployment addresses for the swap terminal contracts for this chain.
         swapTerminal = SwapTerminalDeploymentLib.getDeployment(
             vm.envOr(
                 "NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal-v6/deployments/")
@@ -204,32 +197,13 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             extraMetadata: 4 // Allow adding suckers.
         });
 
-        // The projects loan configuration.
-        REVLoanSource[] memory loanSources = new REVLoanSource[](1);
-        loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: core.terminal});
-
         // The project's revnet configuration
         REVConfig memory revnetConfiguration = REVConfig({
             description: REVDescription(NAME, SYMBOL, PROJECT_URI, ERC20_SALT),
             baseCurrency: ETH_CURRENCY,
             splitOperator: OPERATOR,
-            stageConfigurations: stageConfigurations,
-            loanSources: loanSources,
-            loans: address(revnet.loans)
+            stageConfigurations: stageConfigurations
         });
-
-        REVBuybackHookConfig memory buybackHookConfiguration;
-        {
-            // The project's buyback hook configuration.
-            REVBuybackPoolConfig[] memory buybackPoolConfigurations = new REVBuybackPoolConfig[](1);
-            buybackPoolConfigurations[0] =
-                REVBuybackPoolConfig({token: JBConstants.NATIVE_TOKEN, fee: 10_000, twapWindow: 2 days});
-            buybackHookConfiguration = REVBuybackHookConfig({
-                dataHook: buybackHook.registry,
-                hookToConfigure: buybackHook.hook,
-                poolConfigurations: buybackPoolConfigurations
-            });
-        }
 
         // Organize the instructions for how this project will connect to other chains.
         JBTokenMapping[] memory tokenMappings = new JBTokenMapping[](1);
@@ -315,7 +289,6 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         return FeeProjectConfig({
             configuration: revnetConfiguration,
             terminalConfigurations: terminalConfigurations,
-            buybackHookConfiguration: buybackHookConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             hookConfiguration: REVDeploy721TiersHookConfig({
                 baseline721HookConfiguration: JBDeploy721TiersHookConfig({
@@ -352,16 +325,14 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         core.projects.approve(address(revnet.basic_deployer), FEE_PROJECT_ID);
 
         // Deploy the NANA fee project.
-        revnet.basic_deployer
-            .deployWith721sFor({
-                revnetId: FEE_PROJECT_ID,
-                configuration: feeProjectConfig.configuration,
-                terminalConfigurations: feeProjectConfig.terminalConfigurations,
-                buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
-                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
-                tiered721HookConfiguration: feeProjectConfig.hookConfiguration,
-                allowedPosts: feeProjectConfig.allowedPosts
-            });
+        revnet.basic_deployer.deployWith721sFor({
+            revnetId: FEE_PROJECT_ID,
+            configuration: feeProjectConfig.configuration,
+            terminalConfigurations: feeProjectConfig.terminalConfigurations,
+            suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
+            tiered721HookConfiguration: feeProjectConfig.hookConfiguration,
+            allowedPosts: feeProjectConfig.allowedPosts
+        });
     }
 
     function _isDeployed(
