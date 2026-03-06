@@ -1,42 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import "@bananapus/721-hook-v5/script/helpers/Hook721DeploymentLib.sol";
-import "@bananapus/buyback-hook-v5/script/helpers/BuybackDeploymentLib.sol";
-import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
-import "@bananapus/suckers-v5/script/helpers/SuckerDeploymentLib.sol";
-import "@bananapus/swap-terminal-v5/script/helpers/SwapTerminalDeploymentLib.sol";
-import "@rev-net/core-v5/script/helpers/RevnetCoreDeploymentLib.sol";
+import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
+import "@bananapus/buyback-hook-v6/script/helpers/BuybackDeploymentLib.sol";
+import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
+import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
+import "@bananapus/swap-terminal-v6/script/helpers/SwapTerminalDeploymentLib.sol";
+import "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
 import "./helpers/CroptopDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
-import {IJB721TokenUriResolver} from "@bananapus/721-hook-v5/src/interfaces/IJB721TokenUriResolver.sol";
-import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v5/src/structs/JBDeploy721TiersHookConfig.sol";
-import {JB721InitTiersConfig} from "@bananapus/721-hook-v5/src/structs/JB721InitTiersConfig.sol";
-import {JB721TierConfig} from "@bananapus/721-hook-v5/src/structs/JB721TierConfig.sol";
-import {JB721TiersHookFlags} from "@bananapus/721-hook-v5/src/structs/JB721TiersHookFlags.sol";
-import {IJBPrices} from "@bananapus/core-v5/src/interfaces/IJBPrices.sol";
-import {IJBSplitHook} from "@bananapus/core-v5/src/interfaces/IJBSplitHook.sol";
-import {IJBTerminal} from "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
-import {JBAccountingContext} from "@bananapus/core-v5/src/structs/JBAccountingContext.sol";
-import {JBTerminalConfig} from "@bananapus/core-v5/src/structs/JBTerminalConfig.sol";
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
-import {JBSplit} from "@bananapus/core-v5/src/structs/JBSplit.sol";
-import {JBCurrencyIds} from "@bananapus/core-v5/src/libraries/JBCurrencyIds.sol";
-import {JBSuckerDeployerConfig} from "@bananapus/suckers-v5/src/structs/JBSuckerDeployerConfig.sol";
-import {JBTokenMapping} from "@bananapus/suckers-v5/src/structs/JBTokenMapping.sol";
-import {REVAutoIssuance} from "@rev-net/core-v5/src/structs/REVAutoIssuance.sol";
-import {REVBuybackHookConfig} from "@rev-net/core-v5/src/structs/REVBuybackHookConfig.sol";
-import {REVBuybackPoolConfig} from "@rev-net/core-v5/src/structs/REVBuybackPoolConfig.sol";
-import {REVConfig} from "@rev-net/core-v5/src/structs/REVConfig.sol";
-import {REVCroptopAllowedPost} from "@rev-net/core-v5/src/structs/REVCroptopAllowedPost.sol";
-import {REVDeploy721TiersHookConfig} from "@rev-net/core-v5/src/structs/REVDeploy721TiersHookConfig.sol";
-import {REVDescription} from "@rev-net/core-v5/src/structs/REVDescription.sol";
-import {REVLoanSource} from "@rev-net/core-v5/src/structs/REVLoanSource.sol";
-import {REVStageConfig} from "@rev-net/core-v5/src/structs/REVStageConfig.sol";
-import {REVSuckerDeploymentConfig} from "@rev-net/core-v5/src/structs/REVSuckerDeploymentConfig.sol";
+import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
+import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v6/src/structs/JBDeploy721TiersHookConfig.sol";
+import {JB721InitTiersConfig} from "@bananapus/721-hook-v6/src/structs/JB721InitTiersConfig.sol";
+import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+import {JB721TiersHookFlags} from "@bananapus/721-hook-v6/src/structs/JB721TiersHookFlags.sol";
+import {IJBPrices} from "@bananapus/core-v6/src/interfaces/IJBPrices.sol";
+import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
+import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
+import {JBTokenMapping} from "@bananapus/suckers-v6/src/structs/JBTokenMapping.sol";
+import {REVAutoIssuance} from "@rev-net/core-v6/src/structs/REVAutoIssuance.sol";
+import {REVBuybackHookConfig} from "@rev-net/core-v6/src/structs/REVBuybackHookConfig.sol";
+import {REVBuybackPoolConfig} from "@rev-net/core-v6/src/structs/REVBuybackPoolConfig.sol";
+import {REVConfig} from "@rev-net/core-v6/src/structs/REVConfig.sol";
+import {REVCroptopAllowedPost} from "@rev-net/core-v6/src/structs/REVCroptopAllowedPost.sol";
+import {REVDeploy721TiersHookConfig} from "@rev-net/core-v6/src/structs/REVDeploy721TiersHookConfig.sol";
+import {REVDescription} from "@rev-net/core-v6/src/structs/REVDescription.sol";
+import {REVLoanSource} from "@rev-net/core-v6/src/structs/REVLoanSource.sol";
+import {REVStageConfig} from "@rev-net/core-v6/src/structs/REVStageConfig.sol";
+import {REVSuckerDeploymentConfig} from "@rev-net/core-v6/src/structs/REVSuckerDeploymentConfig.sol";
 
 struct FeeProjectConfig {
     REVConfig configuration;
@@ -87,7 +87,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
 
     function configureSphinx() public override {
         // TODO: Update to contain croptop devs.
-        sphinxConfig.projectName = "croptop-core-v5";
+        sphinxConfig.projectName = "croptop-core-v6";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
@@ -96,26 +96,26 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v6/deployments/"))
         );
         // Get the deployment addresses for the croptop contracts for this chain.
         croptop = CroptopDeploymentLib.getDeployment(vm.envOr("CROPTOP_DEPLOYMENT_PATH", string("deployments/")));
         // Get the deployment addresses for the 721 hook contracts for this chain.
         hook = Hook721DeploymentLib.getDeployment(
-            vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook-v5/deployments/"))
+            vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook-v6/deployments/"))
         );
         // Get the deployment addresses for the 721 hook contracts for this chain.
         revnet = RevnetCoreDeploymentLib.getDeployment(
-            vm.envOr("REVNET_CORE_DEPLOYMENT_PATH", string("node_modules/@rev-net/core-v5/deployments/"))
+            vm.envOr("REVNET_CORE_DEPLOYMENT_PATH", string("node_modules/@rev-net/core-v6/deployments/"))
         );
         // Get the deployment addresses for the suckers contracts for this chain.
         suckers = SuckerDeploymentLib.getDeployment(
-            vm.envOr("NANA_SUCKERS_DEPLOYMENT_PATH", string("node_modules/@bananapus/suckers-v5/deployments/"))
+            vm.envOr("NANA_SUCKERS_DEPLOYMENT_PATH", string("node_modules/@bananapus/suckers-v6/deployments/"))
         );
         // Get the deployment addresses for the 721 hook contracts for this chain.
         swapTerminal = SwapTerminalDeploymentLib.getDeployment(
             vm.envOr(
-                "NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal-v5/deployments/")
+                "NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal-v6/deployments/")
             )
         );
 
