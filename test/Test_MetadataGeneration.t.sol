@@ -43,9 +43,7 @@ contract Test_MetadataGeneration_Unit is Test {
 
         // Test: create the new metadata:
         bytes memory mintMetadata = JBMetadataResolver.addToMetadata({
-            originalMetadata: _additionalPayMetadata,
-            idToAdd: datahookId,
-            dataToAdd: abi.encode(true, tierIdsToMint)
+            originalMetadata: _additionalPayMetadata, idToAdd: datahookId, dataToAdd: abi.encode(true, tierIdsToMint)
         });
 
         // Add the referal id in the first 32 bytes

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
-import {JB721Tier} from "@bananapus/721-hook-v5/src/structs/JB721Tier.sol";
-import {JB721TierConfig} from "@bananapus/721-hook-v5/src/structs/JB721TierConfig.sol";
-import {JBSplit} from "@bananapus/core-v5/src/structs/JBSplit.sol";
-import {JBPermissioned} from "@bananapus/core-v5/src/abstract/JBPermissioned.sol";
-import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
-import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
-import {IJBTerminal} from "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
-import {JBMetadataResolver} from "@bananapus/core-v5/src/libraries/JBMetadataResolver.sol";
-import {JBOwnable} from "@bananapus/ownable-v5/src/JBOwnable.sol";
-import {JBPermissionIds} from "@bananapus/permission-ids-v5/src/JBPermissionIds.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
+import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
+import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
+import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
+import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
@@ -131,7 +131,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // If there's a tier ID stored, resolve it.
             if (tierId != 0) {
                 // slither-disable-next-line calls-loop
-                tiers[i] = IJB721TiersHook(hook).STORE().tierOf(hook, tierId, false);
+                tiers[i] = IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
             }
         }
     }
@@ -190,6 +190,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     }
 
     /// @notice Check if an address is included in an allow list.
+    /// @dev Uses an O(n) linear scan over the `addresses` array. This is acceptable for typical allow list sizes
+    /// (fewer than ~100 addresses), where gas cost is negligible. For very large allow lists, a Merkle proof
+    /// pattern would scale better, but the added complexity is not warranted for the expected use case.
     /// @param addrs The candidate address.
     /// @param addresses An array of allowed addresses.
     function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
@@ -317,6 +320,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             if (projectId != FEE_PROJECT_ID) {
                 // Keep a reference to the fee that will be paid.
+                // Note: integer division truncates, so the fee loses up to (FEE_DIVISOR - 1) wei of dust.
+                // For example, a totalPrice of 39 wei with FEE_DIVISOR=20 yields a fee of 1 wei instead of 1.95.
+                // This rounding is in the payer's favor and the loss is negligible for practical amounts.
                 payValue -= totalPrice / FEE_DIVISOR;
             }
 
@@ -327,7 +333,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Add the new tiers.
             // slither-disable-next-line reentrancy-events
-            hook.adjustTiers(tiersToAdd, new uint256[](0));
+            hook.adjustTiers({tierDataToAdd: tiersToAdd, tierIdsToRemove: new uint256[](0)});
 
             // Keep a reference to the metadata ID target.
             address metadataIdTarget = hook.METADATA_ID_TARGET();
@@ -337,7 +343,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // the specifications from the JBMetadataResolver library.
             mintMetadata = JBMetadataResolver.addToMetadata({
                 originalMetadata: additionalPayMetadata,
-                idToAdd: JBMetadataResolver.getId("pay", metadataIdTarget),
+                idToAdd: JBMetadataResolver.getId({purpose: "pay", target: metadataIdTarget}),
                 dataToAdd: abi.encode(true, tierIdsToMint)
             });
 
@@ -362,7 +368,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         {
             // Get a reference to the project's current ETH payment terminal.
-            IJBTerminal projectTerminal = DIRECTORY.primaryTerminalOf(projectId, JBConstants.NATIVE_TOKEN);
+            IJBTerminal projectTerminal =
+                DIRECTORY.primaryTerminalOf({projectId: projectId, token: JBConstants.NATIVE_TOKEN});
 
             // Make the payment.
             // slither-disable-next-line unused-return
@@ -380,7 +387,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         // Pay a fee if there are funds left.
         if (address(this).balance != 0) {
             // Get a reference to the fee project's current ETH payment terminal.
-            IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_PROJECT_ID, JBConstants.NATIVE_TOKEN);
+            IJBTerminal feeTerminal =
+                DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
 
             // Make the fee payment.
             // slither-disable-next-line unused-return
@@ -456,7 +464,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         uint256 maximumTotalSupply,
                         uint256 maximumSplitPercent,
                         address[] memory addresses
-                    ) = allowanceFor(address(hook), post.category);
+                    ) = allowanceFor({hook: address(hook), category: post.category});
 
                     // Make sure the category being posted to allows publishing.
                     if (minimumTotalSupply == 0) {

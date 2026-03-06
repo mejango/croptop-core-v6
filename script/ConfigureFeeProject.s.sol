@@ -75,9 +75,9 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     uint32 ETH_CURRENCY = JBCurrencyIds.ETH;
     uint8 DECIMALS = 18;
     uint256 DECIMAL_MULTIPLIER = 10 ** DECIMALS;
-    bytes32 SUCKER_SALT = "_CPN_SUCKER__";
-    bytes32 ERC20_SALT = "_CPN_ERC20_SALT__";
-    bytes32 HOOK_SALT = "_CPN_HOOK_SALT__";
+    bytes32 SUCKER_SALT = "_CPN_SUCKERV6__";
+    bytes32 ERC20_SALT = "_CPN_ERC20_SALTV6__";
+    bytes32 HOOK_SALT = "_CPN_HOOK_SALTV6__";
     address OPERATOR;
     address TRUSTED_FORWARDER;
     uint48 CPN_START_TIME = 1_740_089_444;
@@ -325,10 +325,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
                     tokenUriResolver: IJB721TokenUriResolver(address(0)),
                     contractUri: "",
                     tiersConfig: JB721InitTiersConfig({
-                        tiers: new JB721TierConfig[](0),
-                        currency: ETH_CURRENCY,
-                        decimals: DECIMALS,
-                        prices: core.prices
+                        tiers: new JB721TierConfig[](0), currency: ETH_CURRENCY, decimals: DECIMALS, prices: core.prices
                     }),
                     reserveBeneficiary: address(0),
                     flags: JB721TiersHookFlags({
@@ -355,15 +352,16 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         core.projects.approve(address(revnet.basic_deployer), FEE_PROJECT_ID);
 
         // Deploy the NANA fee project.
-        revnet.basic_deployer.deployWith721sFor({
-            revnetId: FEE_PROJECT_ID,
-            configuration: feeProjectConfig.configuration,
-            terminalConfigurations: feeProjectConfig.terminalConfigurations,
-            buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
-            suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
-            tiered721HookConfiguration: feeProjectConfig.hookConfiguration,
-            allowedPosts: feeProjectConfig.allowedPosts
-        });
+        revnet.basic_deployer
+            .deployWith721sFor({
+                revnetId: FEE_PROJECT_ID,
+                configuration: feeProjectConfig.configuration,
+                terminalConfigurations: feeProjectConfig.terminalConfigurations,
+                buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
+                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
+                tiered721HookConfiguration: feeProjectConfig.hookConfiguration,
+                allowedPosts: feeProjectConfig.allowedPosts
+            });
     }
 
     function _isDeployed(

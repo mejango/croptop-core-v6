@@ -51,9 +51,7 @@ contract CroptopAttacks is Test {
 
         // Mock permissions to return true by default.
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(true)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(true)
         );
 
         // Fund test accounts so they can send ETH with mintFrom.
@@ -123,9 +121,7 @@ contract CroptopAttacks is Test {
     /// @dev Set up mocks for mintFrom path.
     function _setupMintMocks() internal {
         vm.mockCall(
-            hookStoreAddr,
-            abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector),
-            abi.encode(uint256(0))
+            hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(uint256(0))
         );
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
         // METADATA_ID_TARGET() selector.
@@ -297,9 +293,7 @@ contract CroptopAttacks is Test {
     // =========================================================================
     function test_configure_noPermission_reverts() public {
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(false)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(false)
         );
 
         CTAllowedPost[] memory posts = new CTAllowedPost[](1);

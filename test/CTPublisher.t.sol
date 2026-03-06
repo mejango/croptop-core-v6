@@ -48,9 +48,7 @@ contract TestCTPublisher is Test {
 
         // Mock permissions to return true by default.
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(true)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(true)
         );
 
         // Fund poster.
@@ -227,9 +225,7 @@ contract TestCTPublisher is Test {
         });
 
         vm.prank(hookOwner);
-        vm.expectRevert(
-            abi.encodeWithSelector(CTPublisher.CTPublisher_MaxTotalSupplyLessThanMin.selector, 100, 50)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_MaxTotalSupplyLessThanMin.selector, 100, 50));
         publisher.configurePostingCriteriaFor(posts);
     }
 
@@ -239,9 +235,7 @@ contract TestCTPublisher is Test {
 
     function test_configureReverts_ifUnauthorized() public {
         vm.mockCall(
-            address(permissions),
-            abi.encodeWithSelector(IJBPermissions.hasPermission.selector),
-            abi.encode(false)
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(false)
         );
 
         CTAllowedPost[] memory posts = new CTAllowedPost[](1);
@@ -397,9 +391,7 @@ contract TestCTPublisher is Test {
     /// @dev Set up mocks for a successful mintFrom path (up to adjustTiers call).
     function _setupMintMocks() internal {
         vm.mockCall(
-            hookStoreAddr,
-            abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector),
-            abi.encode(uint256(0))
+            hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(uint256(0))
         );
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
         // METADATA_ID_TARGET() selector.
@@ -511,9 +503,7 @@ contract TestCTPublisher is Test {
         });
 
         vm.prank(poster);
-        vm.expectRevert(
-            abi.encodeWithSelector(CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 1, 0)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 1, 0));
         publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
     }
 
@@ -587,9 +577,8 @@ contract TestCTPublisher is Test {
             publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
         } else {
             vm.prank(poster);
-            try publisher.mintFrom{value: 0.02 ether}(
-                IJB721TiersHook(hookAddr), posts, poster, poster, "", ""
-            ) {} catch (bytes memory reason) {
+            try publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+            catch (bytes memory reason) {
                 assertTrue(
                     keccak256(reason)
                         != keccak256(
