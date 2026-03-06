@@ -393,6 +393,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                 minimumPrice: post.minimumPrice,
                 minimumTotalSupply: post.minimumTotalSupply,
                 maximumTotalSupply: post.maximumTotalSupply,
+                maximumSplitPercent: post.maximumSplitPercent,
                 allowedAddresses: post.allowedAddresses
             });
         }
