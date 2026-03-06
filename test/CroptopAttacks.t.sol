@@ -3,18 +3,18 @@ pragma solidity 0.8.23;
 
 import "forge-std/Test.sol";
 
-import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
-import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
-import {IJBTerminal} from "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
-import {IJBSplitHook} from "@bananapus/core-v5/src/interfaces/IJBSplitHook.sol";
-import {IJBOwnable} from "@bananapus/ownable-v5/src/interfaces/IJBOwnable.sol";
-import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
-import {IJB721TiersHookStore} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHookStore.sol";
-import {IJB721Hook} from "@bananapus/721-hook-v5/src/interfaces/IJB721Hook.sol";
-import {JB721TierConfig} from "@bananapus/721-hook-v5/src/structs/JB721TierConfig.sol";
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
-import {JBSplit} from "@bananapus/core-v5/src/structs/JBSplit.sol";
-import {JBPermissionIds} from "@bananapus/permission-ids-v5/src/JBPermissionIds.sol";
+import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
+import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
+import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
+import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
 import {CTPublisher} from "../src/CTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";
@@ -45,7 +45,7 @@ contract CroptopAttacks is Test {
         // Mock hook.owner().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
         // Mock hook.PROJECT_ID().
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(hookProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.PROJECT_ID.selector), abi.encode(hookProjectId));
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
 

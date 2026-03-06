@@ -16,17 +16,17 @@
         "artifacts": "source ./.env && npx sphinx artifacts --org-id 'ea165b21-7cdc-4d7b-be59-ecdd4c26bee4' --project-name 'croptop-core-v5'"
     },
     "dependencies": {
-        "@bananapus/core-v6": "^0.0.1",
-        "@bananapus/721-hook-v6": "^0.0.1",
-        "@bananapus/permission-ids-v6": "^0.0.1",
-        "@bananapus/ownable-v6": "^0.0.1",
-        "@bananapus/suckers-v6": "^0.0.1",
-        "@bananapus/buyback-hook-v6": "^0.0.1",
-        "@bananapus/swap-terminal-v6": "^0.0.1",
+        "@bananapus/721-hook-v6": "^0.0.3",
+        "@bananapus/buyback-hook-v6": "^0.0.2",
+        "@bananapus/core-v6": "^0.0.4",
+        "@bananapus/ownable-v6": "^0.0.2",
+        "@bananapus/permission-ids-v6": "^0.0.2",
+        "@bananapus/suckers-v6": "^0.0.2",
+        "@bananapus/swap-terminal-v6": "^0.0.2",
         "@openzeppelin/contracts": "^5.2.0"
     },
     "devDependencies": {
-        "@rev-net/core-v6": "^0.0.1",
+        "@rev-net/core-v6": "^0.0.2",
         "@sphinx-labs/plugins": "^0.33.1"
     }
 }

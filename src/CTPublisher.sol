@@ -333,7 +333,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Add the new tiers.
             // slither-disable-next-line reentrancy-events
-            hook.adjustTiers({tierDataToAdd: tiersToAdd, tierIdsToRemove: new uint256[](0)});
+            hook.adjustTiers({tiersToAdd: tiersToAdd, tierIdsToRemove: new uint256[](0)});
 
             // Keep a reference to the metadata ID target.
             address metadataIdTarget = hook.METADATA_ID_TARGET();
