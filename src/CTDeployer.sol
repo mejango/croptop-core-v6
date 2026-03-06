@@ -1,36 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {JBPermissioned} from "@bananapus/core-v5/src/abstract/JBPermissioned.sol";
-import {IJBRulesetDataHook} from "@bananapus/core-v5/src/interfaces/IJBRulesetDataHook.sol";
-import {IJBSuckerRegistry} from "@bananapus/suckers-v5/src/interfaces/IJBSuckerRegistry.sol";
-import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
-import {JBBeforePayRecordedContext} from "@bananapus/core-v5/src/structs/JBBeforePayRecordedContext.sol";
-import {JBCashOutHookSpecification} from "@bananapus/core-v5/src/structs/JBCashOutHookSpecification.sol";
-import {JBPayHookSpecification} from "@bananapus/core-v5/src/structs/JBPayHookSpecification.sol";
-import {JBBeforeCashOutRecordedContext} from "@bananapus/core-v5/src/structs/JBBeforeCashOutRecordedContext.sol";
-import {JBPermissionsData} from "@bananapus/core-v5/src/structs/JBPermissionsData.sol";
-import {JBRuleset} from "@bananapus/core-v5/src/structs/JBRuleset.sol";
-import {JBRulesetConfig} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
-import {JBOwnable} from "@bananapus/ownable-v5/src/JBOwnable.sol";
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
+import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
+import {IJBRulesetDataHook} from "@bananapus/core-v6/src/interfaces/IJBRulesetDataHook.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
+import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {JBBeforePayRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforePayRecordedContext.sol";
+import {JBCashOutHookSpecification} from "@bananapus/core-v6/src/structs/JBCashOutHookSpecification.sol";
+import {JBPayHookSpecification} from "@bananapus/core-v6/src/structs/JBPayHookSpecification.sol";
+import {JBBeforeCashOutRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforeCashOutRecordedContext.sol";
+import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
+import {JBRuleset} from "@bananapus/core-v6/src/structs/JBRuleset.sol";
+import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.sol";
+import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
-import {IJB721TiersHook} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHook.sol";
-import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v5/src/interfaces/IJB721TiersHookDeployer.sol";
-import {IJB721TokenUriResolver} from "@bananapus/721-hook-v5/src/interfaces/IJB721TokenUriResolver.sol";
-import {JB721InitTiersConfig} from "@bananapus/721-hook-v5/src/structs/JB721InitTiersConfig.sol";
-import {JB721TierConfig} from "@bananapus/721-hook-v5/src/structs/JB721TierConfig.sol";
-import {JB721TiersHookFlags} from "@bananapus/721-hook-v5/src/structs/JB721TiersHookFlags.sol";
-import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v5/src/structs/JBDeploy721TiersHookConfig.sol";
-import {JBLaunchProjectConfig} from "@bananapus/721-hook-v5/src/structs/JBLaunchProjectConfig.sol";
-import {IJBController} from "@bananapus/core-v5/src/interfaces/IJBController.sol";
-import {IJBProjects} from "@bananapus/core-v5/src/interfaces/IJBProjects.sol";
-import {JBCurrencyIds} from "@bananapus/core-v5/src/libraries/JBCurrencyIds.sol";
-import {JBTerminalConfig} from "@bananapus/core-v5/src/structs/JBTerminalConfig.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
+import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookDeployer.sol";
+import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
+import {JB721InitTiersConfig} from "@bananapus/721-hook-v6/src/structs/JB721InitTiersConfig.sol";
+import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+import {JB721TiersHookFlags} from "@bananapus/721-hook-v6/src/structs/JB721TiersHookFlags.sol";
+import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v6/src/structs/JBDeploy721TiersHookConfig.sol";
+import {JBLaunchProjectConfig} from "@bananapus/721-hook-v6/src/structs/JBLaunchProjectConfig.sol";
+import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
+import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
-import {JBPermissionIds} from "@bananapus/permission-ids-v5/src/JBPermissionIds.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
 import {ICTDeployer} from "./interfaces/ICTDeployer.sol";
 import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
@@ -137,7 +137,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         override
         returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
     {
-        // Otherwise, forward the call to the datahook.
+        // Forward the call to the data hook.
         // slither-disable-next-line unused-return
         return dataHookOf[context.projectId].beforePayRecordedWith(context);
     }
@@ -162,7 +162,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         )
     {
         // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
-        if (SUCKER_REGISTRY.isSuckerOf(context.projectId, context.holder)) {
+        if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, addr: context.holder})) {
             return (0, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
@@ -176,17 +176,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @param projectId The ID of the project whose token can be minted.
     /// @param addr The address to check the token minting permission of.
     /// @return flag A flag indicating whether the address has permission to mint the project's tokens on-demand.
-    function hasMintPermissionFor(
-        uint256 projectId,
-        JBRuleset memory,
-        address addr
-    )
-        external
-        view
-        returns (bool flag)
-    {
+    function hasMintPermissionFor(uint256 projectId, JBRuleset memory, address addr) external view returns (bool flag) {
         // If the address is a sucker for this project.
-        return SUCKER_REGISTRY.isSuckerOf(projectId, addr);
+        return SUCKER_REGISTRY.isSuckerOf({projectId: projectId, addr: addr});
     }
 
     /// @dev Make sure only mints can be received.
@@ -281,7 +273,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         });
 
         rulesetConfigurations[0].metadata.cashOutTaxRate = JBConstants.MAX_CASH_OUT_TAX_RATE;
-        rulesetConfigurations[0].metadata.dataHook = address(hook);
+        rulesetConfigurations[0].metadata.dataHook = address(this);
         rulesetConfigurations[0].metadata.useDataHookForPay = true;
 
         // Launch the project, and sanity check the project ID.
@@ -327,9 +319,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(owner),
-                projectId: uint64(projectId),
-                permissionIds: permissionIds
+                operator: address(owner), projectId: uint64(projectId), permissionIds: permissionIds
             })
         });
     }
@@ -362,9 +352,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     {
         // Enforce permissions.
         _requirePermissionFrom({
-            account: PROJECTS.ownerOf(projectId),
-            projectId: projectId,
-            permissionId: JBPermissionIds.DEPLOY_SUCKERS
+            account: PROJECTS.ownerOf(projectId), projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS
         });
 
         // Deploy the suckers.
@@ -405,6 +393,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                 minimumPrice: post.minimumPrice,
                 minimumTotalSupply: post.minimumTotalSupply,
                 maximumTotalSupply: post.maximumTotalSupply,
+                maximumSplitPercent: post.maximumSplitPercent,
                 allowedAddresses: post.allowedAddresses
             });
         }

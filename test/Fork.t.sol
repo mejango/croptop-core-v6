@@ -29,7 +29,7 @@ contract ForkTest is Test {
 
     function setUp() public {
         // Fork ETH mainnet.
-        vm.createSelectFork("https://ethereum-rpc.publicnode.com", 22_432_742);
+        vm.createSelectFork(vm.rpcUrl("ethereum"), 22_432_742);
 
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.

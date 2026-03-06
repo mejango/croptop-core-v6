@@ -25,9 +25,9 @@ contract DeployScript is Script, Sphinx {
     uint256 FEE_PROJECT_ID = 0;
 
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 PUBLISHER_SALT = "_PUBLISHER_SALT_";
-    bytes32 DEPLOYER_SALT = "_DEPLOYER_SALT_";
-    bytes32 PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALT_";
+    bytes32 PUBLISHER_SALT = "_PUBLISHER_SALTV6_";
+    bytes32 DEPLOYER_SALT = "_DEPLOYER_SALTV6_";
+    bytes32 PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALTV6_";
     address TRUSTED_FORWARDER;
 
     function configureSphinx() public override {
@@ -75,7 +75,9 @@ contract DeployScript is Script, Sphinx {
 
             // Deploy it if it has not been deployed yet.
             publisher = !_publisherIsDeployed
-                ? new CTPublisher{salt: PUBLISHER_SALT}(core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER)
+                ? new CTPublisher{salt: PUBLISHER_SALT}(
+                    core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER
+                )
                 : CTPublisher(_publisher);
         }
 
