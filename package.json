@@ -22,7 +22,7 @@
         "@bananapus/ownable-v6": "^0.0.2",
         "@bananapus/permission-ids-v6": "^0.0.2",
         "@bananapus/suckers-v6": "^0.0.2",
-        "@bananapus/swap-terminal-v6": "^0.0.2",
+        "@bananapus/router-terminal-v6": "github:Bananapus/nana-router-terminal-v6#chore/add-deploy-script",
         "@openzeppelin/contracts": "^5.2.0"
     },
     "devDependencies": {
