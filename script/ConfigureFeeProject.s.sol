@@ -4,7 +4,7 @@ pragma solidity 0.8.23;
 import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
 import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
 import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
-import "@bananapus/swap-terminal-v6/script/helpers/SwapTerminalDeploymentLib.sol";
+import "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
 import "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
 import "./helpers/CroptopDeploymentLib.sol";
 
@@ -53,8 +53,8 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     RevnetCoreDeployment revnet;
     /// @notice tracks the deployment of the sucker contracts for the chain we are deploying to.
     SuckerDeployment suckers;
-    /// @notice tracks the deployment of the swap terminal.
-    SwapTerminalDeployment swapTerminal;
+    /// @notice tracks the deployment of the router terminal.
+    RouterTerminalDeployment routerTerminal;
 
     // @notice set this to a non-zero value to re-use an existing projectID. Having it set to 0 will deploy a new
     // fee_project.
@@ -105,10 +105,11 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         suckers = SuckerDeploymentLib.getDeployment(
             vm.envOr("NANA_SUCKERS_DEPLOYMENT_PATH", string("node_modules/@bananapus/suckers-v6/deployments/"))
         );
-        // Get the deployment addresses for the swap terminal contracts for this chain.
-        swapTerminal = SwapTerminalDeploymentLib.getDeployment(
+        // Get the deployment addresses for the router terminal contracts for this chain.
+        routerTerminal = RouterTerminalDeploymentLib.getDeployment(
             vm.envOr(
-                "NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal-v6/deployments/")
+                "NANA_ROUTER_TERMINAL_DEPLOYMENT_PATH",
+                string("node_modules/@bananapus/router-terminal-v6/deployments/")
             )
         );
 
@@ -140,7 +141,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         terminalConfigurations[0] =
             JBTerminalConfig({terminal: core.terminal, accountingContextsToAccept: accountingContextsToAccept});
         terminalConfigurations[1] = JBTerminalConfig({
-            terminal: IJBTerminal(address(swapTerminal.registry)),
+            terminal: IJBTerminal(address(routerTerminal.registry)),
             accountingContextsToAccept: new JBAccountingContext[](0)
         });
 
