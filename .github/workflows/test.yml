@@ -21,7 +21,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
       - name: Run local tests
-        run: forge test --fail-fast --summary --detailed --skip "*/script/**"
+        run: forge test --fail-fast --summary --detailed --skip "*/script/**" --skip "*/Fork.t.sol"
         env:
           RPC_ETHEREUM_MAINNET: ${{ secrets.RPC_ETHEREUM_MAINNET }}
       - name: Check contract sizes

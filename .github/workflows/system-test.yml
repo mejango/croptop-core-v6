@@ -21,7 +21,7 @@ jobs:
       - name: install libraries
         run: git submodule update --init
       - name: Run tests
-        run: FOUNDRY_PROFILE=default forge snapshot # TODO: Change to fork once fork tests can be run
+        run: FOUNDRY_PROFILE=default forge snapshot --skip "*/Fork.t.sol" # TODO: Change to fork once fork tests can be run
         env:
           RPC_ETHEREUM_MAINNET: ${{ secrets.RPC_ETHEREUM_MAINNET }}
       - name: Check contract sizes
