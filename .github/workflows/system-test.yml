@@ -10,19 +10,19 @@ jobs:
   forge-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: bahmutov/npm-install@v1
-      - name: Install Foundry
-        uses: onbjerg/foundry-toolchain@v1
+      - uses: actions/setup-node@v4
         with:
-          version: nightly
-      - name: install libraries
-        run: git submodule update --init
+          node-version: 22.4.x
+      - name: Install npm dependencies
+        run: npm install --omit=dev
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
       - name: Run tests
-        run: FOUNDRY_PROFILE=default forge snapshot --skip "*/Fork.t.sol" # TODO: Change to fork once fork tests can be run
+        run: forge snapshot --skip "*/Fork.t.sol" --skip "*/script/**"
         env:
           RPC_ETHEREUM_MAINNET: ${{ secrets.RPC_ETHEREUM_MAINNET }}
       - name: Check contract sizes
-        run: FOUNDRY_PROFILE=ci_sizes forge build --sizes
+        run: forge build --sizes --skip "*/test/**" --skip "*/script/**"
