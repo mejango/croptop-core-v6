@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
 import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
