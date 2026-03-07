@@ -22,5 +22,7 @@ jobs:
         run: git submodule update --init
       - name: Run tests
         run: FOUNDRY_PROFILE=default forge snapshot # TODO: Change to fork once fork tests can be run
+        env:
+          RPC_ETHEREUM_MAINNET: ${{ secrets.RPC_ETHEREUM_MAINNET }}
       - name: Check contract sizes
         run: FOUNDRY_PROFILE=ci_sizes forge build --sizes
