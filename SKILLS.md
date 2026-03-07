@@ -1,4 +1,4 @@
-# croptop-core
+# Croptop Core
 
 ## Purpose
 
