@@ -1,4 +1,4 @@
-# croptop-core
+# Croptop Core
 
 Permissioned NFT publishing for Juicebox projects -- anyone can post content as NFT tiers to a project's 721 hook, provided the posts meet criteria set by the project owner. A 5% fee is routed to a designated fee project on each mint.
 
