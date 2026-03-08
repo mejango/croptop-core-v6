@@ -43,9 +43,7 @@ contract L54_UpdatableDataHook is Test {
 
         // Mock project ownership (ownerOf is from IERC721).
         vm.mockCall(
-            address(projects),
-            abi.encodeWithSelector(IERC721.ownerOf.selector, projectId),
-            abi.encode(projectOwner)
+            address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, projectId), abi.encode(projectOwner)
         );
     }
 
@@ -59,9 +57,7 @@ contract L54_UpdatableDataHook is Test {
         deployer.setDataHookOf(projectId, originalHook);
 
         assertEq(
-            address(deployer.dataHookOf(projectId)),
-            address(originalHook),
-            "data hook should be set to originalHook"
+            address(deployer.dataHookOf(projectId)), address(originalHook), "data hook should be set to originalHook"
         );
 
         // Owner updates the data hook.
