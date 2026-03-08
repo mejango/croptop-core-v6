@@ -7,9 +7,9 @@ import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.s
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
 import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
+import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
-import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
@@ -41,7 +41,7 @@ contract TestCTPublisher is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
 
         // Mock hook.PROJECT_ID() for permission checks.
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.PROJECT_ID.selector), abi.encode(hookProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(hookProjectId));
 
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));

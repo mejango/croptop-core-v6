@@ -210,7 +210,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         JBTokenMapping[] memory tokenMappings = new JBTokenMapping[](1);
         tokenMappings[0] = JBTokenMapping({
             localToken: JBConstants.NATIVE_TOKEN,
-            remoteToken: JBConstants.NATIVE_TOKEN,
+            remoteToken: bytes32(uint256(uint160(JBConstants.NATIVE_TOKEN))),
             minGas: 200_000,
             minBridgeAmount: 0.01 ether
         });
@@ -256,6 +256,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             minimumPrice: uint104(10 ** (DECIMALS - 5)),
             minimumTotalSupply: 10_000,
             maximumTotalSupply: 999_999_999,
+            maximumSplitPercent: 0,
             allowedAddresses: new address[](0)
         });
         allowedPosts[1] = REVCroptopAllowedPost({
@@ -263,6 +264,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             minimumPrice: uint104(10 ** (DECIMALS - 3)),
             minimumTotalSupply: 10_000,
             maximumTotalSupply: 999_999_999,
+            maximumSplitPercent: 0,
             allowedAddresses: new address[](0)
         });
         allowedPosts[2] = REVCroptopAllowedPost({
@@ -270,6 +272,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             minimumPrice: uint104(10 ** (DECIMALS - 1)),
             minimumTotalSupply: 100,
             maximumTotalSupply: 999_999_999,
+            maximumSplitPercent: 0,
             allowedAddresses: new address[](0)
         });
         allowedPosts[3] = REVCroptopAllowedPost({
@@ -277,6 +280,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             minimumPrice: uint104(10 ** DECIMALS),
             minimumTotalSupply: 10,
             maximumTotalSupply: 999_999_999,
+            maximumSplitPercent: 0,
             allowedAddresses: new address[](0)
         });
         allowedPosts[4] = REVCroptopAllowedPost({
@@ -284,6 +288,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             minimumPrice: uint104(10 ** (DECIMALS + 2)),
             minimumTotalSupply: 10,
             maximumTotalSupply: 999_999_999,
+            maximumSplitPercent: 0,
             allowedAddresses: new address[](0)
         });
 
