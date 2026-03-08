@@ -69,9 +69,7 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(PUBLISHER),
-                projectId: uint56(tokenId),
-                permissionIds: permissionIds
+                operator: address(PUBLISHER), projectId: uint56(tokenId), permissionIds: permissionIds
             })
         });
 

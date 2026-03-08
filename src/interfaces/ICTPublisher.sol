@@ -42,13 +42,7 @@ interface ICTPublisher {
             address[] memory allowedAddresses
         );
 
-    function tiersFor(
-        address hook,
-        bytes32[] memory encodedIPFSUris
-    )
-        external
-        view
-        returns (JB721Tier[] memory tiers);
+    function tiersFor(address hook, bytes32[] memory encodedIPFSUris) external view returns (JB721Tier[] memory tiers);
 
     function configurePostingCriteriaFor(CTAllowedPost[] memory allowedPosts) external;
 
