@@ -79,14 +79,10 @@ contract H19_FeeEvasion is Test {
 
     function _setupMintMocks(uint256 maxTierId) internal {
         vm.mockCall(
-            hookStoreAddr,
-            abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector),
-            abi.encode(maxTierId)
+            hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(maxTierId)
         );
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
-        vm.mockCall(
-            hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0))
-        );
+        vm.mockCall(hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
     }
 
     /// @notice Test that fee is still charged when post.price = 0 for an existing tier.
