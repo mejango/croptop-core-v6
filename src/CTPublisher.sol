@@ -455,12 +455,19 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 uint256 tierId = tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
 
                 if (tierId != 0) {
-                    tierIdsToMint[i] = tierId;
-
-                    // For existing tiers, use the actual tier price (not the user-supplied post.price)
-                    // to prevent fee evasion by passing price=0 for an existing tier.
+                    // If the tier was removed externally (via adjustTiers), clear the stale mapping
+                    // so the code falls through to create a new tier.
                     // slither-disable-next-line calls-loop
-                    totalPrice += store.tierOf(address(hook), tierId, false).price;
+                    if (hook.STORE().isTierRemoved(address(hook), tierId)) {
+                        delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
+                    } else {
+                        tierIdsToMint[i] = tierId;
+
+                        // For existing tiers, use the actual tier price (not the user-supplied post.price)
+                        // to prevent fee evasion by passing price=0 for an existing tier.
+                        // slither-disable-next-line calls-loop
+                        totalPrice += store.tierOf(address(hook), tierId, false).price;
+                    }
                 }
             }
 
