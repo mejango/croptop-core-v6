@@ -384,17 +384,21 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             });
         }
 
-        // Pay a fee if there are funds left.
-        if (address(this).balance != 0) {
+        // Calculate the fee amount explicitly from msg.value rather than using address(this).balance,
+        // which could include force-sent ETH unrelated to this transaction.
+        uint256 feeAmount = msg.value - payValue;
+
+        // Pay a fee if there are funds to send.
+        if (feeAmount != 0) {
             // Get a reference to the fee project's current ETH payment terminal.
             IJBTerminal feeTerminal =
                 DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
 
             // Make the fee payment.
             // slither-disable-next-line unused-return
-            feeTerminal.pay{value: address(this).balance}({
+            feeTerminal.pay{value: feeAmount}({
                 projectId: FEE_PROJECT_ID,
-                amount: address(this).balance,
+                amount: feeAmount,
                 token: JBConstants.NATIVE_TOKEN,
                 beneficiary: feeBeneficiary,
                 minReturnedTokens: 0,
