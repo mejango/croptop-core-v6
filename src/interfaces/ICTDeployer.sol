@@ -5,12 +5,15 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
+import {IJBRulesetDataHook} from "@bananapus/core-v6/src/interfaces/IJBRulesetDataHook.sol";
 
 import {ICTPublisher} from "./ICTPublisher.sol";
 import {CTSuckerDeploymentConfig} from "../structs/CTSuckerDeploymentConfig.sol";
 import {CTProjectConfig} from "../structs/CTProjectConfig.sol";
 
 interface ICTDeployer {
+    event SetDataHook(uint256 indexed projectId, IJBRulesetDataHook newHook, address caller);
+
     /// @notice The contract that mints ERC-721s representing Juicebox project ownership.
     /// @return The projects contract.
     function PROJECTS() external view returns (IJBProjects);
@@ -53,4 +56,9 @@ interface ICTDeployer {
     )
         external
         returns (address[] memory suckers);
+
+    /// @notice Update the data hook for a project. Only the project owner can call this.
+    /// @param projectId The ID of the project to update the data hook for.
+    /// @param newHook The new data hook to set.
+    function setDataHookOf(uint256 projectId, IJBRulesetDataHook newHook) external;
 }

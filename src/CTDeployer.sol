@@ -46,6 +46,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     //*********************************************************************//
 
     error CTDeployer_NotOwnerOfProject(uint256 projectId, address hook, address caller);
+    error CTDeployer_Unauthorized(uint256 projectId, address caller);
 
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
@@ -362,6 +363,21 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             salt: keccak256(abi.encode(suckerDeploymentConfiguration.salt, _msgSender())),
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
+    }
+
+    /// @notice Update the data hook for a project.
+    /// @dev Only the project owner can call this.
+    /// @param projectId The ID of the project to update the data hook for.
+    /// @param newHook The new data hook to set.
+    function setDataHookOf(uint256 projectId, IJBRulesetDataHook newHook) external override {
+        // Make sure the caller is the owner of the project.
+        if (PROJECTS.ownerOf(projectId) != _msgSender()) {
+            revert CTDeployer_Unauthorized(projectId, _msgSender());
+        }
+
+        dataHookOf[projectId] = newHook;
+
+        emit SetDataHook(projectId, newHook, _msgSender());
     }
 
     //*********************************************************************//
