@@ -76,14 +76,10 @@ contract L52_StaleTierIdMapping is Test {
 
     function _setupMintMocks(uint256 maxTierId) internal {
         vm.mockCall(
-            hookStoreAddr,
-            abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector),
-            abi.encode(maxTierId)
+            hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(maxTierId)
         );
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
-        vm.mockCall(
-            hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0))
-        );
+        vm.mockCall(hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
         vm.mockCall(
             address(directory),
             abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector),
@@ -121,7 +117,9 @@ contract L52_StaleTierIdMapping is Test {
         publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
 
         // Verify tier ID 1 was stored in the mapping.
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored after first mint");
+        assertEq(
+            publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored after first mint"
+        );
 
         // Now simulate external tier removal: isTierRemoved returns true for tier 1.
         vm.mockCall(
@@ -140,7 +138,9 @@ contract L52_StaleTierIdMapping is Test {
 
         // Verify the mapping now points to the new tier ID (2).
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI), 2, "tier ID should be updated to new tier after re-post"
+            publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI),
+            2,
+            "tier ID should be updated to new tier after re-post"
         );
     }
 
