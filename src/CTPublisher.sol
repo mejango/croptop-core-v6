@@ -428,9 +428,12 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         // Set the size of the tier IDs of the posts that should be minted once published.
         tierIdsToMint = new uint256[](posts.length);
 
+        // Keep a reference to the hook's store for tier lookups.
+        IJB721TiersHookStore store = hook.STORE();
+
         // The tier ID that will be created, and the first one that should be minted from, is one more than the current
         // max.
-        uint256 startingTierId = hook.STORE().maxTierIdOf(address(hook)) + 1;
+        uint256 startingTierId = store.maxTierIdOf(address(hook)) + 1;
 
         // Keep a reference to the total number of tiers being added.
         uint256 numberOfTiersBeingAdded;
@@ -459,6 +462,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
                     } else {
                         tierIdsToMint[i] = tierId;
+
+                        // For existing tiers, use the actual tier price (not the user-supplied post.price)
+                        // to prevent fee evasion by passing price=0 for an existing tier.
+                        // slither-disable-next-line calls-loop
+                        totalPrice += store.tierOf(address(hook), tierId, false).price;
                     }
                 }
             }
@@ -534,10 +542,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
                 // Save the encodedIPFSUri as minted.
                 tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri] = tierIdsToMint[i];
-            }
 
-            // Increment the total price.
-            totalPrice += post.price;
+                // For new tiers, use the post's price for totalPrice accumulation.
+                totalPrice += post.price;
+            }
         }
 
         // Resize the array if there's a mismatch in length.
