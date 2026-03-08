@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
+import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -450,7 +451,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 // Check if there's an ID of a tier already minted for this encodedIPFSUri.
                 uint256 tierId = tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
 
-                if (tierId != 0) tierIdsToMint[i] = tierId;
+                if (tierId != 0) {
+                    // If the tier was removed externally (via adjustTiers), clear the stale mapping
+                    // so the code falls through to create a new tier.
+                    // slither-disable-next-line calls-loop
+                    if (hook.STORE().isTierRemoved(address(hook), tierId)) {
+                        delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
+                    } else {
+                        tierIdsToMint[i] = tierId;
+                    }
+                }
             }
 
             // If no tier already exists, post the tier.
