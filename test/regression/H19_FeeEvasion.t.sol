@@ -52,6 +52,11 @@ contract H19_FeeEvasion is Test {
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
 
+        // Mock isTierRemoved to return false by default (tier exists).
+        vm.mockCall(
+            hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.isTierRemoved.selector), abi.encode(false)
+        );
+
         // Mock permissions to return true by default.
         vm.mockCall(
             address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(true)

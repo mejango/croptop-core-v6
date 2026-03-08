@@ -116,18 +116,19 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 2. **Fee is 1/20, not a percentage.** `FEE_DIVISOR = 20` means fee = `totalPrice / 20` = 5%. Integer division truncates (rounding down favors payer).
 3. **Fee skipped for fee project.** When `projectId == FEE_PROJECT_ID`, no fee is deducted. This prevents self-referential fee loops.
 4. **Fee payment uses contract balance.** After the main payment, `mintFrom` sends `address(this).balance` as the fee. If the main payment uses exact funds (no remainder), the fee transfer is skipped entirely.
-5. **Tier reuse by IPFS URI.** If an encoded IPFS URI was already minted on the hook, the existing tier ID is reused instead of creating a new tier. The poster still gets a mint of the existing tier.
-6. **Array resizing via assembly.** `_setupPosts` resizes `tiersToAdd` via inline assembly when some posts reuse existing tiers. The `tierIdsToMint` array is NOT resized and may contain zeros for pre-existing tiers.
-7. **CTProjectOwner only accepts mints.** `onERC721Received` reverts if `from != address(0)` -- it only accepts tokens minted by `PROJECTS`, not transferred directly. But external project NFT transfers (where `from` is the previous owner) DO work since the hook is on `CTProjectOwner`, not `CTDeployer`.
-8. **CTDeployer rejects direct transfers.** `CTDeployer.onERC721Received` reverts if `from != address(0)`. It only accepts mints from `PROJECTS`.
-9. **Temporary ownership during deployment.** `CTDeployer` owns the project NFT temporarily during `deployProjectFor` (to configure permissions and hooks), then transfers it to the specified `owner`. If the transfer reverts, the entire deployment fails.
-10. **Data hook proxy pattern.** `CTDeployer` wraps itself as the data hook, forwarding to `dataHookOf[projectId]`. This is needed to intercept cash-out calls and grant fee-free cash outs to suckers.
-11. **Sucker registry trust.** `CTDeployer.beforeCashOutRecordedWith` trusts `SUCKER_REGISTRY.isSuckerOf` to determine fee exemption. If the registry is compromised, any address could cash out without tax.
-12. **Allowlist uses linear scan.** `_isAllowed()` iterates the full allowlist array. Acceptable for <100 addresses; gas cost scales linearly with list size.
-13. **Referral ID in metadata.** `FEE_PROJECT_ID` is stored in the first 32 bytes of mint metadata (via assembly `mstore`), allowing the fee terminal to track referrals.
-14. **Deterministic deployment.** Hook salt is `keccak256(abi.encode(projectConfig.salt, msg.sender))` and sucker salt is `keccak256(abi.encode(suckerConfig.salt, msg.sender))`. Different callers with the same salt get different addresses.
-15. **Default project weight.** `CTDeployer` deploys projects with `weight = 1_000_000 * 10^18`, ETH currency, and `maxCashOutTaxRate`. These defaults are hardcoded.
-16. **ERC2771 meta-transaction support.** Both `CTPublisher` and `CTDeployer` support meta-transactions via `ERC2771Context` with a configurable trusted forwarder, allowing relayers to submit transactions on behalf of users.
+5. **Tier reuse by IPFS URI.** If an encoded IPFS URI was already minted on the hook, the existing tier ID is reused instead of creating a new tier. The poster still gets a mint of the existing tier. The fee is calculated from the actual tier price stored on-chain (not from `post.price`), preventing fee evasion (H-19 fix).
+6. **Stale tier mapping cleanup.** If a tier was removed externally via `adjustTiers()`, the `tierIdForEncodedIPFSUriOf` mapping is automatically cleared when the same IPFS URI is posted again, allowing a new tier to be created (L-52 fix).
+7. **Array resizing via assembly.** `_setupPosts` resizes `tiersToAdd` via inline assembly when some posts reuse existing tiers. The `tierIdsToMint` array is NOT resized and may contain zeros for pre-existing tiers.
+8. **CTProjectOwner only accepts mints.** `onERC721Received` reverts if `from != address(0)` -- it only accepts tokens minted by `PROJECTS`, not transferred directly. But external project NFT transfers (where `from` is the previous owner) DO work since the hook is on `CTProjectOwner`, not `CTDeployer`.
+9. **CTDeployer rejects direct transfers.** `CTDeployer.onERC721Received` reverts if `from != address(0)`. It only accepts mints from `PROJECTS`.
+10. **Temporary ownership during deployment.** `CTDeployer` owns the project NFT temporarily during `deployProjectFor` (to configure permissions and hooks), then transfers it to the specified `owner`. If the transfer reverts, the entire deployment fails.
+11. **Data hook proxy pattern.** `CTDeployer` wraps itself as the data hook, forwarding to `dataHookOf[projectId]`. This is needed to intercept cash-out calls and grant fee-free cash outs to suckers. Both `useDataHookForPay` and `useDataHookForCashOut` are enabled (M-37 fix).
+12. **Sucker registry trust.** `CTDeployer.beforeCashOutRecordedWith` trusts `SUCKER_REGISTRY.isSuckerOf` to determine fee exemption. If the registry is compromised, any address could cash out without tax.
+13. **Allowlist uses linear scan.** `_isAllowed()` iterates the full allowlist array. Acceptable for <100 addresses; gas cost scales linearly with list size.
+14. **Referral ID in metadata.** `FEE_PROJECT_ID` is stored in the first 32 bytes of mint metadata (via assembly `mstore`), allowing the fee terminal to track referrals.
+15. **Deterministic deployment.** Hook salt is `keccak256(abi.encode(projectConfig.salt, msg.sender))` and sucker salt is `keccak256(abi.encode(suckerConfig.salt, msg.sender))`. Different callers with the same salt get different addresses.
+16. **Default project weight.** `CTDeployer` deploys projects with `weight = 1_000_000 * 10^18`, ETH currency, and `maxCashOutTaxRate`. These defaults are hardcoded.
+17. **ERC2771 meta-transaction support.** Both `CTPublisher` and `CTDeployer` support meta-transactions via `ERC2771Context` with a configurable trusted forwarder, allowing relayers to submit transactions on behalf of users.
 
 ## Example Integration
 

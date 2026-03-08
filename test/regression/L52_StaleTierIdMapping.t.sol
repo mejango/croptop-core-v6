@@ -158,6 +158,31 @@ contract L52_StaleTierIdMapping is Test {
             abi.encode(false)
         );
 
+        // Mock tierOf for tier 1 so the H-19 price lookup succeeds.
+        JB721Tier memory tier = JB721Tier({
+            id: 1,
+            price: 0.1 ether,
+            remainingSupply: 9,
+            initialSupply: 10,
+            votingUnits: 0,
+            reserveFrequency: 0,
+            reserveBeneficiary: address(0),
+            encodedIPFSUri: TEST_URI,
+            category: 5,
+            discountPercent: 0,
+            allowOwnerMint: false,
+            transfersPausable: false,
+            cannotBeRemoved: false,
+            cannotIncreaseDiscountPercent: false,
+            splitPercent: 0,
+            resolvedUri: ""
+        });
+        vm.mockCall(
+            hookStoreAddr,
+            abi.encodeWithSelector(IJB721TiersHookStore.tierOf.selector, hookAddr, 1, false),
+            abi.encode(tier)
+        );
+
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             encodedIPFSUri: TEST_URI,
