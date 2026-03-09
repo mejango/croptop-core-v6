@@ -75,6 +75,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     address TRUSTED_FORWARDER;
     uint48 CPN_START_TIME = 1_740_089_444;
     uint104 CPN_MAINNET_AUTO_ISSUANCE_ = 250_003_875_000_000_000_000_000;
+    uint104 CPN_OP_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
     uint104 CPN_BASE_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
     uint104 CPN_ARB_AUTO_ISSUANCE_ = 3_844_000_000_000_000_000;
 
@@ -145,10 +146,11 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             accountingContextsToAccept: new JBAccountingContext[](0)
         });
 
-        REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](3);
+        REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](4);
         issuanceConfs[0] = REVAutoIssuance({chainId: 1, count: CPN_MAINNET_AUTO_ISSUANCE_, beneficiary: OPERATOR});
-        issuanceConfs[1] = REVAutoIssuance({chainId: 8453, count: CPN_BASE_AUTO_ISSUANCE_, beneficiary: OPERATOR});
-        issuanceConfs[2] = REVAutoIssuance({chainId: 42_161, count: CPN_ARB_AUTO_ISSUANCE_, beneficiary: OPERATOR});
+        issuanceConfs[1] = REVAutoIssuance({chainId: 10, count: CPN_OP_AUTO_ISSUANCE_, beneficiary: OPERATOR});
+        issuanceConfs[2] = REVAutoIssuance({chainId: 8453, count: CPN_BASE_AUTO_ISSUANCE_, beneficiary: OPERATOR});
+        issuanceConfs[3] = REVAutoIssuance({chainId: 42_161, count: CPN_ARB_AUTO_ISSUANCE_, beneficiary: OPERATOR});
 
         JBSplit[] memory splits = new JBSplit[](1);
         splits[0] = JBSplit({

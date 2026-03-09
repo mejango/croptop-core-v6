@@ -27,6 +27,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error CTPublisher_DuplicatePost(bytes32 encodedIPFSUri);
     error CTPublisher_EmptyEncodedIPFSUri();
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
@@ -447,6 +448,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // Make sure the post includes an encodedIPFSUri.
             if (post.encodedIPFSUri == bytes32("")) {
                 revert CTPublisher_EmptyEncodedIPFSUri();
+            }
+
+            // Check for duplicate encodedIPFSUri within the same batch to prevent fee evasion.
+            for (uint256 j; j < i; j++) {
+                if (posts[j].encodedIPFSUri == post.encodedIPFSUri) {
+                    revert CTPublisher_DuplicatePost(post.encodedIPFSUri);
+                }
             }
 
             // Scoped section to prevent stack too deep.
