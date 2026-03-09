@@ -280,7 +280,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                     noNewTiersWithReserves: false,
                     noNewTiersWithVotes: false,
                     noNewTiersWithOwnerMinting: false,
-                    preventOverspending: false
+                    preventOverspending: false,
+                    issueTokensForSplits: false
                 })
             }),
             salt: keccak256(abi.encode(projectConfig.salt, _msgSender()))
