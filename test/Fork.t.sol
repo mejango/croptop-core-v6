@@ -39,13 +39,15 @@ import {CTPublisher} from "./../src/CTPublisher.sol";
 
 /// @notice Fork tests for Croptop. Deploys all JB infrastructure fresh within a mainnet fork.
 contract ForkTest is Test {
-    // ───────────────────────── Mainnet addresses ──────────────────────────
+    // ───────────────────────── Mainnet addresses
+    // ──────────────────────────
 
     // OP L1 bridge contracts (exist on Ethereum mainnet).
     IOPMessenger constant OP_L1_MESSENGER = IOPMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
     IOPStandardBridge constant OP_L1_BRIDGE = IOPStandardBridge(0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1);
 
-    // ───────────────────────── JB core (deployed fresh) ───────────────────
+    // ───────────────────────── JB core (deployed fresh)
+    // ───────────────────
 
     address multisig = address(0xBEEF);
     address trustedForwarder = address(0);
@@ -60,16 +62,19 @@ contract ForkTest is Test {
     JBFundAccessLimits jbFundAccessLimits;
     JBController jbController;
 
-    // ───────────────────────── 721 hook (deployed fresh) ──────────────────
+    // ───────────────────────── 721 hook (deployed fresh)
+    // ──────────────────
 
     JB721TiersHookDeployer hookDeployer;
 
-    // ───────────────────────── Suckers (deployed fresh) ───────────────────
+    // ───────────────────────── Suckers (deployed fresh)
+    // ───────────────────
 
     JBSuckerRegistry suckerRegistry;
     JBOptimismSuckerDeployer opSuckerDeployer;
 
-    // ───────────────────────── Croptop ────────────────────────────────────
+    // ───────────────────────── Croptop
+    // ────────────────────────────────────
 
     CTPublisher publisher;
     CTDeployer deployer;
@@ -157,7 +162,8 @@ contract ForkTest is Test {
         assertEq(suckerRegistry.suckersOf(projectId).length, deployerConfigurations.length);
     }
 
-    // ───────────────────────── Internal deployment helpers ────────────────
+    // ───────────────────────── Internal deployment helpers
+    // ────────────────
 
     function _deployJBCore() internal {
         jbPermissions = new JBPermissions(trustedForwarder);
@@ -191,8 +197,7 @@ contract ForkTest is Test {
         JB721TiersHookStore store = new JB721TiersHookStore();
         JBAddressRegistry addressRegistry = new JBAddressRegistry();
 
-        JB721TiersHook hookImpl =
-            new JB721TiersHook(jbDirectory, jbPermissions, jbRulesets, store, trustedForwarder);
+        JB721TiersHook hookImpl = new JB721TiersHook(jbDirectory, jbPermissions, jbRulesets, store, trustedForwarder);
 
         hookDeployer = new JB721TiersHookDeployer(hookImpl, store, addressRegistry, trustedForwarder);
     }
