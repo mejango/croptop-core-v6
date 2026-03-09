@@ -2,23 +2,22 @@
 
 ## Purpose
 
-NFT publishing platform built on Juicebox V6. Allows projects to accept permissioned NFT "posts" from community members. Posts become 721 tiers with configurable pricing, supply limits, and revenue splits. CTDeployer creates projects pre-configured for Croptop; CTPublisher handles the posting mechanics.
+NFT publishing platform built on Juicebox V6. Allows permissioned posting of NFT content to Juicebox projects. CTDeployer creates projects pre-configured for content publishing, and CTPublisher manages the posting workflow with configurable rules (price floors, supply limits, category restrictions).
 
 ## Contract Map
 
 ```
 src/
-├── CTDeployer.sol      — Deploys Croptop projects (JB project + 721 hook + data hook)
-├── CTPublisher.sol     — Permissioned NFT posting: validates posts, adds tiers, mints
-├── CTProjectOwner.sol  — Holds project ownership, delegates to deployer
+├── CTDeployer.sol       — Deploys Croptop projects with 721 hooks and publishing rules
+├── CTPublisher.sol      — Manages permissioned NFT posting to projects
+├── CTProjectOwner.sol   — Proxy owner for Croptop-deployed projects
 ├── interfaces/
 │   ├── ICTDeployer.sol
-│   ├── ICTProjectOwner.sol
 │   └── ICTPublisher.sol
 └── structs/
-    ├── CTAllowedPost.sol         — Post permission template
-    ├── CTDeployerAllowedPost.sol  — Deployer-level post config
-    ├── CTPost.sol                — Individual post data
+    ├── CTAllowedPost.sol         — Rules for what can be posted
+    ├── CTDeployerAllowedPost.sol — Deployer-level post rules
+    ├── CTPost.sol                — A post submission
     ├── CTProjectConfig.sol       — Project configuration
     └── CTSuckerDeploymentConfig.sol — Cross-chain config
 ```
@@ -29,31 +28,32 @@ src/
 ```
 Creator → CTDeployer.deployProjectFor()
   → Launch JB project via JB721TiersHookProjectDeployer
-  → Configure CTDeployer as data hook (controls pay/cashout)
-  → Set allowed post categories and permissions
-  → Configure buyback hook and suckers if specified
-  → Transfer project ownership to CTProjectOwner
+  → Configure CTDeployer as data hook
+  → Set allowed post rules (price floors, supply limits, categories)
+  → Transfer project ownership to CTProjectOwner proxy
 ```
 
-### Publishing a Post
+### Content Publishing
 ```
-Poster → CTPublisher.mintFrom(hook, posts[])
+Publisher → CTPublisher.postFor(projectId, posts[])
   → For each post:
-    → Validate poster is in allowlist for category
-    → Validate price >= minimum, supply within bounds
-    → Create 721 tier with IPFS metadata
-    → Configure revenue split (poster gets configured %)
-    → Mint first edition to poster (pays project)
-  → Fee taken (5%) and sent to fee project
+    → Validate against allowed post rules
+      → Check category permissions
+      → Check price >= minimum
+      → Check supply within bounds
+      → Check publisher in allowlist (if restricted)
+    → Add NFT tier to project's 721 hook
+    → Configure split for publisher (fee share)
+  → Pay project to mint NFTs
 ```
 
 ## Extension Points
 
 | Point | Interface | Purpose |
 |-------|-----------|---------|
-| Data hook | `IJBRulesetDataHook` | CTDeployer controls pay/cashout behavior |
-| Post permissions | `CTAllowedPost` | Per-category posting rules |
-| Token URI | `IJB721TokenUriResolver` | Custom NFT metadata |
+| Data hook | `IJBRulesetDataHook` | CTDeployer acts as data hook |
+| 721 hook | `IJB721TiersHook` | NFT tier management |
+| Publisher | `ICTPublisher` | Content posting workflow |
 
 ## Dependencies
 - `@bananapus/core-v6` — Core protocol

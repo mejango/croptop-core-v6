@@ -2,7 +2,7 @@
 
 How we write Solidity and organize repos across the Juicebox V6 ecosystem. `nana-core-v6` is the gold standard — when in doubt, match what it does.
 
-**This repo's deviations:** Package scope `@croptop/` (not `@bananapus/`). RPC endpoints configured for mainnet fork tests.
+**This repo's scope:** `@croptop/` (not `@bananapus/`). Standard foundry config with no deviations.
 
 ## File Organization
 
@@ -346,9 +346,6 @@ runs = 4096
 runs = 1024
 depth = 100
 fail_on_revert = false
-
-[rpc_endpoints]
-ethereum = "${RPC_ETHEREUM_MAINNET}"
 
 [fmt]
 number_underscore = "thousands"

@@ -2,26 +2,25 @@
 
 ## Trust Assumptions
 
-1. **Project Owner (via CTProjectOwner)** — Can configure allowed post categories, set permissions, and manage the underlying JB project. CTProjectOwner delegates management to the deployer.
-2. **Posters** — Must be in the allowlist for their category. Can set price and supply within configured bounds. Revenue split configured per category.
-3. **CTDeployer** — Acts as data hook for all Croptop projects. A bug in CTDeployer affects every Croptop project's pay/cashout behavior.
-4. **721 Hook** — Tier management delegated to JB721TiersHook. Tier integrity depends on hook correctness.
+1. **Project Owner (CTProjectOwner)** — Controls allowed post rules, can change category restrictions and price floors. CTProjectOwner proxy manages ownership on behalf of the deployer.
+2. **Publishers** — Anyone in the allowlist can post content (add NFT tiers) to a project. Posts create real economic obligations (splits, supply).
+3. **CTDeployer** — Acts as data hook for deployed projects. A bug in CTDeployer affects all Croptop projects.
+4. **Core Protocol** — Relies on JB721TiersHook for NFT management and JBMultiTerminal for payments.
 
 ## Known Risks
 
 | Risk | Description | Mitigation |
 |------|-------------|------------|
-| Fee extraction | 5% fee (FEE_DIVISOR = 20) taken on every post | By design; sent to fee project |
-| Post spam | Allowlisted posters can create many tiers | Supply and price minimums; project owner controls allowlist |
-| Split percent abuse | Poster configures their revenue split within bounds | Maximum split percent enforced per allowed post config |
-| Category conflicts | Multiple allowed post configs for same category | Last configuration wins; project owner manages |
-| Tier accumulation | Each post creates a new 721 tier — tiers grow unboundedly | Gas costs increase with tier count; no hard cap |
+| Publisher fee extraction | Publishers receive a split of revenues from their posted tiers | Fee capped by `FEE_DIVISOR = 20` (5%) |
+| Tier spam | Publishers can create many tiers, increasing gas for tier operations | Supply limits and category restrictions |
+| Price floor bypass | If price floor is set too low, cheap tiers dilute project value | Configure appropriate minimum prices |
+| Allowlist management | Open publishing (empty allowlist) means anyone can post | Use allowlists for curated projects |
+| Cross-chain complexity | Sucker deployment adds configuration surface | Use CTSuckerDeploymentConfig carefully |
 
 ## Privileged Roles
 
 | Role | Capabilities | Scope |
 |------|-------------|-------|
-| Project owner | Configure allowed posts, manage project | Per-project |
-| Allowlisted posters | Create posts within configured bounds | Per-category |
+| Project owner | Configure allowed posts, categories, price floors | Per-project |
+| Publishers (allowlist) | Create NFT tiers (posts) | Per-project, per-category |
 | CTDeployer | Data hook for all Croptop projects | All Croptop projects |
-| Fee project | Receives 5% of post payments | Global |
