@@ -313,7 +313,8 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
                         noNewTiersWithReserves: false,
                         noNewTiersWithVotes: true,
                         noNewTiersWithOwnerMinting: true,
-                        preventOverspending: false
+                        preventOverspending: false,
+                        issueTokensForSplits: false
                     })
                 }),
                 salt: HOOK_SALT,
