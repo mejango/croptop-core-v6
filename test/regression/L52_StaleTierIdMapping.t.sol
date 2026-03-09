@@ -19,7 +19,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
 /// @title L52_StaleTierIdMapping
-/// @notice Regression test for L-52: stale tierIdForEncodedIPFSUriOf mapping after external tier removal.
+/// @notice Stale tierIdForEncodedIPFSUriOf mapping after external tier removal.
 ///         When a tier is removed externally via adjustTiers(), the publisher's mapping still pointed
 ///         to the removed tier ID, blocking re-creation. The fix clears the stale mapping and allows
 ///         the post to fall through to new-tier creation.
@@ -159,7 +159,7 @@ contract L52_StaleTierIdMapping is Test {
             abi.encode(false)
         );
 
-        // Mock tierOf for tier 1 so the H-19 price lookup succeeds.
+        // Mock tierOf for tier 1 so the existing-tier price lookup succeeds.
         JB721Tier memory tier = JB721Tier({
             id: 1,
             price: 0.1 ether,

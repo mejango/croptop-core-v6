@@ -19,7 +19,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
 /// @title M6_DuplicateUriFeeEvasion
-/// @notice Regression test for M-6: duplicate encodedIPFSUri in a single mintFrom batch
+/// @notice Duplicate encodedIPFSUri in a single mintFrom batch
 ///         enables fee evasion. Before the fix, a second post with the same URI would read
 ///         a stale tierIdForEncodedIPFSUriOf mapping (written by _setupPosts for the first
 ///         post but not yet committed to the store), causing store.tierOf() to return price=0,
