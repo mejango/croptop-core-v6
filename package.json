@@ -26,7 +26,7 @@
         "@openzeppelin/contracts": "^5.2.0"
     },
     "devDependencies": {
-        "@rev-net/core-v6": "^0.0.6",
+        "@rev-net/core-v6": "^0.0.8",
         "@sphinx-labs/plugins": "^0.33.1"
     }
 }
