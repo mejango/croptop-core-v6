@@ -80,15 +80,8 @@ contract ForkTest is Test {
     CTDeployer deployer;
 
     function setUp() public {
-        // Skip fork tests when the RPC URL is not available (e.g. in CI).
-        string memory rpcUrl = vm.envOr("RPC_ETHEREUM_MAINNET", string(""));
-        if (bytes(rpcUrl).length == 0) {
-            vm.skip(true);
-            return;
-        }
-
         // Fork ETH mainnet.
-        vm.createSelectFork(rpcUrl);
+        vm.createSelectFork("ethereum");
 
         // Deploy all JB core contracts fresh within the fork.
         _deployJBCore();
