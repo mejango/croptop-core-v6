@@ -8,7 +8,7 @@ import "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib
 import "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
 import "./helpers/CroptopDeploymentLib.sol";
 
-import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
+import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
