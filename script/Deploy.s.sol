@@ -5,7 +5,7 @@ import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
 import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
 import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
 
-import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
+import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {CTDeployer} from "./../src/CTDeployer.sol";
