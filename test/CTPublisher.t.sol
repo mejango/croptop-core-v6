@@ -12,7 +12,6 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
-import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
 import {CTPublisher} from "../src/CTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";

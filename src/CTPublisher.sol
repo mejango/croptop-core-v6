@@ -13,7 +13,6 @@ import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.s
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
-import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
