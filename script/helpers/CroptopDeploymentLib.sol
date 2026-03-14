@@ -47,10 +47,21 @@ library CroptopDeploymentLib {
         view
         returns (CroptopDeployment memory deployment)
     {
-        deployment.publisher = CTPublisher(_getDeploymentAddress(path, "croptop-core-v6", network_name, "CTPublisher"));
-        deployment.deployer = CTDeployer(_getDeploymentAddress(path, "croptop-core-v6", network_name, "CTDeployer"));
-        deployment.project_owner =
-            CTProjectOwner(_getDeploymentAddress(path, "croptop-core-v6", network_name, "CTProjectOwner"));
+        deployment.publisher = CTPublisher(
+            _getDeploymentAddress({
+                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTPublisher"
+            })
+        );
+        deployment.deployer = CTDeployer(
+            _getDeploymentAddress({
+                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTDeployer"
+            })
+        );
+        deployment.project_owner = CTProjectOwner(
+            _getDeploymentAddress({
+                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTProjectOwner"
+            })
+        );
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
@@ -70,6 +81,6 @@ library CroptopDeploymentLib {
     {
         string memory deploymentJson =
             vm.readFile(string.concat(path, project_name, "/", network_name, "/", contractName, ".json"));
-        return stdJson.readAddress(deploymentJson, ".address");
+        return stdJson.readAddress({json: deploymentJson, key: ".address"});
     }
 }

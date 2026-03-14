@@ -269,9 +269,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                 tokenUriResolver: IJB721TokenUriResolver(address(0)),
                 contractUri: projectConfig.contractUri,
                 tiersConfig: JB721InitTiersConfig({
-                    tiers: new JB721TierConfig[](0),
-                    currency: JBCurrencyIds.ETH,
-                    decimals: 18
+                    tiers: new JB721TierConfig[](0), currency: JBCurrencyIds.ETH, decimals: 18
                 }),
                 reserveBeneficiary: address(0),
                 flags: JB721TiersHookFlags({
@@ -321,7 +319,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         }
 
         //transfer to _owner.
-        PROJECTS.transferFrom(address(this), owner, projectId);
+        PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
 
         // Set permission for the project's owner to do all the NFT things.
         uint8[] memory permissionIds = new uint8[](4);

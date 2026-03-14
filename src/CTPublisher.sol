@@ -473,7 +473,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         // For existing tiers, use the actual tier price (not the user-supplied post.price)
                         // to prevent fee evasion by passing price=0 for an existing tier.
                         // slither-disable-next-line calls-loop
-                        totalPrice += store.tierOf(address(hook), tierId, false).price;
+                        totalPrice += store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false}).price;
                     }
                 }
             }
@@ -519,7 +519,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     }
 
                     // Make sure the address is allowed to post.
-                    if (addresses.length != 0 && !_isAllowed(_msgSender(), addresses)) {
+                    if (addresses.length != 0 && !_isAllowed({addrs: _msgSender(), addresses: addresses})) {
                         revert CTPublisher_NotInAllowList(_msgSender(), addresses);
                     }
                 }
