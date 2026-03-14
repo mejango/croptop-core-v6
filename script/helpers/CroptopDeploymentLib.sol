@@ -13,12 +13,14 @@ import {CTProjectOwner} from "../../src/CTProjectOwner.sol";
 struct CroptopDeployment {
     CTPublisher publisher;
     CTDeployer deployer;
+    // forge-lint: disable-next-line(mixed-case-variable)
     CTProjectOwner project_owner;
 }
 
 library CroptopDeploymentLib {
     // Cheat code address, 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D.
     address internal constant VM_ADDRESS = address(uint160(uint256(keccak256("hevm cheat code"))));
+    // forge-lint: disable-next-line(screaming-snake-case-const)
     Vm internal constant vm = Vm(VM_ADDRESS);
 
     function getDeployment(string memory path) internal returns (CroptopDeployment memory deployment) {
@@ -41,16 +43,28 @@ library CroptopDeploymentLib {
 
     function getDeployment(
         string memory path,
+        // forge-lint: disable-next-line(mixed-case-variable)
         string memory network_name
     )
         internal
         view
         returns (CroptopDeployment memory deployment)
     {
-        deployment.publisher = CTPublisher(_getDeploymentAddress(path, "croptop-core-v6", network_name, "CTPublisher"));
-        deployment.deployer = CTDeployer(_getDeploymentAddress(path, "croptop-core-v6", network_name, "CTDeployer"));
-        deployment.project_owner =
-            CTProjectOwner(_getDeploymentAddress(path, "croptop-core-v6", network_name, "CTProjectOwner"));
+        deployment.publisher = CTPublisher(
+            _getDeploymentAddress({
+                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTPublisher"
+            })
+        );
+        deployment.deployer = CTDeployer(
+            _getDeploymentAddress({
+                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTDeployer"
+            })
+        );
+        deployment.project_owner = CTProjectOwner(
+            _getDeploymentAddress({
+                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTProjectOwner"
+            })
+        );
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
@@ -60,7 +74,9 @@ library CroptopDeploymentLib {
     /// @return The address of the contract.
     function _getDeploymentAddress(
         string memory path,
+        // forge-lint: disable-next-line(mixed-case-variable)
         string memory project_name,
+        // forge-lint: disable-next-line(mixed-case-variable)
         string memory network_name,
         string memory contractName
     )
@@ -69,7 +85,8 @@ library CroptopDeploymentLib {
         returns (address)
     {
         string memory deploymentJson =
-            vm.readFile(string.concat(path, project_name, "/", network_name, "/", contractName, ".json"));
-        return stdJson.readAddress(deploymentJson, ".address");
+        // forge-lint: disable-next-line(unsafe-cheatcode)
+        vm.readFile(string.concat(path, project_name, "/", network_name, "/", contractName, ".json"));
+        return stdJson.readAddress({json: deploymentJson, key: ".address"});
     }
 }

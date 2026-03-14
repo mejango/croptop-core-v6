@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
-import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
-import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
-import "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
-import "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
-import "./helpers/CroptopDeploymentLib.sol";
+import {Hook721Deployment, Hook721DeploymentLib} from "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
+import {CoreDeployment, CoreDeploymentLib} from "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
+import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
+import {
+    RouterTerminalDeployment,
+    RouterTerminalDeploymentLib
+} from "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
+import {
+    RevnetCoreDeployment,
+    RevnetCoreDeploymentLib
+} from "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
+import {CroptopDeployment, CroptopDeploymentLib} from "./helpers/CroptopDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
-import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v6/src/structs/JBDeploy721TiersHookConfig.sol";
 import {JB721InitTiersConfig} from "@bananapus/721-hook-v6/src/structs/JB721InitTiersConfig.sol";
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
-import {JB721TiersHookFlags} from "@bananapus/721-hook-v6/src/structs/JB721TiersHookFlags.sol";
 import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
@@ -28,6 +32,8 @@ import {JBTokenMapping} from "@bananapus/suckers-v6/src/structs/JBTokenMapping.s
 import {REVAutoIssuance} from "@rev-net/core-v6/src/structs/REVAutoIssuance.sol";
 import {REVConfig} from "@rev-net/core-v6/src/structs/REVConfig.sol";
 import {REVCroptopAllowedPost} from "@rev-net/core-v6/src/structs/REVCroptopAllowedPost.sol";
+import {REVBaseline721HookConfig} from "@rev-net/core-v6/src/structs/REVBaseline721HookConfig.sol";
+import {REV721TiersHookFlags} from "@rev-net/core-v6/src/structs/REV721TiersHookFlags.sol";
 import {REVDeploy721TiersHookConfig} from "@rev-net/core-v6/src/structs/REVDeploy721TiersHookConfig.sol";
 import {REVDescription} from "@rev-net/core-v6/src/structs/REVDescription.sol";
 import {REVStageConfig} from "@rev-net/core-v6/src/structs/REVStageConfig.sol";
@@ -57,25 +63,44 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
 
     // @notice set this to a non-zero value to re-use an existing projectID. Having it set to 0 will deploy a new
     // fee_project.
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint256 FEE_PROJECT_ID;
 
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint32 PREMINT_CHAIN_ID = 1;
+    // forge-lint: disable-next-line(mixed-case-variable)
     string NAME = "Croptop Publishing Network";
+    // forge-lint: disable-next-line(mixed-case-variable)
     string SYMBOL = "CPN";
+    // forge-lint: disable-next-line(mixed-case-variable)
     string PROJECT_URI = "ipfs://QmUAFevoMn1iqSEQR8LogQYRxm39TNxQTPYnuLuq5BmfEi";
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint32 NATIVE_CURRENCY = uint32(uint160(JBConstants.NATIVE_TOKEN));
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint32 ETH_CURRENCY = JBCurrencyIds.ETH;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint8 DECIMALS = 18;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint256 DECIMAL_MULTIPLIER = 10 ** DECIMALS;
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 SUCKER_SALT = "_CPN_SUCKERV6__";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 ERC20_SALT = "_CPN_ERC20_SALTV6__";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 HOOK_SALT = "_CPN_HOOK_SALTV6__";
+    // forge-lint: disable-next-line(mixed-case-variable)
     address OPERATOR;
+    // forge-lint: disable-next-line(mixed-case-variable)
     address TRUSTED_FORWARDER;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint48 CPN_START_TIME = 1_740_089_444;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_MAINNET_AUTO_ISSUANCE_ = 250_003_875_000_000_000_000_000;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_OP_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_BASE_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_ARB_AUTO_ISSUANCE_ = 3_844_000_000_000_000_000;
 
     function configureSphinx() public override {
@@ -168,6 +193,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             autoIssuances: issuanceConfs,
             splitPercent: 3800, // 38%
             splits: splits,
+            // forge-lint: disable-next-line(unsafe-typecast)
             initialIssuance: uint112(10_000 * DECIMAL_MULTIPLIER),
             issuanceCutFrequency: 120 days,
             issuanceCutPercent: 380_000_000, // 38%
@@ -201,7 +227,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
 
         // The project's revnet configuration
         REVConfig memory revnetConfiguration = REVConfig({
-            description: REVDescription(NAME, SYMBOL, PROJECT_URI, ERC20_SALT),
+            description: REVDescription({name: NAME, ticker: SYMBOL, uri: PROJECT_URI, salt: ERC20_SALT}),
             baseCurrency: ETH_CURRENCY,
             splitOperator: OPERATOR,
             stageConfigurations: stageConfigurations
@@ -298,22 +324,21 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             terminalConfigurations: terminalConfigurations,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             hookConfiguration: REVDeploy721TiersHookConfig({
-                baseline721HookConfiguration: JBDeploy721TiersHookConfig({
+                baseline721HookConfiguration: REVBaseline721HookConfig({
                     name: NAME,
                     symbol: SYMBOL,
                     baseUri: "ipfs://",
                     tokenUriResolver: IJB721TokenUriResolver(address(0)),
                     contractUri: "",
                     tiersConfig: JB721InitTiersConfig({
-                        tiers: new JB721TierConfig[](0), currency: ETH_CURRENCY, decimals: DECIMALS, prices: core.prices
+                        tiers: new JB721TierConfig[](0), currency: ETH_CURRENCY, decimals: DECIMALS
                     }),
                     reserveBeneficiary: address(0),
-                    flags: JB721TiersHookFlags({
+                    flags: REV721TiersHookFlags({
                         noNewTiersWithReserves: false,
                         noNewTiersWithVotes: true,
                         noNewTiersWithOwnerMinting: true,
-                        preventOverspending: false,
-                        issueTokensForSplits: false
+                        preventOverspending: false
                     })
                 }),
                 salt: HOOK_SALT,
@@ -330,7 +355,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         FeeProjectConfig memory feeProjectConfig = getCroptopRevnetConfig();
 
         // Approve the basic deployer to configure the project and transfer it.
-        core.projects.approve(address(revnet.basic_deployer), FEE_PROJECT_ID);
+        core.projects.approve({to: address(revnet.basic_deployer), tokenId: FEE_PROJECT_ID});
 
         // Deploy the NANA fee project.
         revnet.basic_deployer

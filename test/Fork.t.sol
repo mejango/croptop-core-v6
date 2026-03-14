@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+// forge-lint: disable-next-line(unaliased-plain-import)
 import "forge-std/Test.sol";
 
 // JB core — deploy fresh within fork.
@@ -33,7 +34,10 @@ import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSucker
 import {JBTokenMapping} from "@bananapus/suckers-v6/src/structs/JBTokenMapping.sol";
 import {IJBSuckerDeployer} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerDeployer.sol";
 
+import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
+
 // Croptop — wildcard import pulls in all structs (CTProjectConfig, CTDeployerAllowedPost, etc.).
+// forge-lint: disable-next-line(unaliased-plain-import)
 import "./../src/CTDeployer.sol";
 import {CTPublisher} from "./../src/CTPublisher.sol";
 
@@ -158,6 +162,7 @@ contract ForkTest is Test {
     // ───────────────────────── Internal deployment helpers
     // ────────────────
 
+    // forge-lint: disable-next-line(mixed-case-function)
     function _deployJBCore() internal {
         jbPermissions = new JBPermissions(trustedForwarder);
         jbProjects = new JBProjects(multisig, address(0), trustedForwarder);
@@ -191,7 +196,7 @@ contract ForkTest is Test {
         JBAddressRegistry addressRegistry = new JBAddressRegistry();
 
         JB721TiersHook hookImpl =
-            new JB721TiersHook(jbDirectory, jbPermissions, jbRulesets, store, jbSplits, trustedForwarder);
+            new JB721TiersHook(jbDirectory, jbPermissions, jbPrices, jbRulesets, store, jbSplits, trustedForwarder);
 
         hookDeployer = new JB721TiersHookDeployer(hookImpl, store, addressRegistry, trustedForwarder);
     }

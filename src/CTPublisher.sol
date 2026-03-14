@@ -26,6 +26,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    // forge-lint: disable-next-line(mixed-case-variable)
     error CTPublisher_DuplicatePost(bytes32 encodedIPFSUri);
     error CTPublisher_EmptyEncodedIPFSUri();
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
@@ -63,6 +64,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @notice The ID of the tier that an IPFS metadata has been saved to.
     /// @custom:param hook The hook for which the tier ID applies.
     /// @custom:param encodedIPFSUri The IPFS URI.
+    // forge-lint: disable-next-line(mixed-case-variable)
     mapping(address hook => mapping(bytes32 encodedIPFSUri => uint256)) public override tierIdForEncodedIPFSUriOf;
 
     //*********************************************************************//
@@ -112,6 +114,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// is returned.
     function tiersFor(
         address hook,
+        // forge-lint: disable-next-line(mixed-case-variable)
         bytes32[] memory encodedIPFSUris
     )
         external
@@ -119,6 +122,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         override
         returns (JB721Tier[] memory tiers)
     {
+        // forge-lint: disable-next-line(mixed-case-variable)
         uint256 numberOfEncodedIPFSUris = encodedIPFSUris.length;
 
         // Initialize the tier array being returned.
@@ -170,12 +174,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         uint256 packed = _packedAllowanceFor[hook][category];
 
         // minimum price in bits 0-103 (104 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
         minimumPrice = uint256(uint104(packed));
         // minimum supply in bits 104-135 (32 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
         minimumTotalSupply = uint256(uint32(packed >> 104));
         // maximum supply in bits 136-167 (32 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
         maximumTotalSupply = uint256(uint32(packed >> 136));
         // maximum split percent in bits 168-199 (32 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
         maximumSplitPercent = uint256(uint32(packed >> 168));
 
         allowedAddresses = _allowedAddresses[hook][category];
@@ -445,6 +453,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             CTPost memory post = posts[i];
 
             // Make sure the post includes an encodedIPFSUri.
+            // forge-lint: disable-next-line(unsafe-typecast)
             if (post.encodedIPFSUri == bytes32("")) {
                 revert CTPublisher_EmptyEncodedIPFSUri();
             }
@@ -473,7 +482,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         // For existing tiers, use the actual tier price (not the user-supplied post.price)
                         // to prevent fee evasion by passing price=0 for an existing tier.
                         // slither-disable-next-line calls-loop
-                        totalPrice += store.tierOf(address(hook), tierId, false).price;
+                        totalPrice += store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false}).price;
                     }
                 }
             }
@@ -519,7 +528,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     }
 
                     // Make sure the address is allowed to post.
-                    if (addresses.length != 0 && !_isAllowed(_msgSender(), addresses)) {
+                    if (addresses.length != 0 && !_isAllowed({addrs: _msgSender(), addresses: addresses})) {
                         revert CTPublisher_NotInAllowList(_msgSender(), addresses);
                     }
                 }

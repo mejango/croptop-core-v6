@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+// forge-lint: disable-next-line(unaliased-plain-import)
 import "forge-std/Test.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 
@@ -22,15 +23,22 @@ contract Test_MetadataGeneration_Unit is Test {
         bytes[] memory _datas = new bytes[](10);
 
         for (uint256 _i; _i < _ids.length; _i++) {
+            // forge-lint: disable-next-line(unsafe-typecast)
             _ids[_i] = bytes4(uint32(_i + 1 * 1000));
             _datas[_i] = abi.encode(
-                bytes1(uint8(_i + 1)), uint32(69), bytes2(uint16(_i + 69)), bytes32(uint256(type(uint256).max))
+                // forge-lint: disable-next-line(unsafe-typecast)
+                bytes1(uint8(_i + 1)),
+                uint32(69),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                bytes2(uint16(_i + 69)),
+                bytes32(uint256(type(uint256).max))
             );
         }
 
         bytes memory _additionalPayMetadata = _resolverHelper.createMetadata(_ids, _datas);
 
         // The referal to include in the first 32 bytes of the metadata
+        // forge-lint: disable-next-line(mixed-case-variable)
         uint256 FEE_PROJECT_ID = 420;
 
         // The additional metadata to include
@@ -65,6 +73,7 @@ contract Test_MetadataGeneration_Unit is Test {
         assertTrue(found, "datahook metadata not found");
         assertEq(targetData, abi.encode(true, tierIdsToMint), "datahook not equal");
 
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertEq(uint256(bytes32(mintMetadata)), FEE_PROJECT_ID, "referal id not equal");
     }
 }

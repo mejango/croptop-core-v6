@@ -25,7 +25,6 @@ import {JBPayHookSpecification} from "@bananapus/core-v6/src/structs/JBPayHookSp
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBRuleset} from "@bananapus/core-v6/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.sol";
-import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
@@ -269,10 +268,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                 tokenUriResolver: IJB721TokenUriResolver(address(0)),
                 contractUri: projectConfig.contractUri,
                 tiersConfig: JB721InitTiersConfig({
-                    tiers: new JB721TierConfig[](0),
-                    currency: JBCurrencyIds.ETH,
-                    decimals: 18,
-                    prices: controller.PRICES()
+                    tiers: new JB721TierConfig[](0), currency: JBCurrencyIds.ETH, decimals: 18
                 }),
                 reserveBeneficiary: address(0),
                 flags: JB721TiersHookFlags({
@@ -322,7 +318,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         }
 
         //transfer to _owner.
-        PROJECTS.transferFrom(address(this), owner, projectId);
+        PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
 
         // Set permission for the project's owner to do all the NFT things.
         uint8[] memory permissionIds = new uint8[](4);
@@ -334,7 +330,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(owner), projectId: uint64(projectId), permissionIds: permissionIds
+                operator: address(owner),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                projectId: uint64(projectId),
+                permissionIds: permissionIds
             })
         });
     }

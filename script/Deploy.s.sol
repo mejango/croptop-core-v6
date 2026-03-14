@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
-import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
-import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
+import {Hook721Deployment, Hook721DeploymentLib} from "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
+import {CoreDeployment, CoreDeploymentLib} from "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
+import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
@@ -22,12 +22,17 @@ contract DeployScript is Script, Sphinx {
 
     // @notice set this to a non-zero value to re-use an existing projectID. Having it set to 0 will deploy a new
     // fee_project.
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint256 FEE_PROJECT_ID = 0;
 
     /// @notice the salts that are used to deploy the contracts.
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 PUBLISHER_SALT = "_PUBLISHER_SALTV6_";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 DEPLOYER_SALT = "_DEPLOYER_SALTV6_";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALTV6_";
+    // forge-lint: disable-next-line(mixed-case-variable)
     address TRUSTED_FORWARDER;
 
     function configureSphinx() public override {
@@ -67,51 +72,61 @@ contract DeployScript is Script, Sphinx {
         CTPublisher publisher;
         {
             // Perform the check for the publisher.
-            (address _publisher, bool _publisherIsDeployed) = _isDeployed(
-                PUBLISHER_SALT,
-                type(CTPublisher).creationCode,
-                abi.encode(core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER)
-            );
+            (address _publisher, bool _publisherIsDeployed) = _isDeployed({
+                salt: PUBLISHER_SALT,
+                creationCode: type(CTPublisher).creationCode,
+                arguments: abi.encode(core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER)
+            });
 
             // Deploy it if it has not been deployed yet.
             publisher = !_publisherIsDeployed
-                ? new CTPublisher{salt: PUBLISHER_SALT}(
-                    core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER
-                )
+                ? new CTPublisher{salt: PUBLISHER_SALT}({
+                    directory: core.directory,
+                    permissions: core.permissions,
+                    feeProjectId: FEE_PROJECT_ID,
+                    trustedForwarder: TRUSTED_FORWARDER
+                })
                 : CTPublisher(_publisher);
         }
 
         CTDeployer deployer;
         {
             // Perform the check for the publisher.
-            (address _deployer, bool _deployerIsDeployed) = _isDeployed(
-                DEPLOYER_SALT,
-                type(CTDeployer).creationCode,
-                abi.encode(
+            (address _deployer, bool _deployerIsDeployed) = _isDeployed({
+                salt: DEPLOYER_SALT,
+                creationCode: type(CTDeployer).creationCode,
+                arguments: abi.encode(
                     core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER
                 )
-            );
+            });
 
             // Deploy it if it has not been deployed yet.
             deployer = !_deployerIsDeployed
-                ? new CTDeployer{salt: DEPLOYER_SALT}(
-                    core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER
-                )
+                ? new CTDeployer{salt: DEPLOYER_SALT}({
+                    permissions: core.permissions,
+                    projects: core.projects,
+                    deployer: hook.hook_deployer,
+                    publisher: publisher,
+                    suckerRegistry: suckers.registry,
+                    trustedForwarder: TRUSTED_FORWARDER
+                })
                 : CTDeployer(_deployer);
         }
 
         CTProjectOwner owner;
         {
             // Perform the check for the publisher.
-            (address _owner, bool _ownerIsDeployed) = _isDeployed(
-                PROJECT_OWNER_SALT,
-                type(CTProjectOwner).creationCode,
-                abi.encode(core.permissions, core.projects, publisher)
-            );
+            (address _owner, bool _ownerIsDeployed) = _isDeployed({
+                salt: PROJECT_OWNER_SALT,
+                creationCode: type(CTProjectOwner).creationCode,
+                arguments: abi.encode(core.permissions, core.projects, publisher)
+            });
 
             // Deploy it if it has not been deployed yet.
             owner = !_ownerIsDeployed
-                ? new CTProjectOwner{salt: PROJECT_OWNER_SALT}(core.permissions, core.projects, publisher)
+                ? new CTProjectOwner{salt: PROJECT_OWNER_SALT}({
+                    permissions: core.permissions, projects: core.projects, publisher: publisher
+                })
                 : CTProjectOwner(_owner);
         }
     }
