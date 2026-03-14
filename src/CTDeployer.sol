@@ -330,8 +330,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
+                operator: address(owner),
                 // forge-lint: disable-next-line(unsafe-typecast)
-                operator: address(owner), projectId: uint64(projectId), permissionIds: permissionIds
+                projectId: uint64(projectId),
+                permissionIds: permissionIds
             })
         });
     }

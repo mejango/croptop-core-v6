@@ -85,8 +85,8 @@ library CroptopDeploymentLib {
         returns (address)
     {
         string memory deploymentJson =
-            // forge-lint: disable-next-line(unsafe-cheatcode)
-            vm.readFile(string.concat(path, project_name, "/", network_name, "/", contractName, ".json"));
+        // forge-lint: disable-next-line(unsafe-cheatcode)
+        vm.readFile(string.concat(path, project_name, "/", network_name, "/", contractName, ".json"));
         return stdJson.readAddress({json: deploymentJson, key: ".address"});
     }
 }

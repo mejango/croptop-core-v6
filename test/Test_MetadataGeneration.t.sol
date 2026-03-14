@@ -27,7 +27,11 @@ contract Test_MetadataGeneration_Unit is Test {
             _ids[_i] = bytes4(uint32(_i + 1 * 1000));
             _datas[_i] = abi.encode(
                 // forge-lint: disable-next-line(unsafe-typecast)
-                bytes1(uint8(_i + 1)), uint32(69), bytes2(uint16(_i + 69)), bytes32(uint256(type(uint256).max))
+                bytes1(uint8(_i + 1)),
+                uint32(69),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                bytes2(uint16(_i + 69)),
+                bytes32(uint256(type(uint256).max))
             );
         }
 

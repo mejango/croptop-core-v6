@@ -4,10 +4,14 @@ pragma solidity 0.8.26;
 import {Hook721Deployment, Hook721DeploymentLib} from "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
 import {CoreDeployment, CoreDeploymentLib} from "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
 import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
-import {RouterTerminalDeployment, RouterTerminalDeploymentLib} from
-    "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
-import {RevnetCoreDeployment, RevnetCoreDeploymentLib} from
-    "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
+import {
+    RouterTerminalDeployment,
+    RouterTerminalDeploymentLib
+} from "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
+import {
+    RevnetCoreDeployment,
+    RevnetCoreDeploymentLib
+} from "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
 import {CroptopDeployment, CroptopDeploymentLib} from "./helpers/CroptopDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
