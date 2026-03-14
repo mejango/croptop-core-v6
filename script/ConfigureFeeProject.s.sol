@@ -343,9 +343,9 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
                 }),
                 salt: HOOK_SALT,
                 preventSplitOperatorAdjustingTiers: false,
-                preventSplitOperatorUpdatingMetadata: true,
-                preventSplitOperatorMinting: true,
-                preventSplitOperatorIncreasingDiscountPercent: true
+                preventSplitOperatorUpdatingMetadata: false,
+                preventSplitOperatorMinting: false,
+                preventSplitOperatorIncreasingDiscountPercent: false
             }),
             allowedPosts: allowedPosts
         });
