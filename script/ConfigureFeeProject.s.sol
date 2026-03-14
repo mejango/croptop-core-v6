@@ -28,6 +28,8 @@ import {JBTokenMapping} from "@bananapus/suckers-v6/src/structs/JBTokenMapping.s
 import {REVAutoIssuance} from "@rev-net/core-v6/src/structs/REVAutoIssuance.sol";
 import {REVConfig} from "@rev-net/core-v6/src/structs/REVConfig.sol";
 import {REVCroptopAllowedPost} from "@rev-net/core-v6/src/structs/REVCroptopAllowedPost.sol";
+import {REVBaseline721HookConfig} from "@rev-net/core-v6/src/structs/REVBaseline721HookConfig.sol";
+import {REV721TiersHookFlags} from "@rev-net/core-v6/src/structs/REV721TiersHookFlags.sol";
 import {REVDeploy721TiersHookConfig} from "@rev-net/core-v6/src/structs/REVDeploy721TiersHookConfig.sol";
 import {REVDescription} from "@rev-net/core-v6/src/structs/REVDescription.sol";
 import {REVStageConfig} from "@rev-net/core-v6/src/structs/REVStageConfig.sol";
@@ -298,22 +300,21 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             terminalConfigurations: terminalConfigurations,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             hookConfiguration: REVDeploy721TiersHookConfig({
-                baseline721HookConfiguration: JBDeploy721TiersHookConfig({
+                baseline721HookConfiguration: REVBaseline721HookConfig({
                     name: NAME,
                     symbol: SYMBOL,
                     baseUri: "ipfs://",
                     tokenUriResolver: IJB721TokenUriResolver(address(0)),
                     contractUri: "",
                     tiersConfig: JB721InitTiersConfig({
-                        tiers: new JB721TierConfig[](0), currency: ETH_CURRENCY, decimals: DECIMALS, prices: core.prices
+                        tiers: new JB721TierConfig[](0), currency: ETH_CURRENCY, decimals: DECIMALS
                     }),
                     reserveBeneficiary: address(0),
-                    flags: JB721TiersHookFlags({
+                    flags: REV721TiersHookFlags({
                         noNewTiersWithReserves: false,
                         noNewTiersWithVotes: true,
                         noNewTiersWithOwnerMinting: true,
-                        preventOverspending: false,
-                        issueTokensForSplits: false
+                        preventOverspending: false
                     })
                 }),
                 salt: HOOK_SALT,

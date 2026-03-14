@@ -191,7 +191,7 @@ contract ForkTest is Test {
         JBAddressRegistry addressRegistry = new JBAddressRegistry();
 
         JB721TiersHook hookImpl =
-            new JB721TiersHook(jbDirectory, jbPermissions, jbRulesets, store, jbSplits, trustedForwarder);
+            new JB721TiersHook(jbDirectory, jbPermissions, jbPrices, jbRulesets, store, jbSplits, trustedForwarder);
 
         hookDeployer = new JB721TiersHookDeployer(hookImpl, store, addressRegistry, trustedForwarder);
     }
