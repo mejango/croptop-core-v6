@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+// forge-lint: disable-next-line(unaliased-plain-import)
 import "forge-std/Test.sol";
 
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
@@ -258,7 +259,9 @@ contract M6_DuplicateUriFeeEvasion is Test {
     /// @notice Fuzz test: when two URIs are equal the call must revert with
     ///         CTPublisher_DuplicatePost; when they differ it must not.
     function testFuzz_duplicateDetection(bytes32 uri1, bytes32 uri2) public {
+        // forge-lint: disable-next-line(unsafe-typecast)
         vm.assume(uri1 != bytes32(""));
+        // forge-lint: disable-next-line(unsafe-typecast)
         vm.assume(uri2 != bytes32(""));
 
         _configureCategory();

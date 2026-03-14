@@ -12,7 +12,9 @@ import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 /// @custom:member splitPercent The percent of the tier's price to route to the splits (out of
 /// JBConstants.SPLITS_TOTAL_PERCENT).
 /// @custom:member splits The splits to route funds to when this tier is minted.
+// forge-lint: disable-next-line(pascal-case-struct)
 struct CTPost {
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 encodedIPFSUri;
     uint32 totalSupply;
     uint104 price;

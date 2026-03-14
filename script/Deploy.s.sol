@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
-import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
-import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
+import {Hook721Deployment, Hook721DeploymentLib} from "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
+import {CoreDeployment, CoreDeploymentLib} from "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
+import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
@@ -22,12 +22,17 @@ contract DeployScript is Script, Sphinx {
 
     // @notice set this to a non-zero value to re-use an existing projectID. Having it set to 0 will deploy a new
     // fee_project.
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint256 FEE_PROJECT_ID = 0;
 
     /// @notice the salts that are used to deploy the contracts.
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 PUBLISHER_SALT = "_PUBLISHER_SALTV6_";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 DEPLOYER_SALT = "_DEPLOYER_SALTV6_";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALTV6_";
+    // forge-lint: disable-next-line(mixed-case-variable)
     address TRUSTED_FORWARDER;
 
     function configureSphinx() public override {

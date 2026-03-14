@@ -25,7 +25,6 @@ import {JBPayHookSpecification} from "@bananapus/core-v6/src/structs/JBPayHookSp
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBRuleset} from "@bananapus/core-v6/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.sol";
-import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
@@ -331,6 +330,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
+                // forge-lint: disable-next-line(unsafe-typecast)
                 operator: address(owner), projectId: uint64(projectId), permissionIds: permissionIds
             })
         });

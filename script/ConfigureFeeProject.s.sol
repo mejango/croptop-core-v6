@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
-import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
-import "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
-import "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
-import "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
-import "./helpers/CroptopDeploymentLib.sol";
+import {Hook721Deployment, Hook721DeploymentLib} from "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
+import {CoreDeployment, CoreDeploymentLib} from "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
+import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
+import {RouterTerminalDeployment, RouterTerminalDeploymentLib} from
+    "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
+import {RevnetCoreDeployment, RevnetCoreDeploymentLib} from
+    "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
+import {CroptopDeployment, CroptopDeploymentLib} from "./helpers/CroptopDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
-import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v6/src/structs/JBDeploy721TiersHookConfig.sol";
 import {JB721InitTiersConfig} from "@bananapus/721-hook-v6/src/structs/JB721InitTiersConfig.sol";
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
-import {JB721TiersHookFlags} from "@bananapus/721-hook-v6/src/structs/JB721TiersHookFlags.sol";
 import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
@@ -59,25 +59,44 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
 
     // @notice set this to a non-zero value to re-use an existing projectID. Having it set to 0 will deploy a new
     // fee_project.
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint256 FEE_PROJECT_ID;
 
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint32 PREMINT_CHAIN_ID = 1;
+    // forge-lint: disable-next-line(mixed-case-variable)
     string NAME = "Croptop Publishing Network";
+    // forge-lint: disable-next-line(mixed-case-variable)
     string SYMBOL = "CPN";
+    // forge-lint: disable-next-line(mixed-case-variable)
     string PROJECT_URI = "ipfs://QmUAFevoMn1iqSEQR8LogQYRxm39TNxQTPYnuLuq5BmfEi";
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint32 NATIVE_CURRENCY = uint32(uint160(JBConstants.NATIVE_TOKEN));
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint32 ETH_CURRENCY = JBCurrencyIds.ETH;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint8 DECIMALS = 18;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint256 DECIMAL_MULTIPLIER = 10 ** DECIMALS;
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 SUCKER_SALT = "_CPN_SUCKERV6__";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 ERC20_SALT = "_CPN_ERC20_SALTV6__";
+    // forge-lint: disable-next-line(mixed-case-variable)
     bytes32 HOOK_SALT = "_CPN_HOOK_SALTV6__";
+    // forge-lint: disable-next-line(mixed-case-variable)
     address OPERATOR;
+    // forge-lint: disable-next-line(mixed-case-variable)
     address TRUSTED_FORWARDER;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint48 CPN_START_TIME = 1_740_089_444;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_MAINNET_AUTO_ISSUANCE_ = 250_003_875_000_000_000_000_000;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_OP_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_BASE_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
+    // forge-lint: disable-next-line(mixed-case-variable)
     uint104 CPN_ARB_AUTO_ISSUANCE_ = 3_844_000_000_000_000_000;
 
     function configureSphinx() public override {
@@ -170,6 +189,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             autoIssuances: issuanceConfs,
             splitPercent: 3800, // 38%
             splits: splits,
+            // forge-lint: disable-next-line(unsafe-typecast)
             initialIssuance: uint112(10_000 * DECIMAL_MULTIPLIER),
             issuanceCutFrequency: 120 days,
             issuanceCutPercent: 380_000_000, // 38%

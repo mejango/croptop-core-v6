@@ -11,6 +11,7 @@ import {CTDeployerAllowedPost} from "../structs/CTDeployerAllowedPost.sol";
 /// @param name The name of the collection where posts will go.
 /// @param symbol The symbol of the collection where posts will go.
 /// @param salt A salt to use for the deterministic deployment.
+// forge-lint: disable-next-line(pascal-case-struct)
 struct CTProjectConfig {
     JBTerminalConfig[] terminalConfigurations;
     string projectUri;
