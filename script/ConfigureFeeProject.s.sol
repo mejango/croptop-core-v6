@@ -342,10 +342,10 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
                     })
                 }),
                 salt: HOOK_SALT,
-                splitOperatorCanAdjustTiers: true,
-                splitOperatorCanUpdateMetadata: false,
-                splitOperatorCanMint: false,
-                splitOperatorCanIncreaseDiscountPercent: false
+                preventSplitOperatorAdjustingTiers: false,
+                preventSplitOperatorUpdatingMetadata: true,
+                preventSplitOperatorMinting: true,
+                preventSplitOperatorIncreasingDiscountPercent: true
             }),
             allowedPosts: allowedPosts
         });
@@ -359,7 +359,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
 
         // Deploy the NANA fee project.
         revnet.basic_deployer
-            .deployWith721sFor({
+            .deployFor({
                 revnetId: FEE_PROJECT_ID,
                 configuration: feeProjectConfig.configuration,
                 terminalConfigurations: feeProjectConfig.terminalConfigurations,
