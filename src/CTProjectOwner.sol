@@ -71,7 +71,7 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
             permissionsData: JBPermissionsData({
                 operator: address(PUBLISHER),
                 // forge-lint: disable-next-line(unsafe-typecast)
-                projectId: uint56(tokenId),
+                projectId: uint64(tokenId),
                 permissionIds: permissionIds
             })
         });

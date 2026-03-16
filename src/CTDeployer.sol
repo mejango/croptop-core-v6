@@ -308,6 +308,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         }
 
         // Deploy the suckers (if applicable).
+        // The L2 sucker deployer fallback cascade (try primary, fall back to secondary) is
+        // intentionally ordered. If both deployers fail, the deployment proceeds without suckers rather than reverting,
+        // allowing projects to launch on unsupported chains with manual sucker setup later.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             // slither-disable-next-line unused-return
             SUCKER_REGISTRY.deploySuckersFor({

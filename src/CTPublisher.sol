@@ -234,6 +234,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
     /// @notice Collection owners can set the allowed criteria for publishing a new NFT to their project.
     /// @param allowedPosts An array of criteria for allowed posts.
+    // Categories cannot be fully disabled after creation. This is by design — once a category is
+    // created, removing posting would break expectations for existing posters. Projects can set restrictive
+    // allowedPost configurations to effectively disable new posts without removing the category.
     function configurePostingCriteriaFor(CTAllowedPost[] memory allowedPosts) external override {
         // Keep a reference to the number of post criteria.
         uint256 numberOfAllowedPosts = allowedPosts.length;
@@ -394,6 +397,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         }
 
         // Pay a fee if there are funds left.
+        // Force-sent ETH (via selfdestruct or coinbase) cannot be prevented. Routing it to the fee
+        // project (project #1) is the safest option — it prevents ETH from being permanently locked and benefits the
+        // protocol.
         if (address(this).balance != 0) {
             // Get a reference to the fee project's current ETH payment terminal.
             IJBTerminal feeTerminal =
