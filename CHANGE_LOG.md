@@ -111,7 +111,7 @@ No event signatures were changed. Both versions emit the same two events:
 ### Unchanged Errors
 - `CTDeployer_NotOwnerOfProject(uint256 projectId, address hook, address caller)` — unchanged.
 - `CTPublisher_EmptyEncodedIPFSUri()` — unchanged.
-- `CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent)` — unchanged.
+- `CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent)` — signature unchanged; v6 adds an explicit fee validation check before the subtraction (`if (payValue < fee) revert`) so this error now fires with a descriptive message instead of a panic on underflow.
 - `CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max)` — unchanged.
 - `CTPublisher_NotInAllowList(address addr, address[] allowedAddresses)` — unchanged.
 - `CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice)` — unchanged.

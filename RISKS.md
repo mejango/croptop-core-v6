@@ -11,7 +11,7 @@
 ## 2. Economic / Manipulation Risks
 
 - **Fee evasion via duplicate posts across hooks.** `tierIdForEncodedIPFSUriOf` is keyed per hook. The same `encodedIPFSUri` can be posted to different hooks without duplicate detection, potentially creating fee-arbitrage opportunities.
-- **Fee calculation rounding.** `payValue -= totalPrice / FEE_DIVISOR` (FEE_DIVISOR=20, so 5% fee). Integer division truncates, losing up to 19 wei per post. Negligible individually but could compound across many micro-priced posts.
+- **Fee calculation rounding.** Fee is `totalPrice / FEE_DIVISOR` (FEE_DIVISOR=20, so 5% fee). Integer division truncates, losing up to 19 wei per post. Negligible individually but could compound across many micro-priced posts. Explicit validation: reverts `CTPublisher_InsufficientEthSent` if `msg.value < fee` (before subtraction) or if `msg.value - fee < totalPrice` (after subtraction).
 - **Balance-based fee routing.** `CTPublisher.mintFrom` sends fees based on `address(this).balance` after the main payment. Force-sent ETH (via selfdestruct) is routed to the fee project.
 - **Split percent manipulation.** Posters can set `splitPercent` up to `maximumSplitPercent`. Splits route funds away from the project treasury to poster-specified addresses. If `maximumSplitPercent` is set high, posters can redirect most of the tier revenue.
 
@@ -21,7 +21,7 @@
 - **Categories cannot be disabled.** Once `configurePostingCriteriaFor` is called for a category, it can only be restricted by setting very high `minimumPrice` or `minimumTotalSupply`, but never fully removed.
 - **CTDeployer grants broad permissions.** Constructor grants `MAP_SUCKER_TOKEN` (wildcard, projectId=0) to sucker registry and `ADJUST_721_TIERS` (wildcard, projectId=0) to publisher. These permissions apply to ALL projects deployed by this CTDeployer instance.
 - **CTDeployer.deployProjectFor permission gap.** No explicit permission check -- anyone can call `deployProjectFor` and create a project. A griefer could deploy many projects with arbitrary owners.
-- **CTDeployer.claimCollectionOwnershipOf.** Only checks `PROJECTS.ownerOf(projectId) == _msgSender()`. No Juicebox permission check. If the project NFT is transferred, the new owner can claim collection ownership.
+- **CTDeployer.claimCollectionOwnershipOf.** Only checks `PROJECTS.ownerOf(projectId) == _msgSender()`. No Juicebox permission check. If the project NFT is transferred, the new owner can claim collection ownership. After claiming, the project owner must grant CTPublisher the `ADJUST_721_TIERS` permission for the project so that `mintFrom()` continues to work — without this, all subsequent posts revert.
 
 ## 4. DoS Vectors
 
