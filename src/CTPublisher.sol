@@ -108,6 +108,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     //*********************************************************************//
 
     /// @notice Get the tiers for the provided encoded IPFS URIs.
+    /// @dev The returned tier IDs may be stale if the corresponding tiers were removed externally via adjustTiers.
+    /// In that case, the store's tierOf call will return a tier with default/empty values. Callers should check
+    /// the returned tier's initialSupply or other fields to confirm the tier still exists.
     /// @param hook The hook from which to get tiers.
     /// @param encodedIPFSUris The URIs to get tiers of.
     /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. If there's no tier yet, an empty tier
@@ -335,7 +338,14 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 // Note: integer division truncates, so the fee loses up to (FEE_DIVISOR - 1) wei of dust.
                 // For example, a totalPrice of 39 wei with FEE_DIVISOR=20 yields a fee of 1 wei instead of 1.95.
                 // This rounding is in the payer's favor and the loss is negligible for practical amounts.
-                payValue -= totalPrice / FEE_DIVISOR;
+                uint256 fee = totalPrice / FEE_DIVISOR;
+
+                // Make sure enough ETH was sent to cover the fee.
+                if (payValue < fee) {
+                    revert CTPublisher_InsufficientEthSent(totalPrice + fee, msg.value);
+                }
+
+                payValue -= fee;
             }
 
             // Make sure the amount sent to this function is at least the specified price of the tier plus the fee.
