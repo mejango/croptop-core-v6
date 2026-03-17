@@ -123,12 +123,13 @@ For each post in the batch:
    - **Tier exists but removed:** Delete mapping. Fall through to new tier.
    - **No tier:** Validate against category allowance, create `JB721TierConfig`.
 
-**Phase 2: Fee calculation** (lines 333-344)
+**Phase 2: Fee calculation** (lines 336-354)
 
 ```
 fee = totalPrice / FEE_DIVISOR   (integer division)
+require(payValue >= fee)         (reverts CTPublisher_InsufficientEthSent if not)
 payValue = msg.value - fee       (if projectId != FEE_PROJECT_ID)
-require(totalPrice <= payValue)
+require(totalPrice <= payValue)  (reverts CTPublisher_InsufficientEthSent if not)
 ```
 
 **Phase 3: Tier creation** (line 348)
@@ -431,6 +432,8 @@ After the deployment completes and ownership is transferred to `owner`, only the
 ### Consequences
 
 After claiming, the hook's ownership follows the project NFT. Whoever owns the project NFT can call owner-only functions on the hook (tier adjustments, metadata changes, etc.) directly, without going through CTDeployer.
+
+**Important:** After claiming, the project owner must grant CTPublisher the `ADJUST_721_TIERS` permission for the project so that `mintFrom()` continues to work. Without this permission grant, all subsequent posts will revert.
 
 ### Edge Cases
 

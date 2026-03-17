@@ -33,7 +33,7 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 | Function | What it does |
 |----------|-------------|
 | `CTDeployer.deployProjectFor(owner, projectConfig, suckerDeploymentConfiguration, controller)` | Deploys a new Juicebox project with a 721 tiers hook, configures posting criteria, optionally deploys suckers, and transfers project ownership to the specified owner. Uses `CTDeployer` as data hook proxy. Returns `(projectId, hook)`. |
-| `CTDeployer.claimCollectionOwnershipOf(hook)` | Transfers hook ownership to the project via `JBOwnable.transferOwnershipToProject`. Only callable by the project owner. |
+| `CTDeployer.claimCollectionOwnershipOf(hook)` | Transfers hook ownership to the project via `JBOwnable.transferOwnershipToProject`. Only callable by the project owner. After claiming, the project owner must grant CTPublisher `ADJUST_721_TIERS` permission for the project so that `mintFrom()` continues to work. |
 | `CTDeployer.deploySuckersFor(projectId, suckerDeploymentConfiguration)` | Deploys new cross-chain suckers for an existing project. Requires `DEPLOY_SUCKERS` permission. |
 
 ### Data Hook Proxy

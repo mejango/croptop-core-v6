@@ -217,6 +217,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     //*********************************************************************//
 
     /// @notice Claim ownership of the collection.
+    /// @dev After calling this, the hook's owner becomes the project (resolved via PROJECTS.ownerOf). The project
+    /// owner must then grant CTPublisher the ADJUST_721_TIERS permission for the project so that mintFrom() continues
+    /// to work. Without this permission grant, all subsequent posts will revert.
     /// @param hook The hook to claim ownership of.
     function claimCollectionOwnershipOf(IJB721TiersHook hook) external override {
         // Get the project ID of the hook.
@@ -324,6 +327,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
 
         // Set permission for the project's owner to do all the NFT things.
+        // These permissions are granted from CTDeployer (address(this)), not from the project owner.
+        // Transferring the project NFT does not invalidate them because the permission account is CTDeployer,
+        // which remains the hook's owner regardless of who holds the project NFT.
         uint8[] memory permissionIds = new uint8[](4);
         permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
         permissionIds[1] = JBPermissionIds.SET_721_METADATA;

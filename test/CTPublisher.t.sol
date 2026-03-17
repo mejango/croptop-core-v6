@@ -636,6 +636,138 @@ contract TestCTPublisher is Test {
     // --- Multiple Posts With Different Split Percents ------------------- //
     //*********************************************************************//
 
+    //*********************************************************************//
+    // --- Fee Validation in mintFrom ------------------------------------- //
+    //*********************************************************************//
+
+    function test_mintFrom_insufficientEthForFee_reverts() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("fee-test"),
+            totalSupply: 10,
+            price: 1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        // Fee = 1 ether / 20 = 0.05 ether. Total needed = 1.05 ether.
+        // Send only 0.04 ether — less than just the fee.
+        uint256 fee = 1 ether / 20;
+        vm.prank(poster);
+        vm.expectRevert(
+            abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether + fee, 0.04 ether)
+        );
+        publisher.mintFrom{value: 0.04 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+    }
+
+    function test_mintFrom_exactPriceNoFee_reverts() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("exact-price"),
+            totalSupply: 10,
+            price: 1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        // Send exactly 1 ether — covers price but not the 0.05 fee.
+        // After fee deduction: payValue = 1 - 0.05 = 0.95, which is < totalPrice (1).
+        vm.prank(poster);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether, 1 ether));
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+    }
+
+    function test_mintFrom_exactPricePlusFee_succeeds() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("exact-fee"),
+            totalSupply: 10,
+            price: 1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        // Send exactly 1.05 ether (price + fee). Should not revert with InsufficientEthSent.
+        uint256 fee = 1 ether / 20;
+        vm.prank(poster);
+        try publisher.mintFrom{value: 1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+        catch (bytes memory reason) {
+            assertTrue(
+                bytes4(reason) != CTPublisher.CTPublisher_InsufficientEthSent.selector,
+                "should not revert with InsufficientEthSent"
+            );
+        }
+    }
+
+    function test_mintFrom_feeProject_noFeeDeducted() public {
+        // Configure a category on a hook whose PROJECT_ID == FEE_PROJECT_ID (1).
+        address feeHook = makeAddr("feeHook");
+        address feeHookStore = makeAddr("feeHookStore");
+        vm.mockCall(feeHook, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
+        vm.mockCall(feeHook, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(feeProjectId));
+        vm.mockCall(feeHook, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(feeHookStore));
+        vm.mockCall(
+            feeHookStore, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(uint256(0))
+        );
+        vm.mockCall(feeHook, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
+        vm.mockCall(feeHook, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
+        vm.mockCall(
+            address(directory),
+            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector),
+            abi.encode(makeAddr("terminal"))
+        );
+        vm.mockCall(makeAddr("terminal"), "", abi.encode(uint256(0)));
+
+        CTAllowedPost[] memory allowed = new CTAllowedPost[](1);
+        allowed[0] = CTAllowedPost({
+            hook: feeHook,
+            category: 5,
+            minimumPrice: 0.01 ether,
+            minimumTotalSupply: 1,
+            maximumTotalSupply: 100,
+            maximumSplitPercent: 0,
+            allowedAddresses: new address[](0)
+        });
+        vm.prank(hookOwner);
+        publisher.configurePostingCriteriaFor(allowed);
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("fee-project-post"),
+            totalSupply: 10,
+            price: 1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        // Send exactly the price with no fee. Should not revert with InsufficientEthSent.
+        vm.prank(poster);
+        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(feeHook), posts, poster, poster, "", "") {}
+        catch (bytes memory reason) {
+            assertTrue(
+                bytes4(reason) != CTPublisher.CTPublisher_InsufficientEthSent.selector,
+                "fee project should not charge fee"
+            );
+        }
+    }
+
+    //*********************************************************************//
+    // --- Multiple Posts With Different Split Percents ------------------- //
+    //*********************************************************************//
+
     function test_mintFrom_multiplePostsDifferentSplits() public {
         // Category 5 allows up to 50% splits.
         _configureCategoryWithSplits(5, 0, 1, 100, 500_000_000);

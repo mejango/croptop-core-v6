@@ -11,6 +11,9 @@ import {ICTProjectOwner} from "./interfaces/ICTProjectOwner.sol";
 import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
 
 /// @notice A contract that can be sent a project to be burned, while still allowing croptop posts.
+/// @dev This contract does not expose any function to reconfigure posting criteria. This is by design: posting
+/// criteria are set before transferring the project here, and become immutable once ownership is transferred.
+/// The project owner should configure all desired posting criteria before sending the project NFT to this contract.
 contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
