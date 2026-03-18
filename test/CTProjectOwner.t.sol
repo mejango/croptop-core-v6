@@ -65,7 +65,8 @@ contract CTProjectOwnerTest is Test {
                     address(projectOwner),
                     JBPermissionsData({
                         operator: address(publisher),
-                        projectId: uint64(tokenId),
+                        // forge-lint: disable-next-line(unsafe-typecast)
+                        projectId: uint64(tokenId), // safe: mirrors CTProjectOwner.onERC721Received
                         permissionIds: permissionIds
                     })
                 )
@@ -103,7 +104,8 @@ contract CTProjectOwnerTest is Test {
                     address(projectOwner),
                     JBPermissionsData({
                         operator: address(publisher),
-                        projectId: uint64(tokenId),
+                        // forge-lint: disable-next-line(unsafe-typecast)
+                        projectId: uint64(tokenId), // safe: mirrors CTProjectOwner.onERC721Received
                         permissionIds: permissionIds
                     })
                 )
@@ -131,7 +133,8 @@ contract CTProjectOwnerTest is Test {
                     address(projectOwner),
                     JBPermissionsData({
                         operator: address(publisher),
-                        projectId: uint64(tokenId1),
+                        // forge-lint: disable-next-line(unsafe-typecast)
+                        projectId: uint64(tokenId1), // safe: mirrors CTProjectOwner.onERC721Received
                         permissionIds: permissionIds
                     })
                 )
@@ -151,7 +154,8 @@ contract CTProjectOwnerTest is Test {
                     address(projectOwner),
                     JBPermissionsData({
                         operator: address(publisher),
-                        projectId: uint64(tokenId2),
+                        // forge-lint: disable-next-line(unsafe-typecast)
+                        projectId: uint64(tokenId2), // safe: mirrors CTProjectOwner.onERC721Received
                         permissionIds: permissionIds
                     })
                 )
