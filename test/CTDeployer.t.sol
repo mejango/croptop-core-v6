@@ -601,6 +601,7 @@ contract TestCTDeployer is Test {
             surplus: JBTokenAmount({token: address(0), decimals: 18, currency: 0, value: 1 ether}),
             useTotalSurplus: false,
             cashOutTaxRate: 10_000,
+            beneficiaryIsFeeless: false,
             metadata: ""
         });
     }

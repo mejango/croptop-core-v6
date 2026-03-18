@@ -19,9 +19,7 @@ import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerR
 import {JBBeforeCashOutRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforeCashOutRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforePayRecordedContext.sol";
 import {JBCashOutHookSpecification} from "@bananapus/core-v6/src/structs/JBCashOutHookSpecification.sol";
-import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBPayHookSpecification} from "@bananapus/core-v6/src/structs/JBPayHookSpecification.sol";
-import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {JBTokenAmount} from "@bananapus/core-v6/src/structs/JBTokenAmount.sol";
 
@@ -197,6 +195,7 @@ contract TestAuditGaps is Test {
             surplus: JBTokenAmount({token: address(0), decimals: 18, currency: 0, value: 1 ether}),
             useTotalSurplus: false,
             cashOutTaxRate: 10_000,
+            beneficiaryIsFeeless: false,
             metadata: ""
         });
     }
@@ -415,6 +414,7 @@ contract TestAuditGaps is Test {
 
             address[] memory allowlist = new address[](size);
             for (uint256 i; i < size; i++) {
+                // forge-lint: disable-next-line(unsafe-typecast)
                 allowlist[i] = address(uint160(0x1000 + i));
             }
 
@@ -422,6 +422,7 @@ contract TestAuditGaps is Test {
             posts[0] = CTAllowedPost({
                 hook: hookAddr,
                 // Use different category for each size to avoid interference.
+                // forge-lint: disable-next-line(unsafe-typecast)
                 category: uint24(s + 1),
                 minimumPrice: 0,
                 minimumTotalSupply: 1,
@@ -436,6 +437,7 @@ contract TestAuditGaps is Test {
             uint256 gasUsed = gasBefore - gasleft();
 
             // Verify the allowlist was stored correctly.
+            // forge-lint: disable-next-line(unsafe-typecast)
             (,,,, address[] memory stored) = publisher.allowanceFor(hookAddr, uint24(s + 1));
             assertEq(stored.length, size, "stored allowlist length should match");
 
@@ -463,6 +465,7 @@ contract TestAuditGaps is Test {
             // Build allowlist where poster is the LAST entry (worst case).
             address[] memory allowlist = new address[](size);
             for (uint256 i; i < size - 1; i++) {
+                // forge-lint: disable-next-line(unsafe-typecast)
                 allowlist[i] = address(uint160(0x2000 + i));
             }
             allowlist[size - 1] = poster;
@@ -470,6 +473,7 @@ contract TestAuditGaps is Test {
             CTAllowedPost[] memory posts = new CTAllowedPost[](1);
             posts[0] = CTAllowedPost({
                 hook: hookAddr,
+                // forge-lint: disable-next-line(unsafe-typecast)
                 category: uint24(10 + s),
                 minimumPrice: 0,
                 minimumTotalSupply: 1,
@@ -489,6 +493,7 @@ contract TestAuditGaps is Test {
                 encodedIPFSUri: uri,
                 totalSupply: 10,
                 price: 0.01 ether,
+                // forge-lint: disable-next-line(unsafe-typecast)
                 category: uint24(10 + s),
                 splitPercent: 0,
                 splits: new JBSplit[](0)
@@ -551,6 +556,7 @@ contract TestAuditGaps is Test {
         catch (bytes memory reason) {
             // Make sure it did NOT revert with CTPublisher_NotInAllowList.
             assertTrue(
+                // forge-lint: disable-next-line(unsafe-typecast)
                 reason.length < 4 || bytes4(reason) != CTPublisher.CTPublisher_NotInAllowList.selector,
                 "empty allowlist should not restrict any address"
             );

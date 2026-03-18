@@ -4,35 +4,23 @@ pragma solidity 0.8.26;
 // forge-lint: disable-next-line(unaliased-plain-import)
 import "forge-std/Test.sol";
 
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
-import {IJBRulesetDataHook} from "@bananapus/core-v6/src/interfaces/IJBRulesetDataHook.sol";
 import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookDeployer.sol";
-import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
-import {JBBeforeCashOutRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforeCashOutRecordedContext.sol";
-import {JBBeforePayRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforePayRecordedContext.sol";
-import {JBCashOutHookSpecification} from "@bananapus/core-v6/src/structs/JBCashOutHookSpecification.sol";
-import {JBPayHookSpecification} from "@bananapus/core-v6/src/structs/JBPayHookSpecification.sol";
 import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
-import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
-import {JBRuleset} from "@bananapus/core-v6/src/structs/JBRuleset.sol";
 import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
-import {JBTokenAmount} from "@bananapus/core-v6/src/structs/JBTokenAmount.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
 
 import {CTDeployer} from "../src/CTDeployer.sol";
 import {CTPublisher} from "../src/CTPublisher.sol";
-import {ICTDeployer} from "../src/interfaces/ICTDeployer.sol";
 import {ICTPublisher} from "../src/interfaces/ICTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";
 import {CTDeployerAllowedPost} from "../src/structs/CTDeployerAllowedPost.sol";
@@ -126,14 +114,10 @@ contract ClaimCollectionOwnershipTest is Test {
         vm.mockCall(address(hook), abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(projectId));
 
         // Mock PROJECTS.ownerOf(projectId) to return owner.
-        vm.mockCall(
-            address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, projectId), abi.encode(owner)
-        );
+        vm.mockCall(address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, projectId), abi.encode(owner));
 
         // Mock JBOwnable.transferOwnershipToProject to succeed.
-        vm.mockCall(
-            address(hook), abi.encodeWithSelector(IJBOwnable.transferOwnershipToProject.selector), abi.encode()
-        );
+        vm.mockCall(address(hook), abi.encodeWithSelector(IJBOwnable.transferOwnershipToProject.selector), abi.encode());
 
         // Step 3: Owner claims collection ownership.
         vm.prank(owner);
@@ -152,9 +136,7 @@ contract ClaimCollectionOwnershipTest is Test {
 
         // Initially, 'owner' owns the project.
         vm.mockCall(
-            address(projects),
-            abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId),
-            abi.encode(owner)
+            address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId), abi.encode(owner)
         );
 
         // Mock transferOwnershipToProject.
@@ -166,9 +148,7 @@ contract ClaimCollectionOwnershipTest is Test {
 
         // Now simulate the project NFT being transferred to newOwner.
         vm.mockCall(
-            address(projects),
-            abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId),
-            abi.encode(newOwner)
+            address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId), abi.encode(newOwner)
         );
 
         // After the hook is owned by the project, the JBOwnable.owner() resolves to PROJECTS.ownerOf(projectId).
@@ -179,9 +159,7 @@ contract ClaimCollectionOwnershipTest is Test {
         // Verify: the old owner can no longer claim (since they don't own the project NFT anymore).
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                CTDeployer.CTDeployer_NotOwnerOfProject.selector, deployedProjectId, hookAddr, owner
-            )
+            abi.encodeWithSelector(CTDeployer.CTDeployer_NotOwnerOfProject.selector, deployedProjectId, hookAddr, owner)
         );
         ctDeployer.claimCollectionOwnershipOf(IJB721TiersHook(hookAddr));
     }
@@ -270,9 +248,7 @@ contract ClaimCollectionOwnershipTest is Test {
     function test_claim_calledTwice_succeeds() public {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
         vm.mockCall(
-            address(projects),
-            abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId),
-            abi.encode(owner)
+            address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId), abi.encode(owner)
         );
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.transferOwnershipToProject.selector), abi.encode());
 
@@ -289,9 +265,7 @@ contract ClaimCollectionOwnershipTest is Test {
     function test_claim_revertsForNonProjectOwner() public {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
         vm.mockCall(
-            address(projects),
-            abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId),
-            abi.encode(owner)
+            address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId), abi.encode(owner)
         );
 
         vm.prank(unauthorized);

@@ -705,6 +705,7 @@ contract TestCTPublisher is Test {
         try publisher.mintFrom{value: 1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
         catch (bytes memory reason) {
             assertTrue(
+                // forge-lint: disable-next-line(unsafe-typecast)
                 bytes4(reason) != CTPublisher.CTPublisher_InsufficientEthSent.selector,
                 "should not revert with InsufficientEthSent"
             );
@@ -758,6 +759,7 @@ contract TestCTPublisher is Test {
         try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(feeHook), posts, poster, poster, "", "") {}
         catch (bytes memory reason) {
             assertTrue(
+                // forge-lint: disable-next-line(unsafe-typecast)
                 bytes4(reason) != CTPublisher.CTPublisher_InsufficientEthSent.selector,
                 "fee project should not charge fee"
             );

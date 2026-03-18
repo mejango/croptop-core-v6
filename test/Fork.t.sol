@@ -27,7 +27,7 @@ import {JBAddressRegistry} from "@bananapus/address-registry-v6/src/JBAddressReg
 import {JBSuckerRegistry} from "@bananapus/suckers-v6/src/JBSuckerRegistry.sol";
 import {JBOptimismSuckerDeployer} from "@bananapus/suckers-v6/src/deployers/JBOptimismSuckerDeployer.sol";
 import {JBOptimismSucker} from "@bananapus/suckers-v6/src/JBOptimismSucker.sol";
-import {JBAddToBalanceMode} from "@bananapus/suckers-v6/src/enums/JBAddToBalanceMode.sol";
+
 import {IOPMessenger} from "@bananapus/suckers-v6/src/interfaces/IOPMessenger.sol";
 import {IOPStandardBridge} from "@bananapus/suckers-v6/src/interfaces/IOPStandardBridge.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
@@ -141,8 +141,7 @@ contract ForkTest is Test {
         tokens[0] = JBTokenMapping({
             localToken: address(JBConstants.NATIVE_TOKEN),
             minGas: 200_000,
-            remoteToken: bytes32(uint256(uint160(JBConstants.NATIVE_TOKEN))),
-            minBridgeAmount: 0.001 ether
+            remoteToken: bytes32(uint256(uint160(JBConstants.NATIVE_TOKEN)))
         });
 
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
@@ -214,7 +213,7 @@ contract ForkTest is Test {
 
         // Deploy and configure the singleton.
         JBOptimismSucker singleton = new JBOptimismSucker(
-            opSuckerDeployer, jbDirectory, jbPermissions, jbTokens, JBAddToBalanceMode.ON_CLAIM, trustedForwarder
+            opSuckerDeployer, jbDirectory, jbPermissions, jbTokens, 1, suckerRegistry, trustedForwarder
         );
         opSuckerDeployer.configureSingleton(singleton);
 
