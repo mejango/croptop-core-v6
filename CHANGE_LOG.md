@@ -86,8 +86,8 @@ Posts can now include a `splitPercent` and an array of `splits` (JBSplit[]) that
 - **v5:** When minting from an existing tier, `totalPrice` was accumulated using `post.price` (user-supplied).
 - **v6:** When minting from an existing tier, `totalPrice` is accumulated using the actual tier price fetched from `store.tierOf()`. This prevents a caller from passing `price=0` for an existing tier to evade fees.
 
-### CTDeployer as Data Hook Proxy
-- The CTDeployer now implements the data hook pattern directly, acting as a proxy that forwards `beforePayRecordedWith` and `beforeCashOutRecordedWith` to the stored `dataHookOf[projectId]`. For cash outs from suckers (verified via `SUCKER_REGISTRY.isSuckerOf`), it returns 0% tax rate, enabling sucker-based cross-chain operations without cash out taxes.
+### CTDeployer Data Hook Proxy Activated
+- The CTDeployer implemented the data hook proxy pattern in v5 as well -- it had `beforePayRecordedWith`, `beforeCashOutRecordedWith`, `hasMintPermissionFor`, and the `dataHookOf` mapping -- but `deployProjectFor` set `metadata.dataHook = address(hook)` (the 721 hook directly), so the proxy methods were never called. In v6, `deployProjectFor` sets `metadata.dataHook = address(this)`, `cashOutTaxRate = MAX_CASH_OUT_TAX_RATE`, and `useDataHookForCashOut = true`, activating the proxy. This routes all pay and cash out data hook calls through CTDeployer, which forwards them to the stored `dataHookOf[projectId]` while intercepting sucker cash outs (verified via `SUCKER_REGISTRY.isSuckerOf`) to return a 0% tax rate for cross-chain operations.
 
 ---
 
