@@ -26,6 +26,7 @@ import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {MockPriceFeed} from "@bananapus/core-v6/test/mock/MockPriceFeed.sol";
 
 // 721 hook — deploy fresh within fork.
 import {JB721TiersHookStore} from "@bananapus/721-hook-v6/src/JB721TiersHookStore.sol";
@@ -132,6 +133,18 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Deploy all JB core contracts fresh within the fork.
         _deployJBCore();
+
+        // CTDeployer hardcodes baseCurrency = JBCurrencyIds.ETH (1), but the accounting context
+        // uses currency = uint32(uint160(NATIVE_TOKEN)) = 61166. Add an identity price feed
+        // so JBPrices can convert between them.
+        MockPriceFeed identityFeed = new MockPriceFeed(1e18, 18);
+        vm.prank(multisig);
+        jbPrices.addPriceFeedFor({
+            projectId: 0,
+            pricingCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
+            unitCurrency: JBCurrencyIds.ETH,
+            feed: identityFeed
+        });
 
         // Deploy the terminal infrastructure.
         _deployTerminal();
