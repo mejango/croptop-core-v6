@@ -821,8 +821,7 @@ contract TestCTPublisher is Test {
 
         // Verify adjustTiers receives the tier config with the correct split beneficiary and percent.
         vm.expectCall(
-            hookAddr,
-            abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector, expectedTiers, new uint256[](0))
+            hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector, expectedTiers, new uint256[](0))
         );
 
         uint256 fee = 0.1 ether / 20;
