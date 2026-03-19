@@ -56,12 +56,14 @@ import {CTPost} from "./../../src/structs/CTPost.sol";
 /// @notice Fork tests for CTPublisher.mintFrom(). Deploys all JB infrastructure fresh within a mainnet fork,
 ///         then exercises the publish-and-mint flow end-to-end.
 contract PublishForkTest is Test, DeployPermit2 {
-    // ───────────────────────── Mainnet addresses ──────────────────────────
+    // ───────────────────────── Mainnet addresses
+    // ──────────────────────────
 
     IOPMessenger constant OP_L1_MESSENGER = IOPMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
     IOPStandardBridge constant OP_L1_BRIDGE = IOPStandardBridge(0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1);
 
-    // ───────────────────────── JB core (deployed fresh) ───────────────────
+    // ───────────────────────── JB core (deployed fresh)
+    // ───────────────────
 
     address multisig = address(0xBEEF);
     address trustedForwarder = address(0);
@@ -81,21 +83,25 @@ contract PublishForkTest is Test, DeployPermit2 {
     JBTerminalStore jbTerminalStore;
     JBMultiTerminal jbMultiTerminal;
 
-    // ───────────────────────── 721 hook (deployed fresh) ──────────────────
+    // ───────────────────────── 721 hook (deployed fresh)
+    // ──────────────────
 
     JB721TiersHookDeployer hookDeployer;
 
-    // ───────────────────────── Suckers (deployed fresh) ───────────────────
+    // ───────────────────────── Suckers (deployed fresh)
+    // ───────────────────
 
     JBSuckerRegistry suckerRegistry;
     JBOptimismSuckerDeployer opSuckerDeployer;
 
-    // ───────────────────────── Croptop ────────────────────────────────────
+    // ───────────────────────── Croptop
+    // ────────────────────────────────────
 
     CTPublisher publisher;
     CTDeployer deployer;
 
-    // ───────────────────────── Test actors & state ────────────────────────
+    // ───────────────────────── Test actors & state
+    // ────────────────────────
 
     address projectOwner = address(0xA11CE);
     address poster = address(0xB0B);
@@ -106,7 +112,8 @@ contract PublishForkTest is Test, DeployPermit2 {
     uint256 testProjectId;
     IJB721TiersHook testHook;
 
-    // ───────────────────────── Constants ──────────────────────────────────
+    // ───────────────────────── Constants
+    // ──────────────────────────────────
 
     uint104 constant POST_PRICE = 0.1 ether;
     uint32 constant POST_SUPPLY = 100;
@@ -116,7 +123,8 @@ contract PublishForkTest is Test, DeployPermit2 {
     // forge-lint: disable-next-line(unsafe-typecast)
     bytes32 constant TEST_URI_2 = bytes32("test_ipfs_uri_2");
 
-    // ───────────────────────── Setup ─────────────────────────────────────
+    // ───────────────────────── Setup
+    // ─────────────────────────────────────
 
     function setUp() public {
         // Fork ETH mainnet.
@@ -148,7 +156,8 @@ contract PublishForkTest is Test, DeployPermit2 {
         vm.deal(poster, 10 ether);
     }
 
-    // ───────────────────────── Tests ─────────────────────────────────────
+    // ───────────────────────── Tests
+    // ─────────────────────────────────────
 
     /// @notice Verify that mintFrom() mints an NFT to the specified beneficiary.
     function testFork_MintFromPublishesNFT() public {
@@ -179,21 +188,18 @@ contract PublishForkTest is Test, DeployPermit2 {
         uint256 totalValue = uint256(POST_PRICE) + fee;
 
         // Record terminal balances before minting.
-        uint256 feeProjectBalanceBefore = jbTerminalStore.balanceOf(
-            address(jbMultiTerminal), feeProjectId, JBConstants.NATIVE_TOKEN
-        );
-        uint256 testProjectBalanceBefore = jbTerminalStore.balanceOf(
-            address(jbMultiTerminal), testProjectId, JBConstants.NATIVE_TOKEN
-        );
+        uint256 feeProjectBalanceBefore =
+            jbTerminalStore.balanceOf(address(jbMultiTerminal), feeProjectId, JBConstants.NATIVE_TOKEN);
+        uint256 testProjectBalanceBefore =
+            jbTerminalStore.balanceOf(address(jbMultiTerminal), testProjectId, JBConstants.NATIVE_TOKEN);
 
         // Mint.
         vm.prank(poster);
         publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "", "");
 
         // Verify fee project terminal balance increased by the fee amount.
-        uint256 feeProjectBalanceAfter = jbTerminalStore.balanceOf(
-            address(jbMultiTerminal), feeProjectId, JBConstants.NATIVE_TOKEN
-        );
+        uint256 feeProjectBalanceAfter =
+            jbTerminalStore.balanceOf(address(jbMultiTerminal), feeProjectId, JBConstants.NATIVE_TOKEN);
         assertEq(
             feeProjectBalanceAfter - feeProjectBalanceBefore,
             fee,
@@ -201,9 +207,8 @@ contract PublishForkTest is Test, DeployPermit2 {
         );
 
         // Verify test project terminal balance increased by the post price.
-        uint256 testProjectBalanceAfter = jbTerminalStore.balanceOf(
-            address(jbMultiTerminal), testProjectId, JBConstants.NATIVE_TOKEN
-        );
+        uint256 testProjectBalanceAfter =
+            jbTerminalStore.balanceOf(address(jbMultiTerminal), testProjectId, JBConstants.NATIVE_TOKEN);
         assertEq(
             testProjectBalanceAfter - testProjectBalanceBefore,
             uint256(POST_PRICE),
@@ -250,7 +255,8 @@ contract PublishForkTest is Test, DeployPermit2 {
         assertEq(IERC721(address(testHook)).balanceOf(nftBeneficiary), 2, "Two NFTs should be minted across both calls");
     }
 
-    // ───────────────────────── Internal deployment helpers ────────────────
+    // ───────────────────────── Internal deployment helpers
+    // ────────────────
 
     // forge-lint: disable-next-line(mixed-case-function)
     function _deployJBCore() internal {
@@ -385,13 +391,12 @@ contract PublishForkTest is Test, DeployPermit2 {
     function _ethTerminalConfig() internal view returns (JBTerminalConfig[] memory configs) {
         JBAccountingContext[] memory contexts = new JBAccountingContext[](1);
         contexts[0] = JBAccountingContext({
-            token: JBConstants.NATIVE_TOKEN,
-            decimals: 18,
-            currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+            token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
 
         configs = new JBTerminalConfig[](1);
-        configs[0] = JBTerminalConfig({terminal: IJBTerminal(address(jbMultiTerminal)), accountingContextsToAccept: contexts});
+        configs[0] =
+            JBTerminalConfig({terminal: IJBTerminal(address(jbMultiTerminal)), accountingContextsToAccept: contexts});
     }
 
     /// @notice Build a single-element CTPost array.
