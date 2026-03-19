@@ -14,6 +14,8 @@ import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+
 import {CTPublisher} from "../src/CTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../src/structs/CTPost.sol";
@@ -769,6 +771,64 @@ contract TestCTPublisher is Test {
     //*********************************************************************//
     // --- Multiple Posts With Different Split Percents ------------------- //
     //*********************************************************************//
+
+    function test_mintFrom_nonzeroSplitPercent_passesSplitsToTier() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 500_000_000);
+        _setupMintMocks();
+
+        address splitBeneficiary = makeAddr("splitBeneficiary");
+
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0] = JBSplit({
+            percent: 500_000_000, // 50% of tier revenue to beneficiary
+            projectId: 0,
+            beneficiary: payable(splitBeneficiary),
+            preferAddToBalance: false,
+            lockedUntil: 0,
+            hook: IJBSplitHook(address(0))
+        });
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("split-beneficiary-test"),
+            totalSupply: 10,
+            price: 0.1 ether,
+            category: 5,
+            splitPercent: 250_000_000, // 25% split
+            splits: splits
+        });
+
+        // Build expected tier config to verify splits are passed through.
+        JB721TierConfig[] memory expectedTiers = new JB721TierConfig[](1);
+        expectedTiers[0] = JB721TierConfig({
+            price: 0.1 ether,
+            initialSupply: 10,
+            votingUnits: 0,
+            reserveFrequency: 0,
+            reserveBeneficiary: address(0),
+            encodedIPFSUri: keccak256("split-beneficiary-test"),
+            category: 5,
+            discountPercent: 0,
+            allowOwnerMint: false,
+            useReserveBeneficiaryAsDefault: false,
+            transfersPausable: false,
+            useVotingUnits: true,
+            cannotBeRemoved: false,
+            cannotIncreaseDiscountPercent: false,
+            splitPercent: 250_000_000,
+            splits: splits
+        });
+
+        // Verify adjustTiers receives the tier config with the correct split beneficiary and percent.
+        vm.expectCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector, expectedTiers, new uint256[](0))
+        );
+
+        uint256 fee = 0.1 ether / 20;
+        vm.prank(poster);
+        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+    }
 
     function test_mintFrom_multiplePostsDifferentSplits() public {
         // Category 5 allows up to 50% splits.
