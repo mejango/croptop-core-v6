@@ -10,7 +10,7 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 |----------|------|
 | `CTPublisher` | Core publishing engine. Validates posts against bit-packed allowances, creates 721 tiers on hooks, mints first copies to posters, and routes fees. Inherits `JBPermissioned`, `ERC2771Context`. |
 | `CTDeployer` | Factory that deploys a Juicebox project + 721 hook + posting criteria in one transaction. Also acts as `IJBRulesetDataHook` proxy that forwards pay/cash-out calls to the underlying hook while granting fee-free cash outs to suckers. |
-| `CTProjectOwner` | Receives project ownership NFT and grants `CTPublisher` the `ADJUST_721_TIERS` permission permanently. Locks ownership while keeping posting enabled. |
+| `CTProjectOwner` | Burn-lock contract: receives the project ownership NFT and grants `CTPublisher` the `ADJUST_721_TIERS` permission permanently. Since `CTProjectOwner` has no `transferFrom`, `reconfigure`, or `withdraw` functions, ownership is effectively burned -- no one can reclaim the project NFT, change rulesets, or modify posting criteria after transfer. Use this when you want a fully autonomous project where only community posting (within pre-set criteria) is possible. If you need to retain the ability to reconfigure the project, adjust tiers, or withdraw funds, keep ownership yourself (or use a multisig) instead. Configure all desired posting criteria **before** transferring the project NFT here, as they become immutable once ownership moves. Accepts both mints and `safeTransferFrom` calls originating from the `PROJECTS` contract. |
 
 ## Key Functions
 
@@ -65,10 +65,10 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 
 | Struct | Key Fields | Used In |
 |--------|------------|---------|
-| `CTAllowedPost` | `hook`, `category` (uint24), `minimumPrice` (uint104), `minimumTotalSupply` (uint32), `maximumTotalSupply` (uint32), `maximumSplitPercent` (uint32), `allowedAddresses[]` | `configurePostingCriteriaFor` |
+| `CTAllowedPost` | `hook`, `category` (uint24), `minimumPrice` (uint104), `minimumTotalSupply` (uint32), `maximumTotalSupply` (uint32), `maximumSplitPercent` (uint32), `allowedAddresses[]` | `configurePostingCriteriaFor` -- used when calling `CTPublisher` directly on an existing hook |
+| `CTDeployerAllowedPost` | Same fields as `CTAllowedPost` minus `hook` | `CTProjectConfig.allowedPosts` -- used during `deployProjectFor` because the hook address is not yet known; `CTDeployer._configurePostingCriteriaFor` fills in the `hook` field automatically after deploying the hook |
 | `CTPost` | `encodedIPFSUri` (bytes32), `totalSupply` (uint32), `price` (uint104), `category` (uint24), `splitPercent` (uint32), `splits[]` (JBSplit[]) | `mintFrom` |
 | `CTProjectConfig` | `terminalConfigurations`, `projectUri`, `allowedPosts` (CTDeployerAllowedPost[]), `contractUri`, `name`, `symbol`, `salt` | `deployProjectFor` |
-| `CTDeployerAllowedPost` | Same as `CTAllowedPost` minus `hook` (inferred during deployment) | `CTProjectConfig.allowedPosts` |
 | `CTSuckerDeploymentConfig` | `deployerConfigurations` (JBSuckerDeployerConfig[]), `salt` | `deployProjectFor`, `deploySuckersFor` |
 
 ## Events
@@ -104,12 +104,23 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 
 ## Storage
 
-| Mapping | Type | Purpose |
-|---------|------|---------|
+### CTPublisher
+
+| Variable | Type | Purpose |
+|----------|------|---------|
 | `tierIdForEncodedIPFSUriOf` | `hook => encodedIPFSUri => uint256` | Maps IPFS URI to existing tier ID (prevents duplicates) |
 | `_packedAllowanceFor` | `hook => category => uint256` | Bit-packed allowance: price (0-103), minSupply (104-135), maxSupply (136-167), maxSplitPercent (168-199) |
 | `_allowedAddresses` | `hook => category => address[]` | Per-category address allowlist |
-| `dataHookOf` | `projectId => IJBRulesetDataHook` | Stores original data hook (CTDeployer proxy pattern) |
+
+### CTDeployer
+
+| Variable | Type | Purpose |
+|----------|------|---------|
+| `PROJECTS` | `IJBProjects` (immutable) | ERC-721 contract for Juicebox project ownership |
+| `DEPLOYER` | `IJB721TiersHookDeployer` (immutable) | Factory for deploying 721 tiers hooks |
+| `PUBLISHER` | `ICTPublisher` (immutable) | CTPublisher instance used for posting |
+| `SUCKER_REGISTRY` | `IJBSuckerRegistry` (immutable) | Registry for cross-chain sucker deployment and lookup |
+| `dataHookOf` | `projectId => IJBRulesetDataHook` | Stores original data hook per project (CTDeployer proxy pattern) |
 
 ## Gotchas
 
@@ -125,7 +136,7 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 10. **Temporary ownership during deployment.** `CTDeployer` owns the project NFT temporarily during `deployProjectFor` (to configure permissions and hooks), then transfers it to the specified `owner`. If the transfer reverts, the entire deployment fails.
 11. **Data hook proxy pattern.** `CTDeployer` wraps itself as the data hook, forwarding to `dataHookOf[projectId]`. This is needed to intercept cash-out calls and grant fee-free cash outs to suckers. Both `useDataHookForPay` and `useDataHookForCashOut` are enabled (M-37 fix).
 12. **Sucker registry trust.** `CTDeployer.beforeCashOutRecordedWith` trusts `SUCKER_REGISTRY.isSuckerOf` to determine fee exemption. If the registry is compromised, any address could cash out without tax.
-13. **Allowlist uses linear scan.** `_isAllowed()` iterates the full allowlist array. Acceptable for <100 addresses; gas cost scales linearly with list size.
+13. **Allowlist uses linear scan.** `_isAllowed()` iterates the full allowlist array. Acceptable for <100 addresses; gas cost scales linearly with list size. This also affects `mintFrom` with large post batches: each post in the batch triggers a separate allowlist scan, so gas scales as `O(posts * allowlistSize)`. Keep batches under ~20 posts with allowlists under ~50 addresses to stay within block gas limits.
 14. **Referral ID in metadata.** `FEE_PROJECT_ID` is stored in the first 32 bytes of mint metadata (via assembly `mstore`), allowing the fee terminal to track referrals.
 15. **Deterministic deployment.** Hook salt is `keccak256(abi.encode(projectConfig.salt, msg.sender))` and sucker salt is `keccak256(abi.encode(suckerConfig.salt, msg.sender))`. Different callers with the same salt get different addresses.
 16. **Default project weight.** `CTDeployer` deploys projects with `weight = 1_000_000 * 10^18`, ETH currency, and `maxCashOutTaxRate`. These defaults are hardcoded.
