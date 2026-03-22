@@ -4,6 +4,8 @@ Permissioned NFT publishing for Juicebox projects -- anyone can post content as 
 
 [Docs](https://docs.juicebox.money) | [Discord](https://discord.gg/juicebox) | [Croptop](https://croptop.eth.limo)
 
+**Supported Chains:** Ethereum, Optimism, Base, Arbitrum (mainnets) and Ethereum Sepolia, Optimism Sepolia, Base Sepolia, Arbitrum Sepolia (testnets). See `script/Deploy.s.sol` for the Sphinx deployment configuration.
+
 ## Conceptual Overview
 
 Croptop turns any Juicebox project with a 721 tiers hook into a permissioned content marketplace. Project owners define posting criteria -- minimum price, supply bounds, address allowlists -- and anyone who meets those criteria can publish new NFT tiers on the project. The poster's content becomes a mintable NFT tier, and the first copy is minted to them automatically.
@@ -28,6 +30,33 @@ Croptop turns any Juicebox project with a 721 tiers hook into a permissioned con
 4. Anyone can mint additional copies
    → Standard 721 tier minting via the project's hook
 ```
+
+```mermaid
+sequenceDiagram
+    participant Poster
+    participant CTPublisher
+    participant Hook as 721 Tiers Hook
+    participant Terminal as Project Terminal
+    participant FeeTerminal as Fee Project Terminal
+
+    Poster->>CTPublisher: mintFrom(hook, posts, ...)
+    CTPublisher->>CTPublisher: Validate each post against category criteria
+    loop For each post
+        CTPublisher->>Hook: adjustTiersOf() -- create new tier (or reuse existing)
+    end
+    CTPublisher->>Terminal: pay() -- total price minus fee
+    Note over Terminal: Mints first copy of each tier to poster
+    CTPublisher->>FeeTerminal: pay() -- 5% fee (totalPrice / 20)
+    Note over FeeTerminal: Routes fee to designated fee project
+```
+
+### Fee Structure
+
+Every `mintFrom` call collects a 5% fee on the total tier price. The fee is calculated as `totalPrice / FEE_DIVISOR` where `FEE_DIVISOR = 20`. The fee is paid to the primary ETH terminal of a designated fee project (`FEE_PROJECT_ID`, set at deployment). The remainder goes to the target project's primary terminal as a normal payment.
+
+- If the project being posted to **is** the fee project, no fee is collected (avoids circular payments).
+- Integer division truncates, so the fee loses up to 19 wei of dust per mint.
+- Any ETH remaining in the contract after the main payment (including force-sent ETH) is forwarded to the fee project terminal.
 
 ### One-Click Deployment
 
