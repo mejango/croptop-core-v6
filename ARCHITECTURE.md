@@ -13,6 +13,7 @@ src/
 ├── CTProjectOwner.sol   — Proxy owner for Croptop-deployed projects
 ├── interfaces/
 │   ├── ICTDeployer.sol
+│   ├── ICTProjectOwner.sol
 │   └── ICTPublisher.sol
 └── structs/
     ├── CTAllowedPost.sol         — Rules for what can be posted
