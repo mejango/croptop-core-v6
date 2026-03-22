@@ -2,6 +2,14 @@
 
 This document describes all changes between `croptop-core` (v5) and `croptop-core-v6` (v6).
 
+## Summary
+
+- **Data hook proxy activated**: `CTDeployer` now sets itself as the data hook (`metadata.dataHook = address(this)`) instead of pointing directly to the 721 hook — enables sucker cashouts at 0% tax rate for cross-chain operations.
+- **Split support for posts**: `CTPost` gained `splitPercent` and `splits` fields, allowing poster-defined payment routing per NFT tier (bounded by `maximumSplitPercent`).
+- **Fee evasion fixes**: Existing tier mints now use on-chain price (not user-supplied), and duplicate posts within a batch are rejected.
+- **Stale tier recovery**: Externally-removed tiers are detected and re-created instead of silently failing.
+- **`projectId` cast widened**: `uint56` → `uint64` to match v6 `JBPermissionsData`.
+
 ---
 
 ## 1. Breaking Changes
@@ -50,6 +58,8 @@ All imports updated from v5 to v6 namespaces:
 - **v5:** Sets `metadata.dataHook = address(hook)` (the 721 hook itself is the data hook). Does NOT set `cashOutTaxRate` or `useDataHookForCashOut`.
 - **v6:** Sets `metadata.dataHook = address(this)` (the CTDeployer itself is the data hook). Sets `metadata.cashOutTaxRate = JBConstants.MAX_CASH_OUT_TAX_RATE` and `metadata.useDataHookForCashOut = true`.
 - The CTDeployer now acts as a data hook proxy, forwarding pay/cashout calls to the stored `dataHookOf[projectId]`, while intercepting sucker cash outs to grant 0% tax rate. This is a fundamental architectural change.
+
+> **Why this change**: In v5, the CTDeployer already had the proxy methods (`beforePayRecordedWith`, `beforeCashOutRecordedWith`, `hasMintPermissionFor`) and the `dataHookOf` mapping, but `deployProjectFor` pointed `metadata.dataHook` directly at the 721 hook, bypassing the proxy entirely. v6 activates the proxy so the deployer can intercept sucker cashouts (verified via `SUCKER_REGISTRY.isSuckerOf`) and return a 0% tax rate for cross-chain operations. Without this, cross-chain token bridging via suckers would incur the full `MAX_CASH_OUT_TAX_RATE`, making omnichain projects economically unviable.
 
 ### `JB721InitTiersConfig` — `prices` Field Removed
 - **v5:** `JB721InitTiersConfig({ tiers, currency, decimals, prices: controller.PRICES() })`
@@ -251,3 +261,5 @@ No field changes. Import path updated from `@bananapus/suckers-v5` to `@bananapu
 | -- | `CTPublisher_SplitPercentExceedsMaximum` | New error |
 | Solidity `0.8.23` | Solidity `0.8.26` | Compiler bump |
 | `@bananapus/*-v5` | `@bananapus/*-v6` | All dependency namespaces |
+
+> **Cross-repo impact**: The `CTPost.splitPercent` and `splits` fields feed directly into `nana-721-hook-v6`'s tier splits system. `nana-suckers-v6` suckers are detected via `SUCKER_REGISTRY.isSuckerOf` for the 0% tax cashout path. `nana-permission-ids-v6` `uint64` projectId width change drove the `CTProjectOwner` cast update.
