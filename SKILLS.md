@@ -40,8 +40,8 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 
 | Function | What it does |
 |----------|-------------|
-| `CTDeployer.beforePayRecordedWith(context)` | Forwards pay context to the stored `dataHookOf[projectId]` (typically the 721 tiers hook). |
-| `CTDeployer.beforeCashOutRecordedWith(context)` | Returns zero tax rate for sucker addresses (fee-free cross-chain cash outs). Otherwise forwards to the stored data hook. |
+| `CTDeployer.beforePayRecordedWith(context)` | Forwards pay context to the stored `dataHookOf[projectId]` (typically the 721 tiers hook). Hook specifications returned include a `noop` field — the 721 hook always returns `noop: false`. |
+| `CTDeployer.beforeCashOutRecordedWith(context)` | Returns zero tax rate for sucker addresses (fee-free cross-chain cash outs). Otherwise forwards to the stored data hook. Forwarded hook specifications preserve the inner hook's `noop` flag. |
 | `CTDeployer.hasMintPermissionFor(projectId, ruleset, addr)` | Returns `true` if `addr` is a sucker for the project. |
 
 ### Burn-Lock Ownership
