@@ -7,6 +7,7 @@
 - **Sucker registry.** `CTDeployer.beforeCashOutRecordedWith` trusts `SUCKER_REGISTRY.isSuckerOf()` for 0% tax cashouts, same risk as the omnichain deployer.
 - **CTProjectOwner as burn target.** Projects transferred to `CTProjectOwner` grant `ADJUST_721_TIERS` to `PUBLISHER`. The project NFT cannot be recovered -- this is intentional but irreversible.
 - **JBDirectory / Terminal resolution.** `CTPublisher.mintFrom` resolves terminals via `DIRECTORY.primaryTerminalOf()`. A compromised directory could redirect payment and fee flows.
+- **721 hook store.** `_setupPosts` calls `hook.STORE().tierOf()` and `hook.STORE().isTierRemoved()`. The store is trusted to return accurate tier data. A malicious hook returning a fake store can report manipulated prices, supply limits, and removal status, causing `_setupPosts` to miscalculate `totalPrice` or skip duplicate detection.
 
 ## 2. Economic / Manipulation Risks
 
@@ -30,7 +31,13 @@
 - **Terminal resolution failure.** If `DIRECTORY.primaryTerminalOf()` returns `address(0)` for the project or fee project, the `pay()` call will revert with a low-level error.
 - **adjustTiers revert.** `hook.adjustTiers()` can revert if tiers violate category ordering constraints or other hook-level rules. This blocks the entire `mintFrom` call.
 
-## 5. Integration Risks
+## 5. Reentrancy Surface
+
+- **`mintFrom` external call chain.** `mintFrom` makes three categories of external calls: (1) `hook.adjustTiers()` to create new tiers, (2) `terminal.pay{value}()` to pay the project, (3) `terminal.pay{value}()` to pay the fee project. The first `terminal.pay` can trigger pay hooks on the target project, which could call back into `CTPublisher`. However, `mintFrom` has no mutable state between the tier adjustment and the payment — `totalPrice` and `payValue` are computed from local variables before the external calls. A re-entrant `mintFrom` call would process independently.
+- **Fee payment ordering.** The fee is sent AFTER the main payment (line ordering in `mintFrom`). If the main payment's pay hook re-enters and calls `mintFrom` again, the fee for the first call has not yet been sent. This is safe because the fee is computed from `address(this).balance` AFTER the main payment, and each call independently computes its own fee from its own `msg.value`. Force-sent ETH (via selfdestruct) would inflate the fee calculation, routing the excess to the fee project — an attacker subsidizes the fee project, not themselves.
+- **No `ReentrancyGuard`.** The publisher relies on independent local state per call. This is safe for the current implementation but fragile if mutable contract storage is added in future versions.
+
+## 6. Integration Risks
 
 - **CTDeployer forwards all pay/cashout calls to `dataHookOf`.** `beforePayRecordedWith` and `beforeCashOutRecordedWith` delegate to the stored data hook without try-catch. If the data hook reverts, all payments/cashouts for the project are blocked.
 - **No mechanism for hook migration.** `dataHookOf` is written once in `deployProjectFor` and never updated. If the data hook becomes compromised, there is no governance path to replace it without deploying a new project.
@@ -38,7 +45,17 @@
 - **CTProjectOwner accepts any project NFT.** `onERC721Received` grants `ADJUST_721_TIERS` to `PUBLISHER` for whatever tokenId is received. If a non-Croptop project is accidentally transferred to `CTProjectOwner`, the publisher gains tier adjustment permission for it.
 - **Fee payment destination.** Fees are routed to `FEE_PROJECT_ID` via its primary terminal. If the fee project changes its terminal or token acceptance, fee payments could fail and block all minting.
 
-## 6. Invariants to Verify
+## 7. Accepted Behaviors
+
+### 7.1 O(n^2) duplicate detection in `_setupPosts` (bounded by practical limits)
+
+`_setupPosts` uses an inner loop (`j < i`) to detect duplicate `encodedIPFSUri` values within a single batch. This is O(n^2) in the number of posts. For typical batch sizes (1-20 posts), gas cost is negligible (~2k gas per comparison). At 100 posts, the quadratic cost adds ~10M gas. The practical limit is ~150 posts per batch before approaching block gas limits. No mitigation is needed because: (1) the quadratic detection prevents duplicate NFT tiers which would corrupt tier ID tracking, (2) real-world posting batches are small (marketplace UX limits), and (3) the gas cost is borne by the poster, not the protocol.
+
+### 7.2 Tier ID prediction assumes no concurrent transactions
+
+`_setupPosts` predicts new tier IDs as `maxTierIdOf(hook) + 1 + i`. A concurrent `adjustTiers` call between the `maxTierIdOf` read and the `adjustTiers` execution shifts all predicted IDs, causing the wrong tiers to be minted. This is a known race condition. Mitigation is at the application layer: frontends should use nonce-based transaction ordering or warn users about concurrent posting. The hook-level `adjustTiers` is atomic (all-or-nothing), so a failed prediction reverts the entire batch cleanly.
+
+## 8. Invariants to Verify
 
 - `tierIdForEncodedIPFSUriOf[hook][encodedIPFSUri]` is set exactly once per (hook, encodedIPFSUri) pair and points to a valid, non-removed tier.
 - `totalPrice` accumulated in `_setupPosts` equals the sum of prices for all posts (new tier price for new posts, existing tier price for existing posts).
