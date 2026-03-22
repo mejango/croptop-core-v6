@@ -40,8 +40,8 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 
 | Function | What it does |
 |----------|-------------|
-| `CTDeployer.beforePayRecordedWith(context)` | Forwards pay context to the stored `dataHookOf[projectId]` (typically the 721 tiers hook). |
-| `CTDeployer.beforeCashOutRecordedWith(context)` | Returns zero tax rate for sucker addresses (fee-free cross-chain cash outs). Otherwise forwards to the stored data hook. |
+| `CTDeployer.beforePayRecordedWith(context)` | Forwards pay context to the stored `dataHookOf[projectId]` (typically the 721 tiers hook). Hook specifications returned include a `noop` field — the 721 hook always returns `noop: false`. |
+| `CTDeployer.beforeCashOutRecordedWith(context)` | Returns zero tax rate for sucker addresses (fee-free cross-chain cash outs). Otherwise forwards to the stored data hook. Forwarded hook specifications preserve the inner hook's `noop` flag. |
 | `CTDeployer.hasMintPermissionFor(projectId, ruleset, addr)` | Returns `true` if `addr` is a sucker for the project. |
 
 ### Burn-Lock Ownership
@@ -92,6 +92,7 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 | `CTPublisher_TotalSupplyTooBig` | Post `totalSupply > maximumTotalSupply` (when max > 0) |
 | `CTPublisher_UnauthorizedToPostInCategory` | Category unconfigured (`minSupply == 0`) |
 | `CTPublisher_ZeroTotalSupply` | `configurePostingCriteriaFor` with `minimumTotalSupply == 0` |
+| `CTPublisher_DuplicatePost(bytes32 encodedIPFSUri)` | Same `encodedIPFSUri` appears more than once within the same `mintFrom` batch |
 | `CTDeployer_NotOwnerOfProject` | `claimCollectionOwnershipOf` called by non-owner |
 
 ## Constants
@@ -119,7 +120,7 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 5. **Tier reuse by IPFS URI.** If an encoded IPFS URI was already minted on the hook, the existing tier ID is reused instead of creating a new tier. The poster still gets a mint of the existing tier. The fee is calculated from the actual tier price stored on-chain (not from `post.price`), preventing fee evasion (H-19 fix).
 6. **Stale tier mapping cleanup.** If a tier was removed externally via `adjustTiers()`, the `tierIdForEncodedIPFSUriOf` mapping is automatically cleared when the same IPFS URI is posted again, allowing a new tier to be created (L-52 fix).
 7. **Array resizing via assembly.** `_setupPosts` resizes `tiersToAdd` via inline assembly when some posts reuse existing tiers. The `tierIdsToMint` array is NOT resized and may contain zeros for pre-existing tiers.
-8. **CTProjectOwner only accepts mints.** `onERC721Received` reverts if `from != address(0)` -- it only accepts tokens minted by `PROJECTS`, not transferred directly. But external project NFT transfers (where `from` is the previous owner) DO work since the hook is on `CTProjectOwner`, not `CTDeployer`.
+8. **CTProjectOwner only accepts from PROJECTS contract.** `onERC721Received` reverts if `msg.sender != address(PROJECTS)`. It does NOT check the `from` address, so both mints and transfers through `PROJECTS.safeTransferFrom` are accepted.
 9. **CTDeployer rejects direct transfers.** `CTDeployer.onERC721Received` reverts if `from != address(0)`. It only accepts mints from `PROJECTS`.
 10. **Temporary ownership during deployment.** `CTDeployer` owns the project NFT temporarily during `deployProjectFor` (to configure permissions and hooks), then transfers it to the specified `owner`. If the transfer reverts, the entire deployment fails.
 11. **Data hook proxy pattern.** `CTDeployer` wraps itself as the data hook, forwarding to `dataHookOf[projectId]`. This is needed to intercept cash-out calls and grant fee-free cash outs to suckers. Both `useDataHookForPay` and `useDataHookForCashOut` are enabled (M-37 fix).
