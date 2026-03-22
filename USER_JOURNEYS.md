@@ -1,38 +1,37 @@
 # croptop-core-v6 -- User Journeys
 
-Complete user path documentation for auditors. Each journey describes the entry point, parameters, state changes, external calls, and edge cases.
+Complete user path documentation for auditors. Each journey describes the entry point, who can call, parameters, state changes, events, external calls, and edge cases.
 
 ---
 
 ## Journey 1: Deploy a Croptop Project
 
 **Actor:** Project creator
-**Entry point:** `CTDeployer.deployProjectFor(owner, projectConfig, suckerDeploymentConfiguration, controller)`
-**Source:** `src/CTDeployer.sol` lines 241-342
+**Entry point:** `CTDeployer.deployProjectFor(address owner, CTProjectConfig calldata projectConfig, CTSuckerDeploymentConfig calldata suckerDeploymentConfiguration, IJBController controller) external returns (uint256 projectId, IJB721TiersHook hook)`
+**Who can call:** Anyone. No access control on this function.
+**Source:** `src/CTDeployer.sol` lines 244-348
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `owner` | `address` | Final owner of the project NFT after deployment |
-| `projectConfig` | `CTProjectConfig` | Name, symbol, URIs, terminal configs, allowed posts, salt |
-| `suckerDeploymentConfiguration` | `CTSuckerDeploymentConfig` | Cross-chain sucker deployer configs + salt (set salt to `bytes32(0)` to skip) |
-| `controller` | `IJBController` | The JB controller that will manage the project |
+- `owner` (`address`): Final owner of the project NFT after deployment.
+- `projectConfig` (`CTProjectConfig`): Name, symbol, URIs, terminal configs, allowed posts, salt.
+- `suckerDeploymentConfiguration` (`CTSuckerDeploymentConfig`): Cross-chain sucker deployer configs + salt (set salt to `bytes32(0)` to skip).
+- `controller` (`IJBController`): The JB controller that will manage the project.
 
 ### Execution Flow
 
-1. **Controller validation** (line 251): Reverts if `controller.PROJECTS() != PROJECTS`.
+1. **Controller validation** (line 254): Reverts if `controller.PROJECTS() != PROJECTS`.
 
-2. **Ruleset configuration** (lines 253-288):
+2. **Ruleset configuration** (lines 256-291):
    - Weight: `1_000_000 * 10^18`
    - Base currency: ETH
    - Cash-out tax rate: `MAX_CASH_OUT_TAX_RATE` (100%)
    - Data hook: `address(this)` (CTDeployer)
    - `useDataHookForPay = true`, `useDataHookForCashOut = true`
 
-3. **Project ID prediction** (line 258): `projectId = PROJECTS.count() + 1`
+3. **Project ID prediction** (line 261): `projectId = PROJECTS.count() + 1`
 
-4. **Hook deployment** (lines 262-283):
+4. **Hook deployment** (lines 265-286):
    ```
    DEPLOYER.deployHookFor(projectId, config, salt)
    ```
@@ -40,32 +39,32 @@ Complete user path documentation for auditors. Each journey describes the entry 
    - Deployed with empty tiers, ETH currency, 18 decimals
    - No reserves, no votes, no owner minting, no overspend prevention
 
-5. **Project launch** (lines 291-300):
+5. **Project launch** (lines 294-303):
    ```
    controller.launchProjectFor(owner: address(this), ...)
    ```
    - CTDeployer receives the project NFT temporarily
    - `assert(projectId == returned ID)` -- reverts on mismatch (front-running protection)
 
-6. **Data hook registration** (line 303):
+6. **Data hook registration** (line 306):
    ```
    dataHookOf[projectId] = IJBRulesetDataHook(hook)
    ```
    This is write-once. No setter exists.
 
-7. **Posting criteria** (lines 306-308): If `projectConfig.allowedPosts.length > 0`, calls internal `_configurePostingCriteriaFor()` which formats `CTDeployerAllowedPost` into `CTAllowedPost` (adding the hook address) and delegates to `PUBLISHER.configurePostingCriteriaFor()`.
+7. **Posting criteria** (lines 309-311): If `projectConfig.allowedPosts.length > 0`, calls internal `_configurePostingCriteriaFor()` which formats `CTDeployerAllowedPost` into `CTAllowedPost` (adding the hook address) and delegates to `PUBLISHER.configurePostingCriteriaFor()`.
 
-8. **Sucker deployment** (lines 314-321): If `suckerDeploymentConfiguration.salt != bytes32(0)`:
+8. **Sucker deployment** (lines 317-324): If `suckerDeploymentConfiguration.salt != bytes32(0)`:
    ```
    SUCKER_REGISTRY.deploySuckersFor(projectId, salt, configurations)
    ```
 
-9. **Ownership transfer** (line 324):
+9. **Ownership transfer** (line 327):
    ```
    PROJECTS.transferFrom(address(this), owner, projectId)
    ```
 
-10. **Permission grants** (lines 327-341): Grants `owner` four permissions from CTDeployer's account:
+10. **Permission grants** (lines 329-347): Grants `owner` four permissions from CTDeployer's account:
     - `ADJUST_721_TIERS`
     - `SET_721_METADATA`
     - `MINT_721`
@@ -73,13 +72,16 @@ Complete user path documentation for auditors. Each journey describes the entry 
 
 ### State Changes
 
-| Storage | Change |
-|---------|--------|
-| `CTDeployer.dataHookOf[projectId]` | Set to the deployed hook address (permanent) |
-| `JBProjects` (ERC-721) | New token minted, transferred from CTDeployer to `owner` |
-| `JBPermissions` | 5 permission entries set (1 for sucker registry, 1 for publisher, 4 for owner) |
-| `CTPublisher._packedAllowanceFor` | Set for each allowed post category (if any) |
-| `CTPublisher._allowedAddresses` | Set for each allowed post category with allowlists (if any) |
+1. `CTDeployer.dataHookOf[projectId]` -- set to the deployed hook address (permanent, write-once).
+2. `JBProjects` (ERC-721) -- new token minted, transferred from CTDeployer to `owner`.
+3. `JBPermissions` -- 2 permission entries set in constructor (sucker registry `MAP_SUCKER_TOKEN` + publisher `ADJUST_721_TIERS`), 4 permission entries set for `owner` (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`).
+4. `CTPublisher._packedAllowanceFor[hook][category]` -- set for each allowed post category (if any).
+5. `CTPublisher._allowedAddresses[hook][category]` -- set for each allowed post category with allowlists (if any).
+
+### Events
+
+- `ConfigurePostingCriteria(hook, allowedPost, caller)` -- emitted by CTPublisher for each allowed post entry (only if `projectConfig.allowedPosts` is non-empty). See Journey 3 for the full event signature.
+- No events are emitted directly by CTDeployer itself. External calls to `controller.launchProjectFor()`, `DEPLOYER.deployHookFor()`, `PROJECTS.transferFrom()`, and `PERMISSIONS.setPermissionsFor()` emit their own events from those contracts.
 
 ### Edge Cases
 
@@ -95,24 +97,23 @@ Complete user path documentation for auditors. Each journey describes the entry 
 ## Journey 2: Post Content (Mint NFTs)
 
 **Actor:** Content poster (any address, or allowlisted address)
-**Entry point:** `CTPublisher.mintFrom(hook, posts, nftBeneficiary, feeBeneficiary, additionalPayMetadata, feeMetadata)`
-**Source:** `src/CTPublisher.sol` lines 307-420
+**Entry point:** `CTPublisher.mintFrom(IJB721TiersHook hook, CTPost[] calldata posts, address nftBeneficiary, address feeBeneficiary, bytes calldata additionalPayMetadata, bytes calldata feeMetadata) external payable`
+**Who can call:** Anyone, subject to per-category allowlist restrictions. If a category has a non-empty `allowedAddresses` list, only those addresses may post in that category. Checked via `_isAllowed(_msgSender(), addresses)`.
+**Source:** `src/CTPublisher.sol` lines 310-430
 **Value:** Must send `msg.value >= sum(tier prices) + 5% fee`
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `hook` | `IJB721TiersHook` | The 721 hook to post to |
-| `posts` | `CTPost[]` | Array of posts (URI, supply, price, category, splits) |
-| `nftBeneficiary` | `address` | Receives the minted NFTs |
-| `feeBeneficiary` | `address` | Receives fee project tokens |
-| `additionalPayMetadata` | `bytes` | Extra metadata appended to the payment |
-| `feeMetadata` | `bytes` | Metadata sent with the fee payment |
+- `hook` (`IJB721TiersHook`): The 721 hook to post to.
+- `posts` (`CTPost[]`): Array of posts (URI, supply, price, category, splits).
+- `nftBeneficiary` (`address`): Receives the minted NFTs.
+- `feeBeneficiary` (`address`): Receives fee project tokens.
+- `additionalPayMetadata` (`bytes`): Extra metadata appended to the payment.
+- `feeMetadata` (`bytes`): Metadata sent with the fee payment.
 
 ### Execution Flow
 
-**Phase 1: Validation and setup** (`_setupPosts`, lines 432-579)
+**Phase 1: Validation and setup** (`_setupPosts`, lines 442-589)
 
 For each post in the batch:
 
@@ -132,23 +133,23 @@ payValue = msg.value - fee       (if projectId != FEE_PROJECT_ID)
 require(totalPrice <= payValue)  (reverts CTPublisher_InsufficientEthSent if not)
 ```
 
-**Phase 3: Tier creation** (line 348)
+**Phase 3: Tier creation** (line 358)
 
 ```
 hook.adjustTiers(tiersToAdd, [])
 ```
 
-**Phase 4: Metadata construction** (lines 356-367)
+**Phase 4: Metadata construction** (lines 361-377)
 
 Build JBMetadataResolver-compatible metadata with tier IDs and referral ID.
 
-**Phase 5: Project payment** (lines 388-396)
+**Phase 5: Project payment** (lines 398-406)
 
 ```
 projectTerminal.pay{value: payValue}(projectId, NATIVE_TOKEN, payValue, nftBeneficiary, 0, "Minted from Croptop", mintMetadata)
 ```
 
-**Phase 6: Fee payment** (lines 403-418)
+**Phase 6: Fee payment** (lines 413-429)
 
 ```
 if (address(this).balance != 0) {
@@ -158,13 +159,27 @@ if (address(this).balance != 0) {
 
 ### State Changes
 
-| Storage | Change |
-|---------|--------|
-| `CTPublisher.tierIdForEncodedIPFSUriOf[hook][uri]` | Set for each new tier created |
-| `CTPublisher.tierIdForEncodedIPFSUriOf[hook][uri]` | Deleted if stale mapping detected (removed tier) |
-| `JB721TiersHookStore` (external) | New tiers added via `adjustTiers` |
-| Project terminal (external) | Balance increased by `payValue` |
-| Fee project terminal (external) | Balance increased by fee amount |
+1. `CTPublisher.tierIdForEncodedIPFSUriOf[hook][uri]` -- set for each new tier created.
+2. `CTPublisher.tierIdForEncodedIPFSUriOf[hook][uri]` -- deleted if stale mapping detected (removed tier).
+3. `JB721TiersHookStore` (external) -- new tiers added via `adjustTiers`.
+4. Project terminal (external) -- balance increased by `payValue`.
+5. Fee project terminal (external) -- balance increased by fee amount.
+
+### Events
+
+- `Mint(projectId, hook, nftBeneficiary, feeBeneficiary, posts, postValue, txValue, caller)` -- emitted at line 380 after setup is complete, before the project payment. Full signature:
+  ```solidity
+  event Mint(
+      uint256 indexed projectId,
+      IJB721TiersHook indexed hook,
+      address indexed nftBeneficiary,
+      address feeBeneficiary,
+      CTPost[] posts,
+      uint256 postValue,
+      uint256 txValue,
+      address caller
+  );
+  ```
 
 ### Edge Cases
 
@@ -187,14 +202,13 @@ if (address(this).balance != 0) {
 ## Journey 3: Configure Posting Criteria (Allowlist Setup)
 
 **Actor:** Hook owner (or permissioned delegate)
-**Entry point:** `CTPublisher.configurePostingCriteriaFor(allowedPosts)`
-**Source:** `src/CTPublisher.sol` lines 240-295
+**Entry point:** `CTPublisher.configurePostingCriteriaFor(CTAllowedPost[] memory allowedPosts) external`
+**Who can call:** The hook's owner (as returned by `JBOwnable(hook).owner()`) or any address that has been granted the `ADJUST_721_TIERS` permission for the hook's `PROJECT_ID()` from that owner. Checked per-entry via `_requirePermissionFrom(account: JBOwnable(hook).owner(), projectId: hook.PROJECT_ID(), permissionId: JBPermissionIds.ADJUST_721_TIERS)`.
+**Source:** `src/CTPublisher.sol` lines 243-298
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `allowedPosts` | `CTAllowedPost[]` | Array of per-category posting rules |
+- `allowedPosts` (`CTAllowedPost[]`): Array of per-category posting rules.
 
 Each `CTAllowedPost` contains:
 
@@ -212,9 +226,9 @@ Each `CTAllowedPost` contains:
 
 For each `CTAllowedPost` in the array:
 
-1. **Emit event** (line 249): `ConfigurePostingCriteria(hook, allowedPost, caller)`
+1. **Emit event** (line 252): `ConfigurePostingCriteria(hook, allowedPost, caller)`
 
-2. **Permission check** (lines 253-257):
+2. **Permission check** (lines 256-260):
    ```
    _requirePermissionFrom(
        account: JBOwnable(hook).owner(),
@@ -224,16 +238,16 @@ For each `CTAllowedPost` in the array:
    ```
 
 3. **Validation:**
-   - `minimumTotalSupply > 0` or revert `CTPublisher_ZeroTotalSupply` (line 260)
-   - `minimumTotalSupply <= maximumTotalSupply` or revert `CTPublisher_MaxTotalSupplyLessThanMin` (line 265)
+   - `minimumTotalSupply > 0` or revert `CTPublisher_ZeroTotalSupply` (line 263)
+   - `minimumTotalSupply <= maximumTotalSupply` or revert `CTPublisher_MaxTotalSupplyLessThanMin` (line 268)
 
-4. **Pack and store** (lines 271-281):
+4. **Pack and store** (lines 274-284):
    ```
    packed = minimumPrice | (minimumTotalSupply << 104) | (maximumTotalSupply << 136) | (maximumSplitPercent << 168)
    _packedAllowanceFor[hook][category] = packed
    ```
 
-5. **Allowlist storage** (lines 284-293):
+5. **Allowlist storage** (lines 287-296):
    ```
    delete _allowedAddresses[hook][category]
    for each address in allowedAddresses:
@@ -242,10 +256,16 @@ For each `CTAllowedPost` in the array:
 
 ### State Changes
 
-| Storage | Change |
-|---------|--------|
-| `_packedAllowanceFor[hook][category]` | Overwritten with new packed values |
-| `_allowedAddresses[hook][category]` | Deleted and repopulated |
+1. `CTPublisher._packedAllowanceFor[hook][category]` -- overwritten with new packed values.
+2. `CTPublisher._allowedAddresses[hook][category]` -- deleted and repopulated.
+
+### Events
+
+- `ConfigurePostingCriteria(address indexed hook, CTAllowedPost allowedPost, address caller)` -- emitted once per entry in the `allowedPosts` array (line 252), **before** the permission check. Full signature:
+  ```solidity
+  event ConfigurePostingCriteria(address indexed hook, CTAllowedPost allowedPost, address caller);
+  ```
+  Note: the event is emitted before `_requirePermissionFrom`, so an unauthorized call will emit the event then revert, rolling back the event emission.
 
 ### Edge Cases
 
@@ -265,7 +285,8 @@ For each `CTAllowedPost` in the array:
 ## Journey 4: Collect Posting Fees
 
 **Actor:** Passive (fee project). Fees are collected automatically during `mintFrom()`.
-**Entry point:** Triggered within `CTPublisher.mintFrom()` at lines 403-418
+**Entry point:** Triggered within `CTPublisher.mintFrom()` at lines 413-429
+**Who can call:** N/A -- this is an internal sub-flow of Journey 2, not independently callable.
 **Beneficiary:** The project with ID `FEE_PROJECT_ID` (immutable, set at construction)
 
 ### Fee Calculation
@@ -313,6 +334,10 @@ The `feeBeneficiary` parameter in `mintFrom()` determines who receives the fee p
 | `msg.value` exceeds requirement | Excess goes to fee project. Poster overpays. |
 | Dust from integer division | Up to 19 wei lost per tx. Fee project receives slightly less. |
 
+### Events
+
+- No events are emitted by the fee sub-flow itself. The `Mint` event (see Journey 2) is emitted before the fee payment. The fee terminal's `pay()` call emits its own events from the terminal contract.
+
 ### Edge Cases
 
 - **Fee project has no primary terminal:** `DIRECTORY.primaryTerminalOf()` returns `address(0)`. The `pay()` call to address(0) reverts. The entire `mintFrom()` transaction reverts (including the project payment).
@@ -325,16 +350,17 @@ The `feeBeneficiary` parameter in `mintFrom()` determines who receives the fee p
 ## Journey 5: Deploy a Croptop Project via CTDeployer with Posting Criteria
 
 **Actor:** Project creator
-**Entry point:** `CTDeployer.deployProjectFor()` with non-empty `projectConfig.allowedPosts`
-**Source:** `src/CTDeployer.sol` lines 241-342, internal `_configurePostingCriteriaFor()` at lines 376-405
+**Entry point:** `CTDeployer.deployProjectFor(address owner, CTProjectConfig calldata projectConfig, CTSuckerDeploymentConfig calldata suckerDeploymentConfiguration, IJBController controller) external returns (uint256 projectId, IJB721TiersHook hook)` with non-empty `projectConfig.allowedPosts`
+**Who can call:** Anyone. No access control on this function. Same as Journey 1.
+**Source:** `src/CTDeployer.sol` lines 244-348, internal `_configurePostingCriteriaFor()` at lines 382-411
 
 This is an extension of Journey 1 that details the posting criteria configuration during deployment.
 
 ### Posting Criteria Flow
 
 1. CTDeployer receives `CTDeployerAllowedPost[]` (which omits the `hook` field, since the hook hasn't been deployed yet).
-2. After the hook is deployed, `_configurePostingCriteriaFor()` converts each `CTDeployerAllowedPost` to a `CTAllowedPost` by injecting `hook: address(hook)` (lines 392-400).
-3. Calls `PUBLISHER.configurePostingCriteriaFor(formattedAllowedPosts)` (line 404).
+2. After the hook is deployed, `_configurePostingCriteriaFor()` converts each `CTDeployerAllowedPost` to a `CTAllowedPost` by injecting `hook: address(hook)` (lines 398-406).
+3. Calls `PUBLISHER.configurePostingCriteriaFor(formattedAllowedPosts)` (line 410).
 4. The publisher validates each entry (supply bounds, permissions) and stores the packed allowances and allowlists.
 
 ### Permission Flow
@@ -347,9 +373,18 @@ The `PUBLISHER.configurePostingCriteriaFor()` call checks `ADJUST_721_TIERS` per
 
 After the deployment completes and ownership is transferred to `owner`, only the new owner (or their delegate) can reconfigure posting criteria.
 
+### State Changes
+
+1. `CTPublisher._packedAllowanceFor[hook][category]` -- set for each allowed post category.
+2. `CTPublisher._allowedAddresses[hook][category]` -- set for each allowed post category with allowlists.
+
+### Events
+
+- `ConfigurePostingCriteria(address indexed hook, CTAllowedPost allowedPost, address caller)` -- emitted by CTPublisher once per `allowedPosts` entry. The `caller` is CTDeployer's address (since CTDeployer calls the publisher). The `hook` is the newly deployed hook address.
+
 ### Edge Cases
 
-- **Empty `allowedPosts`:** The `_configurePostingCriteriaFor()` call is skipped (line 306 condition). The project has no posting categories configured. Content cannot be posted until the owner configures criteria manually.
+- **Empty `allowedPosts`:** The `_configurePostingCriteriaFor()` call is skipped (line 309 condition). The project has no posting categories configured. Content cannot be posted until the owner configures criteria manually.
 - **Invalid criteria in deployment:** If any `CTDeployerAllowedPost` has `minimumTotalSupply == 0` or `minimumTotalSupply > maximumTotalSupply`, the publisher reverts, and the entire deployment fails.
 
 ---
@@ -357,15 +392,22 @@ After the deployment completes and ownership is transferred to `owner`, only the
 ## Journey 6: Lock Project Ownership (Burn-Lock)
 
 **Actor:** Project owner
-**Entry point:** `IERC721(PROJECTS).safeTransferFrom(owner, address(ctProjectOwner), projectId)`
-**Source:** `src/CTProjectOwner.sol` lines 47-80
+**Entry point:** `IERC721(PROJECTS).safeTransferFrom(address from, address to, uint256 tokenId)` where `to = address(ctProjectOwner)`
+**Who can call:** The current owner of the project NFT, or an approved operator. The `safeTransferFrom` is an ERC-721 function with standard ownership/approval checks. CTProjectOwner itself has no caller restrictions in `onERC721Received` beyond requiring `msg.sender == address(PROJECTS)`.
+**Source:** `src/CTProjectOwner.sol` lines 50-83
+
+### Parameters
+
+- `from` (`address`): Current holder of the project NFT (not checked by CTProjectOwner, unlike CTDeployer).
+- `to` (`address`): Must be `address(ctProjectOwner)`.
+- `tokenId` (`uint256`): The project ID to lock.
 
 ### Execution Flow
 
 1. The project owner calls `safeTransferFrom` on the JBProjects ERC-721 contract, transferring their project NFT to the CTProjectOwner contract.
 2. The ERC-721 contract calls `CTProjectOwner.onERC721Received()`.
-3. **Validation** (line 62): `msg.sender == address(PROJECTS)` -- only accepts tokens from the JBProjects contract.
-4. **Permission grant** (lines 65-77):
+3. **Validation** (line 65): `msg.sender == address(PROJECTS)` -- only accepts tokens from the JBProjects contract. Reverts with empty revert on failure.
+4. **Permission grant** (lines 68-80):
    ```
    PERMISSIONS.setPermissionsFor(
        account: address(this),
@@ -380,10 +422,12 @@ After the deployment completes and ownership is transferred to `owner`, only the
 
 ### State Changes
 
-| Storage | Change |
-|---------|--------|
-| `JBProjects` (ERC-721) | Token transferred from owner to CTProjectOwner |
-| `JBPermissions` | CTPublisher granted `ADJUST_721_TIERS` for this project from CTProjectOwner |
+1. `JBProjects` (ERC-721) -- token transferred from owner to CTProjectOwner.
+2. `JBPermissions` -- CTPublisher granted `ADJUST_721_TIERS` for this project from CTProjectOwner's account.
+
+### Events
+
+- No events are emitted directly by CTProjectOwner. The ERC-721 `Transfer(from, to, tokenId)` event is emitted by JBProjects. The `JBPermissions.setPermissionsFor()` call emits its own event from the permissions contract.
 
 ### Consequences
 
@@ -405,29 +449,30 @@ After the deployment completes and ownership is transferred to `owner`, only the
 ## Journey 7: Claim Hook Collection Ownership
 
 **Actor:** Project owner
-**Entry point:** `CTDeployer.claimCollectionOwnershipOf(hook)`
-**Source:** `src/CTDeployer.sol` lines 221-232
+**Entry point:** `CTDeployer.claimCollectionOwnershipOf(IJB721TiersHook hook) external`
+**Who can call:** Only the current owner of the project NFT (`PROJECTS.ownerOf(hook.PROJECT_ID())`). Checked via `PROJECTS.ownerOf(projectId) != _msgSender()` -- reverts with `CTDeployer_NotOwnerOfProject(projectId, address(hook), _msgSender())` on failure.
+**Source:** `src/CTDeployer.sol` lines 224-235
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `hook` | `IJB721TiersHook` | The 721 hook to claim ownership of |
+- `hook` (`IJB721TiersHook`): The 721 hook to claim ownership of.
 
 ### Execution Flow
 
-1. **Read project ID** (line 223): `projectId = hook.PROJECT_ID()`
-2. **Owner check** (lines 226-228): `PROJECTS.ownerOf(projectId) == _msgSender()` or revert `CTDeployer_NotOwnerOfProject`
-3. **Transfer ownership** (line 231):
+1. **Read project ID** (line 226): `projectId = hook.PROJECT_ID()`
+2. **Owner check** (lines 229-231): `PROJECTS.ownerOf(projectId) == _msgSender()` or revert `CTDeployer_NotOwnerOfProject(projectId, address(hook), _msgSender())`
+3. **Transfer ownership** (line 234):
    ```
    JBOwnable(address(hook)).transferOwnershipToProject(projectId)
    ```
 
 ### State Changes
 
-| Storage | Change |
-|---------|--------|
-| Hook's JBOwnable storage | Owner changed from CTDeployer to the project (ownership tied to project NFT) |
+1. Hook's `JBOwnable` storage -- owner changed from CTDeployer to the project (ownership tied to project NFT holder via `PROJECTS.ownerOf(projectId)`).
+
+### Events
+
+- No events are emitted directly by CTDeployer. The `JBOwnable.transferOwnershipToProject()` call emits its own ownership transfer event from the hook contract.
 
 ### Consequences
 
@@ -446,19 +491,18 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 ## Journey 8: Deploy Suckers for Existing Project
 
 **Actor:** Project owner (or permissioned delegate)
-**Entry point:** `CTDeployer.deploySuckersFor(projectId, suckerDeploymentConfiguration)`
-**Source:** `src/CTDeployer.sol` lines 348-367
+**Entry point:** `CTDeployer.deploySuckersFor(uint256 projectId, CTSuckerDeploymentConfig calldata suckerDeploymentConfiguration) external returns (address[] memory suckers)`
+**Who can call:** The project owner (`PROJECTS.ownerOf(projectId)`) or any address that has been granted the `DEPLOY_SUCKERS` permission for that project. Checked via `_requirePermissionFrom(account: PROJECTS.ownerOf(projectId), projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS)`.
+**Source:** `src/CTDeployer.sol` lines 354-373
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `projectId` | `uint256` | The project to deploy suckers for |
-| `suckerDeploymentConfiguration` | `CTSuckerDeploymentConfig` | Deployer configs + salt |
+- `projectId` (`uint256`): The project to deploy suckers for.
+- `suckerDeploymentConfiguration` (`CTSuckerDeploymentConfig`): Deployer configs + salt.
 
 ### Execution Flow
 
-1. **Permission check** (lines 356-358):
+1. **Permission check** (lines 362-364):
    ```
    _requirePermissionFrom(
        account: PROJECTS.ownerOf(projectId),
@@ -467,7 +511,7 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
    )
    ```
 
-2. **Sucker deployment** (lines 362-366):
+2. **Sucker deployment** (lines 368-372):
    ```
    suckers = SUCKER_REGISTRY.deploySuckersFor(
        projectId,
@@ -478,10 +522,12 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 
 ### State Changes
 
-| Storage | Change |
-|---------|--------|
-| Sucker Registry | New suckers registered for the project |
-| Deployed sucker contracts | New contracts deployed via Create2 |
+1. Sucker Registry -- new suckers registered for the project.
+2. Deployed sucker contracts -- new contracts deployed via Create2.
+
+### Events
+
+- No events are emitted directly by CTDeployer. The `SUCKER_REGISTRY.deploySuckersFor()` call emits its own events from the registry contract.
 
 ### Edge Cases
 
@@ -494,14 +540,27 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 ## Journey 9: Data Hook Interception (Pay)
 
 **Actor:** Anyone paying a Croptop-deployed project
-**Entry point:** Called by JBMultiTerminal during `pay()` flow
-**Source:** `CTDeployer.beforePayRecordedWith(context)` at lines 160-169
+**Entry point:** `CTDeployer.beforePayRecordedWith(JBBeforePayRecordedContext calldata context) external view returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)`
+**Who can call:** Intended to be called by JBMultiTerminal during the `pay()` flow. No explicit access control -- any address can call this function, but it is only meaningful when called by the terminal as part of a payment.
+**Source:** `src/CTDeployer.sol` lines 160-169
+
+### Parameters
+
+- `context` (`JBBeforePayRecordedContext`): Standard Juicebox payment context containing `projectId`, payer details, amount, and metadata.
 
 ### Execution Flow
 
 1. JBMultiTerminal calls `CTDeployer.beforePayRecordedWith(context)` because CTDeployer is registered as the project's data hook.
 2. CTDeployer forwards the call directly to `dataHookOf[context.projectId]` (line 168), which is the JB721TiersHook.
 3. The hook returns `(weight, hookSpecifications)` which determine token issuance and pay hook routing.
+
+### State Changes
+
+- None. This is a `view` function.
+
+### Events
+
+- None. This is a `view` function.
 
 ### Edge Cases
 
@@ -513,8 +572,13 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 ## Journey 10: Data Hook Interception (Cash Out)
 
 **Actor:** Token holder cashing out from a Croptop-deployed project
-**Entry point:** Called by JBMultiTerminal during `cashOut()` flow
-**Source:** `CTDeployer.beforeCashOutRecordedWith(context)` at lines 132-151
+**Entry point:** `CTDeployer.beforeCashOutRecordedWith(JBBeforeCashOutRecordedContext calldata context) external view returns (uint256 cashOutTaxRate, uint256 cashOutCount, uint256 totalSupply, JBCashOutHookSpecification[] memory hookSpecifications)`
+**Who can call:** Intended to be called by JBMultiTerminal during the `cashOut()` flow. No explicit access control -- any address can call this function, but it is only meaningful when called by the terminal as part of a cash-out.
+**Source:** `src/CTDeployer.sol` lines 132-151
+
+### Parameters
+
+- `context` (`JBBeforeCashOutRecordedContext`): Standard Juicebox cash-out context containing `projectId`, `holder`, `cashOutCount`, `totalSupply`, and metadata.
 
 ### Execution Flow
 
@@ -529,6 +593,14 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 
 3. **Normal path** (line 150): Forward to `dataHookOf[context.projectId].beforeCashOutRecordedWith(context)`.
 
+### State Changes
+
+- None. This is a `view` function.
+
+### Events
+
+- None. This is a `view` function.
+
 ### Edge Cases
 
 - **Sucker impersonation:** If an attacker can register as a sucker (via compromised registry), they get zero-tax cash outs from any Croptop project.
@@ -541,15 +613,14 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 ## Journey 11: Read Posting Allowance
 
 **Actor:** Anyone (view function)
-**Entry point:** `CTPublisher.allowanceFor(hook, category)`
-**Source:** `src/CTPublisher.sol` lines 158-190
+**Entry point:** `CTPublisher.allowanceFor(address hook, uint256 category) public view returns (uint256 minimumPrice, uint256 minimumTotalSupply, uint256 maximumTotalSupply, uint256 maximumSplitPercent, address[] memory allowedAddresses)`
+**Who can call:** Anyone. This is a public view function with no access control.
+**Source:** `src/CTPublisher.sol` lines 161-193
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `hook` | `address` | The hook contract |
-| `category` | `uint256` | The posting category |
+- `hook` (`address`): The hook contract.
+- `category` (`uint256`): The posting category.
 
 ### Returns
 
@@ -561,6 +632,14 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 | `maximumSplitPercent` | `uint256` | Extracted from bits 168-199 |
 | `allowedAddresses` | `address[]` | Full copy of the allowlist array |
 
+### State Changes
+
+- None. This is a `view` function.
+
+### Events
+
+- None. This is a `view` function.
+
 ### Edge Cases
 
 - **Unconfigured category:** Returns all zeros and empty array. A `minimumTotalSupply` of 0 means posting is not allowed.
@@ -571,15 +650,14 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 ## Journey 12: Look Up Tiers by IPFS URI
 
 **Actor:** Anyone (view function)
-**Entry point:** `CTPublisher.tiersFor(hook, encodedIPFSUris)`
-**Source:** `src/CTPublisher.sol` lines 115-142
+**Entry point:** `CTPublisher.tiersFor(address hook, bytes32[] memory encodedIPFSUris) external view returns (JB721Tier[] memory tiers)`
+**Who can call:** Anyone. This is an external view function with no access control.
+**Source:** `src/CTPublisher.sol` lines 118-145
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `hook` | `address` | The hook contract |
-| `encodedIPFSUris` | `bytes32[]` | Array of encoded IPFS URIs to look up |
+- `hook` (`address`): The hook contract.
+- `encodedIPFSUris` (`bytes32[]`): Array of encoded IPFS URIs to look up.
 
 ### Returns
 
@@ -589,8 +667,16 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 
 For each URI:
 1. Look up `tierIdForEncodedIPFSUriOf[hook][uri]`
-2. If non-zero, call `hook.STORE().tierOf(hook, tierId, false)` (line 139)
+2. If non-zero, call `hook.STORE().tierOf(hook, tierId, false)` (line 142)
 3. If zero, return an empty `JB721Tier`
+
+### State Changes
+
+- None. This is a `view` function.
+
+### Events
+
+- None. This is a `view` function.
 
 ### Edge Cases
 
