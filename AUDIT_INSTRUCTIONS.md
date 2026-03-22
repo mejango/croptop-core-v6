@@ -61,6 +61,20 @@ CTProjectOwner
 
 ---
 
+## Value Extraction Paths
+
+Quick reference for where the money is:
+
+| Path | Entry Point | Value at Risk | What to Verify |
+|------|------------|---------------|----------------|
+| Fee evasion | `CTPublisher.mintFrom()` | 5% fee on every mint | `totalPrice` computed from on-chain tier prices for existing tiers, not user-supplied `post.price` |
+| Fee-free cashout | `CTDeployer.beforeCashOutRecordedWith()` | Full treasury value | Only legitimate suckers (via registry) get 0% tax |
+| Unauthorized minting | `CTDeployer.hasMintPermissionFor()` | Arbitrary token minting | Only registered suckers get mint permission |
+| Tier spam | `CTPublisher._setupPosts()` | Gas griefing, hook degradation | Allowlist + price/supply floors gate tier creation |
+| Fee routing failure | `CTPublisher.mintFrom()` residual balance | Fee project loses 5% | `address(this).balance` after project payment is sent to fee project |
+
+---
+
 ## 2. Content Posting Flow
 
 The core flow is `CTPublisher.mintFrom()`. This is the primary entry point for all content publishing.
@@ -456,3 +470,33 @@ Three findings were fixed and have regression tests. Two findings remain open (l
 | L-52 | LOW | FIXED | Stale tier ID mapping after external tier removal |
 | NM-005 | LOW | OPEN | `uint56` vs `uint64` project ID cast inconsistency |
 | NM-006 | LOW | OPEN | Cannot fully disable posting for a configured category |
+
+---
+
+## Compiler and Version Info
+
+- **Solidity**: 0.8.26
+- **EVM target**: Cancun
+- **Optimizer**: via-IR, 200 runs
+- **Dependencies**: OpenZeppelin 5.x, nana-core-v6, nana-721-hook-v6, nana-suckers-v6
+- **Build**: `forge build` (Foundry)
+
+---
+
+## How to Report Findings
+
+For each finding:
+
+1. **Title** -- one line, starts with severity (CRITICAL/HIGH/MEDIUM/LOW)
+2. **Affected contract(s)** -- exact file path and line numbers
+3. **Description** -- what is wrong, in plain language
+4. **Trigger sequence** -- step-by-step
+5. **Impact** -- what an attacker gains, what the project/fee project loses
+6. **Proof** -- code trace or Foundry test
+7. **Fix** -- minimal code change
+
+**Severity guide:**
+- **CRITICAL**: Fee evasion at scale, unauthorized treasury drain, permanent project DoS.
+- **HIGH**: Conditional fee bypass, sucker impersonation, broken posting criteria.
+- **MEDIUM**: Tier spam, gas griefing, rounding errors in fee calculation.
+- **LOW**: Informational, cosmetic, testnet-only.
