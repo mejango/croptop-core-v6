@@ -34,6 +34,8 @@ Admin privileges and their scope in croptop-core-v6.
 
 **Scope:** Per-project. Grants `CTPublisher` permanent `ADJUST_721_TIERS` permission for the received project. Once the project is transferred here, human ownership is effectively burned.
 
+- **Important:** `onERC721Received()` accepts project NFTs from any transfer, not only mints. If a project owner accidentally transfers their project NFT to `CTProjectOwner`, it is permanently locked -- there is no recovery function. The only check is that `msg.sender` is the `PROJECTS` contract (ensuring it is a JBProjects NFT, not an arbitrary ERC-721).
+
 ### 6. Sucker Registry
 
 **How assigned:** Immutable dependency set at CTDeployer construction (line 98). Receives `MAP_SUCKER_TOKEN` permission at construction (line 101-110, `CTDeployer.sol`).
@@ -88,6 +90,18 @@ These permissions are set per-project during deployment (line 328-339, `CTDeploy
 | `SET_721_METADATA` | `owner` | 330 | Allows the project owner to update 721 metadata. |
 | `MINT_721` | `owner` | 331 | Allows the project owner to mint 721 tokens directly. |
 | `SET_721_DISCOUNT_PERCENT` | `owner` | 332 | Allows the project owner to set tier discount percentages. |
+
+## Data Hook Proxy
+
+When deploying a project, `CTDeployer` sets itself as the project's `dataHook` in the ruleset metadata (line 290). It then proxies data hook calls to the project's actual 721 tiers hook:
+
+- **`beforePayRecordedWith`**: Calls `IJBRulesetDataHook(hook).beforePayRecordedWith(context)` where `hook = dataHookOf[context.projectId]`, then returns the 721 hook's specifications.
+- **`beforeCashOutRecordedWith`**: Checks if the caller is a registered sucker via `SUCKER_REGISTRY.isSuckerOf()`. If so, returns 0% cash-out tax (fee-free bridging). Otherwise, delegates to the 721 hook.
+- **`hasMintPermissionFor`**: Returns `true` for registered suckers. Otherwise delegates to the 721 hook.
+
+This proxy pattern exists so that CTDeployer can intercept cash-out calls to grant fee-free bridging to suckers while still supporting the 721 hook's NFT minting logic.
+
+The `dataHookOf[projectId]` mapping is write-once (set during `deployProjectFor`, no setter function). The proxy target cannot be changed after deployment.
 
 ## Immutable Configuration
 
