@@ -14,8 +14,8 @@ Croptop is a thin orchestration layer on top of Juicebox V6 core and the 721 tie
 
 | Contract | File | Lines | Role |
 |----------|------|-------|------|
-| **CTPublisher** | `src/CTPublisher.sol` | ~580 | Core publishing engine. Validates posts against bit-packed allowances, creates 721 tiers, mints first copies, routes fees. Inherits `JBPermissioned`, `ERC2771Context`. |
-| **CTDeployer** | `src/CTDeployer.sol` | ~427 | Factory that deploys a JB project + 721 hook + posting criteria in one transaction. Acts as `IJBRulesetDataHook` proxy: forwards pay/cash-out calls to the underlying hook while granting fee-free cash outs to suckers. Inherits `JBPermissioned`, `ERC2771Context`, `IERC721Receiver`. |
+| **CTPublisher** | `src/CTPublisher.sol` | ~590 | Core publishing engine. Validates posts against bit-packed allowances, creates 721 tiers, mints first copies, routes fees. Inherits `JBPermissioned`, `ERC2771Context`. |
+| **CTDeployer** | `src/CTDeployer.sol` | ~433 | Factory that deploys a JB project + 721 hook + posting criteria in one transaction. Acts as `IJBRulesetDataHook` proxy: forwards pay/cash-out calls to the underlying hook while granting fee-free cash outs to suckers. Inherits `JBPermissioned`, `ERC2771Context`, `IERC721Receiver`. |
 | **CTProjectOwner** | `src/CTProjectOwner.sol` | ~82 | Receives project ownership NFT via `safeTransferFrom` and permanently grants `CTPublisher` the `ADJUST_721_TIERS` permission. Implements `IERC721Receiver`. |
 
 ### Struct Table
@@ -373,7 +373,7 @@ Check that no realistic usage pattern could cause a revert due to gas limits. Th
 
 ### P3 -- Low (informational, code quality)
 
-11. **`uint56` vs `uint64` cast inconsistency** between CTProjectOwner (line 74) and CTDeployer (line 338). Confirm no truncation risk for realistic project IDs.
+11. **`uint64` project ID cast** in CTProjectOwner (line 77) and CTDeployer (line 344). Both now use `uint64`. Confirm no truncation risk for realistic project IDs.
 
 12. **Force-sent ETH routing** (CTPublisher.sol lines 403-418). Confirm this is the intended behavior and cannot be exploited.
 
@@ -461,14 +461,14 @@ Tests use Foundry's `vm.mockCall()` to isolate CTPublisher from its dependencies
 
 ## 12. Previous Audit Findings
 
-Three findings were fixed and have regression tests. Two findings remain open (low severity). See `RISKS.md` for full details.
+Four findings were fixed (three with regression tests). One finding remains open (low severity). See `RISKS.md` for full details.
 
 | ID | Severity | Status | Description |
 |----|----------|--------|-------------|
 | NM-001 | MEDIUM | FIXED | Duplicate URI fee evasion in batch mints |
 | H-19 | HIGH | FIXED | Fee evasion on existing tier mints via `post.price = 0` |
 | L-52 | LOW | FIXED | Stale tier ID mapping after external tier removal |
-| NM-005 | LOW | OPEN | `uint56` vs `uint64` project ID cast inconsistency |
+| NM-005 | LOW | FIXED | `uint56` vs `uint64` project ID cast inconsistency |
 | NM-006 | LOW | OPEN | Cannot fully disable posting for a configured category |
 
 ---
