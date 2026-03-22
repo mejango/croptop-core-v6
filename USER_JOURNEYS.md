@@ -22,12 +22,10 @@ Complete user path documentation for auditors. Each journey describes the entry 
 
 1. **Controller validation** (line 254): Reverts if `controller.PROJECTS() != PROJECTS`.
 
-2. **Ruleset configuration** (lines 256-291):
+2. **Ruleset configuration -- phase 1** (lines 256-258):
    - Weight: `1_000_000 * 10^18`
    - Base currency: ETH
-   - Cash-out tax rate: `MAX_CASH_OUT_TAX_RATE` (100%)
-   - Data hook: `address(this)` (CTDeployer)
-   - `useDataHookForPay = true`, `useDataHookForCashOut = true`
+   - The remaining ruleset metadata (data hook, cash-out tax rate) cannot be set yet because the hook address is not known until after deployment (step 4).
 
 3. **Project ID prediction** (line 261): `projectId = PROJECTS.count() + 1`
 
@@ -39,42 +37,56 @@ Complete user path documentation for auditors. Each journey describes the entry 
    - Deployed with empty tiers, ETH currency, 18 decimals
    - No reserves, no votes, no owner minting, no overspend prevention
 
-5. **Project launch** (lines 294-303):
+5. **Ruleset configuration -- phase 2** (lines 288-291): Now that the hook is deployed, the remaining metadata fields are set:
+   - Cash-out tax rate: `MAX_CASH_OUT_TAX_RATE` (100%)
+   - Data hook: `address(this)` (CTDeployer)
+   - `useDataHookForPay = true`, `useDataHookForCashOut = true`
+
+6. **Project launch** (lines 294-303):
    ```
    controller.launchProjectFor(owner: address(this), ...)
    ```
    - CTDeployer receives the project NFT temporarily
    - `assert(projectId == returned ID)` -- reverts on mismatch (front-running protection)
 
-6. **Data hook registration** (line 306):
+7. **Data hook registration** (line 306):
    ```
    dataHookOf[projectId] = IJBRulesetDataHook(hook)
    ```
    This is write-once. No setter exists.
 
-7. **Posting criteria** (lines 309-311): If `projectConfig.allowedPosts.length > 0`, calls internal `_configurePostingCriteriaFor()` which formats `CTDeployerAllowedPost` into `CTAllowedPost` (adding the hook address) and delegates to `PUBLISHER.configurePostingCriteriaFor()`.
+8. **Posting criteria** (lines 309-311): If `projectConfig.allowedPosts.length > 0`, calls internal `_configurePostingCriteriaFor()` which formats `CTDeployerAllowedPost` into `CTAllowedPost` (adding the hook address) and delegates to `PUBLISHER.configurePostingCriteriaFor()`.
 
-8. **Sucker deployment** (lines 317-324): If `suckerDeploymentConfiguration.salt != bytes32(0)`:
+9. **Sucker deployment** (lines 317-324): If `suckerDeploymentConfiguration.salt != bytes32(0)`:
    ```
    SUCKER_REGISTRY.deploySuckersFor(projectId, salt, configurations)
    ```
 
-9. **Ownership transfer** (line 327):
-   ```
-   PROJECTS.transferFrom(address(this), owner, projectId)
-   ```
+10. **Ownership transfer** (line 327):
+    ```
+    PROJECTS.transferFrom(address(this), owner, projectId)
+    ```
 
-10. **Permission grants** (lines 329-347): Grants `owner` four permissions from CTDeployer's account:
+11. **Permission grants** (lines 329-347): Grants `owner` four permissions from CTDeployer's account:
     - `ADJUST_721_TIERS`
     - `SET_721_METADATA`
     - `MINT_721`
     - `SET_721_DISCOUNT_PERCENT`
 
-### State Changes
+### Constructor (One-Time Setup)
+
+The CTDeployer constructor (lines 92-118) grants two wildcard (`projectId = 0`) permissions from CTDeployer's account. These are set once at contract deployment, not on every `deployProjectFor` call:
+
+1. `JBPermissions` -- sucker registry granted `MAP_SUCKER_TOKEN` (wildcard, all projects).
+2. `JBPermissions` -- CTPublisher granted `ADJUST_721_TIERS` (wildcard, all projects).
+
+These wildcard permissions allow the sucker registry and publisher to act on behalf of CTDeployer for any project it deploys, without needing per-project permission grants.
+
+### State Changes (Per Call)
 
 1. `CTDeployer.dataHookOf[projectId]` -- set to the deployed hook address (permanent, write-once).
 2. `JBProjects` (ERC-721) -- new token minted, transferred from CTDeployer to `owner`.
-3. `JBPermissions` -- 2 permission entries set in constructor (sucker registry `MAP_SUCKER_TOKEN` + publisher `ADJUST_721_TIERS`), 4 permission entries set for `owner` (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`).
+3. `JBPermissions` -- 4 permission entries set for `owner` from CTDeployer's account (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`), scoped to the new `projectId`.
 4. `CTPublisher._packedAllowanceFor[hook][category]` -- set for each allowed post category (if any).
 5. `CTPublisher._allowedAddresses[hook][category]` -- set for each allowed post category with allowlists (if any).
 
@@ -127,11 +139,18 @@ For each post in the batch:
 **Phase 2: Fee calculation** (lines 336-354)
 
 ```
-fee = totalPrice / FEE_DIVISOR   (integer division)
-require(payValue >= fee)         (reverts CTPublisher_InsufficientEthSent if not)
-payValue = msg.value - fee       (if projectId != FEE_PROJECT_ID)
-require(totalPrice <= payValue)  (reverts CTPublisher_InsufficientEthSent if not)
+payValue = msg.value
+
+if (projectId != FEE_PROJECT_ID) {
+    fee = totalPrice / FEE_DIVISOR       (integer division, 5%)
+    require(payValue >= fee)             (reverts CTPublisher_InsufficientEthSent if not)
+    payValue -= fee                      (fee portion held in contract balance)
+}
+
+require(totalPrice <= payValue)          (reverts CTPublisher_InsufficientEthSent if not)
 ```
+
+When `projectId == FEE_PROJECT_ID`, no fee is deducted; `payValue` remains `msg.value` and the full amount goes to the project payment. Any remaining `address(this).balance` after the project payment (which would be 0 in this case) is skipped in Phase 6.
 
 **Phase 3: Tier creation** (line 358)
 
@@ -295,9 +314,18 @@ For each `CTAllowedPost` in the array:
 totalPrice = sum of all post prices in the batch
     (on-chain tier price for existing tiers, post.price for new tiers)
 
-fee = totalPrice / FEE_DIVISOR       (FEE_DIVISOR = 20, so fee = 5%)
-payValue = msg.value - fee            (deducted before project payment)
+payValue = msg.value
+
+if (projectId != FEE_PROJECT_ID) {
+    fee = totalPrice / FEE_DIVISOR   (FEE_DIVISOR = 20, so fee = 5%)
+    require(payValue >= fee)         (reverts if msg.value < fee)
+    payValue -= fee                  (fee held in contract balance for later routing)
+}
+
+require(totalPrice <= payValue)      (reverts if insufficient ETH for the posts)
 ```
+
+When `projectId == FEE_PROJECT_ID`, the fee calculation is skipped entirely. The full `msg.value` is sent as `payValue` to the project terminal. After that payment, `address(this).balance` is 0, so the fee routing step (below) is a no-op.
 
 ### Fee Routing
 

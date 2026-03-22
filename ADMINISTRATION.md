@@ -6,25 +6,25 @@ Admin privileges and their scope in croptop-core-v6.
 
 ### 1. Project Owner
 
-**How assigned:** Receives the JBProjects ERC-721 NFT for the project. Initially set by the `owner` parameter in `CTDeployer.deployProjectFor()` (line 325, `CTDeployer.sol`). Can be transferred via standard ERC-721 transfer.
+**How assigned:** Receives the JBProjects ERC-721 NFT for the project. Initially set by the `owner` parameter in `CTDeployer.deployProjectFor()`. Can be transferred via standard ERC-721 transfer.
 
 **Scope:** Per-project. Controls posting rules and hook ownership for a single project.
 
 ### 2. Hook Owner
 
-**How assigned:** Determined by `JBOwnable(hook).owner()`. For CTDeployer-launched projects, the deployer initially owns the hook (via `DEPLOYER.deployHookFor()` at line 264). The project owner can later claim hook ownership via `claimCollectionOwnershipOf()` (line 223).
+**How assigned:** Determined by `JBOwnable(hook).owner()`. For CTDeployer-launched projects, the deployer initially owns the hook (via `DEPLOYER.deployHookFor()`). The project owner can later claim hook ownership via `claimCollectionOwnershipOf()`.
 
 **Scope:** Per-hook. The hook owner (or anyone with `ADJUST_721_TIERS` permission for that hook's project) can configure posting criteria.
 
 ### 3. CTDeployer (Contract)
 
-**How assigned:** Immutable singleton deployed at construction. Acts as the `IJBRulesetDataHook` for all CTDeployer-launched projects (set at line 290 of `CTDeployer.sol`).
+**How assigned:** Immutable singleton deployed at construction. Acts as the `IJBRulesetDataHook` for all CTDeployer-launched projects (set in `deployProjectFor()`).
 
 **Scope:** All Croptop-deployed projects. Proxies pay/cashout data hook calls, grants fee-free cashouts to suckers, and holds broad permissions on behalf of launched projects.
 
 ### 4. CTPublisher (Contract)
 
-**How assigned:** Immutable singleton deployed at construction. Receives `ADJUST_721_TIERS` permission from CTDeployer at construction (line 113-119, `CTDeployer.sol`).
+**How assigned:** Immutable singleton deployed at construction. Receives `ADJUST_721_TIERS` permission from CTDeployer at construction.
 
 **Scope:** All hooks for which it has `ADJUST_721_TIERS` permission. Creates NFT tiers and mints first copies.
 
@@ -38,7 +38,7 @@ Admin privileges and their scope in croptop-core-v6.
 
 ### 6. Sucker Registry
 
-**How assigned:** Immutable dependency set at CTDeployer construction (line 98). Receives `MAP_SUCKER_TOKEN` permission at construction (line 101-110, `CTDeployer.sol`).
+**How assigned:** Immutable dependency set at CTDeployer construction. Receives `MAP_SUCKER_TOKEN` permission at construction.
 
 **Scope:** All projects deployed via CTDeployer. Can map tokens for cross-chain bridging. Determines which addresses get fee-free cashouts.
 
@@ -54,50 +54,50 @@ Admin privileges and their scope in croptop-core-v6.
 
 | Function | Required Role | Permission ID | Scope | What It Does |
 |----------|--------------|---------------|-------|-------------|
-| `deployProjectFor()` (line 243) | Anyone | None | Global | Deploys a new Juicebox project with 721 hook, configures posting rules, optionally deploys suckers, transfers ownership to `owner`. No access restriction -- anyone can deploy a project. |
-| `claimCollectionOwnershipOf()` (line 223) | Project owner | None (direct `ownerOf` check) | Per-project | Transfers hook ownership to the project via `JBOwnable.transferOwnershipToProject()`. Caller must be `PROJECTS.ownerOf(projectId)`. |
-| `deploySuckersFor()` (line 346) | Project owner or delegate | `JBPermissionIds.DEPLOY_SUCKERS` | Per-project | Deploys new cross-chain suckers for an existing project. Uses `_requirePermissionFrom()` against the project owner. |
+| `deployProjectFor()` | Anyone | None | Global | Deploys a new Juicebox project with 721 hook, configures posting rules, optionally deploys suckers, transfers ownership to `owner`. No access restriction -- anyone can deploy a project. |
+| `claimCollectionOwnershipOf()` | Project owner | None (direct `ownerOf` check) | Per-project | Transfers hook ownership to the project via `JBOwnable.transferOwnershipToProject()`. Caller must be `PROJECTS.ownerOf(projectId)`. |
+| `deploySuckersFor()` | Project owner or delegate | `JBPermissionIds.DEPLOY_SUCKERS` | Per-project | Deploys new cross-chain suckers for an existing project. Uses `_requirePermissionFrom()` against the project owner. |
 
 ### CTPublisher
 
 | Function | Required Role | Permission ID | Scope | What It Does |
 |----------|--------------|---------------|-------|-------------|
-| `configurePostingCriteriaFor()` (line 230) | Hook owner or delegate | `JBPermissionIds.ADJUST_721_TIERS` | Per-hook, per-category | Sets posting rules: minimum price, min/max supply, max split percent, address allowlist. Uses `_requirePermissionFrom()` against `JBOwnable(hook).owner()`. |
-| `mintFrom()` (line 297) | Anyone (subject to allowlist) | None (enforced by allowlist in `_setupPosts`) | Per-hook | Publishes posts as 721 tiers, mints first copies, routes 5% fee to `FEE_PROJECT_ID`. Validates all posts against configured criteria. |
+| `configurePostingCriteriaFor()` | Hook owner or delegate | `JBPermissionIds.ADJUST_721_TIERS` | Per-hook, per-category | Sets posting rules: minimum price, min/max supply, max split percent, address allowlist. Uses `_requirePermissionFrom()` against `JBOwnable(hook).owner()`. |
+| `mintFrom()` | Anyone (subject to allowlist) | None (enforced by allowlist in `_setupPosts`) | Per-hook | Publishes posts as 721 tiers, mints first copies, routes 5% fee to `FEE_PROJECT_ID`. Validates all posts against configured criteria. |
 
 ### CTProjectOwner
 
 | Function | Required Role | Permission ID | Scope | What It Does |
 |----------|--------------|---------------|-------|-------------|
-| `onERC721Received()` (line 47) | Anyone who transfers a JBProjects NFT | None | Per-project | On receiving a project NFT from `PROJECTS` (mint only, `from == address(0)` is NOT enforced here), grants `CTPublisher` the `ADJUST_721_TIERS` permission for that project. |
+| `onERC721Received()` | Anyone who transfers a JBProjects NFT | None | Per-project | On receiving a project NFT from `PROJECTS` (mint only, `from == address(0)` is NOT enforced here), grants `CTPublisher` the `ADJUST_721_TIERS` permission for that project. |
 
 ### Permissions Granted at CTDeployer Construction
 
 These permissions are set in the CTDeployer constructor and apply to all projects it will ever deploy (wildcard `projectId: 0`):
 
-| Permission | Granted To | Line | Purpose |
-|-----------|-----------|------|---------|
-| `MAP_SUCKER_TOKEN` | `SUCKER_REGISTRY` | 101-110 | Allows the sucker registry to map tokens for cross-chain bridging on any project owned by CTDeployer. |
-| `ADJUST_721_TIERS` | `PUBLISHER` (CTPublisher) | 113-119 | Allows CTPublisher to add tiers to any hook on any project owned by CTDeployer. |
+| Permission | Granted To | Purpose |
+|-----------|-----------|---------|
+| `MAP_SUCKER_TOKEN` | `SUCKER_REGISTRY` | Allows the sucker registry to map tokens for cross-chain bridging on any project owned by CTDeployer. |
+| `ADJUST_721_TIERS` | `PUBLISHER` (CTPublisher) | Allows CTPublisher to add tiers to any hook on any project owned by CTDeployer. |
 
 ### Permissions Granted During `deployProjectFor()`
 
-These permissions are set per-project during deployment (line 328-339, `CTDeployer.sol`):
+These permissions are set per-project during deployment:
 
-| Permission | Granted To | Line | Purpose |
-|-----------|-----------|------|---------|
-| `ADJUST_721_TIERS` | `owner` | 329 | Allows the project owner to adjust 721 tiers. |
-| `SET_721_METADATA` | `owner` | 330 | Allows the project owner to update 721 metadata. |
-| `MINT_721` | `owner` | 331 | Allows the project owner to mint 721 tokens directly. |
-| `SET_721_DISCOUNT_PERCENT` | `owner` | 332 | Allows the project owner to set tier discount percentages. |
+| Permission | Granted To | Purpose |
+|-----------|-----------|---------|
+| `ADJUST_721_TIERS` | `owner` | Allows the project owner to adjust 721 tiers. |
+| `SET_721_METADATA` | `owner` | Allows the project owner to update 721 metadata. |
+| `MINT_721` | `owner` | Allows the project owner to mint 721 tokens directly. |
+| `SET_721_DISCOUNT_PERCENT` | `owner` | Allows the project owner to set tier discount percentages. |
 
 ## Data Hook Proxy
 
-When deploying a project, `CTDeployer` sets itself as the project's `dataHook` in the ruleset metadata (line 290). It then proxies data hook calls to the project's actual 721 tiers hook:
+When deploying a project, `CTDeployer` sets itself as the project's `dataHook` in the ruleset metadata. It then proxies data hook calls to the project's actual 721 tiers hook:
 
 - **`beforePayRecordedWith`**: Calls `IJBRulesetDataHook(hook).beforePayRecordedWith(context)` where `hook = dataHookOf[context.projectId]`, then returns the 721 hook's specifications.
 - **`beforeCashOutRecordedWith`**: Checks if the caller is a registered sucker via `SUCKER_REGISTRY.isSuckerOf()`. If so, returns 0% cash-out tax (fee-free bridging). Otherwise, delegates to the 721 hook.
-- **`hasMintPermissionFor`**: Returns `true` for registered suckers. Otherwise delegates to the 721 hook.
+- **`hasMintPermissionFor`**: Returns `true` for registered suckers, `false` for all other addresses. Does not delegate to the 721 hook.
 
 This proxy pattern exists so that CTDeployer can intercept cash-out calls to grant fee-free bridging to suckers while still supporting the 721 hook's NFT minting logic.
 
@@ -118,9 +118,9 @@ These values are set at deploy time and cannot be changed after deployment:
 | `SUCKER_REGISTRY` | CTDeployer | Constructor (immutable) | Sucker registry for cross-chain bridging. |
 | `PERMISSIONS` | CTDeployer, CTProjectOwner | Constructor (immutable) | JBPermissions contract for access control. |
 | `trustedForwarder` | CTDeployer, CTPublisher | Constructor (immutable via ERC2771Context) | Meta-transaction trusted forwarder address. |
-| `dataHookOf[projectId]` | CTDeployer | `deployProjectFor()` (line 307) | Once set during deployment, the data hook for a project can never be changed. Write-once storage. |
-| Project weight | CTDeployer | `deployProjectFor()` (line 256) | Hardcoded at `1_000_000 * 10^18` with ETH base currency and max cashout tax rate. |
-| Hook deploy salt | CTDeployer | `deployProjectFor()` (line 286) | `keccak256(abi.encode(salt, msg.sender))` -- deterministic but caller-specific. |
+| `dataHookOf[projectId]` | CTDeployer | `deployProjectFor()` | Once set during deployment, the data hook for a project can never be changed. Write-once storage. |
+| Project weight | CTDeployer | `deployProjectFor()` | Hardcoded at `1_000_000 * 10^18` with ETH base currency and max cashout tax rate. |
+| Hook deploy salt | CTDeployer | `deployProjectFor()` | `keccak256(abi.encode(salt, msg.sender))` -- deterministic but caller-specific. |
 
 ## Admin Boundaries
 
@@ -132,11 +132,11 @@ What admins CANNOT do:
 
 3. **Project owners cannot change the data hook.** `dataHookOf[projectId]` is write-once (set during `deployProjectFor`, no setter function). The data hook proxy pattern is permanent.
 
-4. **Project owners cannot disable Croptop posting entirely for a category.** `configurePostingCriteriaFor()` requires `minimumTotalSupply > 0` (line 250-252, `CTPublisher.sol`). The workaround is to set an astronomically high `minimumPrice` with `minimumTotalSupply = maximumTotalSupply = 1`. See finding NM-006.
+4. **Project owners cannot disable Croptop posting entirely for a category.** `configurePostingCriteriaFor()` requires `minimumTotalSupply > 0`. The workaround is to set an astronomically high `minimumPrice` with `minimumTotalSupply = maximumTotalSupply = 1`. See finding NM-006.
 
 5. **Project owners cannot bypass posting criteria to mint directly through CTPublisher.** They must use `mintFrom()` like anyone else, which enforces all configured rules. However, owners can adjust tiers directly on the hook (bypassing CTPublisher) if they have `ADJUST_721_TIERS` permission.
 
-6. **CTPublisher cannot mint without paying.** `mintFrom()` requires `msg.value >= totalPrice + fee` (line 332-334). There is no free-mint path through CTPublisher.
+6. **CTPublisher cannot mint without paying.** `mintFrom()` requires `msg.value >= totalPrice + fee`. There is no free-mint path through CTPublisher.
 
 7. **CTProjectOwner cannot return project ownership.** Once a project NFT is transferred to CTProjectOwner, there is no function to transfer it back. Ownership is effectively burned.
 
