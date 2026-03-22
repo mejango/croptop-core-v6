@@ -48,7 +48,7 @@ Permissioned NFT publishing system that lets anyone post content as 721 tiers to
 
 | Function | What it does |
 |----------|-------------|
-| `CTProjectOwner.onERC721Received(operator, from, tokenId, data)` | On receiving the project NFT, grants `CTPublisher` the `ADJUST_721_TIERS` permission for that project. Only accepts mints from `PROJECTS` (rejects direct transfers). |
+| `CTProjectOwner.onERC721Received(operator, from, tokenId, data)` | On receiving the project NFT, grants `CTPublisher` the `ADJUST_721_TIERS` permission for that project. Accepts both mints and transfers from `PROJECTS` (reverts if `msg.sender` is not `PROJECTS`). |
 
 ## Integration Points
 
