@@ -448,7 +448,6 @@ ETHEREUM_RPC_URL=<your-rpc> forge test --match-contract ForkTest --fork-url $ETH
 ### Coverage Gaps (no existing tests)
 
 - Force-sent ETH handling via selfdestruct
-- Sucker fee-free cash-out abuse / impersonation
 - `deployProjectFor` front-running race condition
 - Multiple hooks sharing the same CTPublisher instance
 - Cross-category posting in a single batch (different categories, different allowlists)
