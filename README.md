@@ -112,16 +112,16 @@ forge install
 | Command | Description |
 |---------|-------------|
 | `forge build` | Compile contracts |
-| `forge test` | Run all tests (4 test files covering publishing, attacks, fork integration, metadata) |
+| `forge test` | Run all tests (12 test files covering publishing, deployer, attacks, fork integration, metadata, and regressions) |
 | `forge test -vvv` | Run tests with full trace |
 
 ## Repository Layout
 
 ```
 src/
-  CTPublisher.sol                        # Core publishing engine (~540 lines)
-  CTDeployer.sol                         # Project factory + data hook proxy (~425 lines)
-  CTProjectOwner.sol                     # Burn-lock ownership helper (~79 lines)
+  CTPublisher.sol                        # Core publishing engine (~590 lines)
+  CTDeployer.sol                         # Project factory + data hook proxy (~433 lines)
+  CTProjectOwner.sol                     # Burn-lock ownership helper (~84 lines)
   interfaces/
     ICTPublisher.sol                     # Publisher interface + events
     ICTDeployer.sol                      # Factory interface
@@ -133,10 +133,20 @@ src/
     CTProjectConfig.sol                  # Full project deployment config
     CTSuckerDeploymentConfig.sol         # Cross-chain sucker config
 test/
-  CTPublisher.t.sol                      # Unit tests (~672 lines, ~22 cases)
-  CroptopAttacks.t.sol                   # Security/adversarial tests (~440 lines, ~12 cases)
+  CTPublisher.t.sol                      # Unit tests (~865 lines, ~26 cases)
+  CTDeployer.t.sol                       # Deployer tests (~608 lines)
+  CTProjectOwner.t.sol                   # Project owner tests (~185 lines)
+  ClaimCollectionOwnership.t.sol         # Collection ownership claim tests (~315 lines)
+  CroptopAttacks.t.sol                   # Security/adversarial tests (~437 lines, ~12 cases)
   Fork.t.sol                             # Mainnet fork integration tests
+  TestAuditGaps.sol                      # Audit gap coverage tests (~689 lines)
   Test_MetadataGeneration.t.sol          # JBMetadataResolver roundtrip tests
+  fork/
+    PublishFork.t.sol                    # Fork-based publish tests (~437 lines)
+  regression/
+    DuplicateUriFeeEvasion.t.sol         # Duplicate URI fee evasion regression (~312 lines)
+    FeeEvasion.t.sol                     # Fee evasion regression (~279 lines)
+    StaleTierIdMapping.t.sol             # Stale tier ID mapping regression (~214 lines)
 script/
   Deploy.s.sol                           # Sphinx multi-chain deployment
   ConfigureFeeProject.s.sol              # Fee project configuration
