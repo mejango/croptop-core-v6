@@ -40,7 +40,7 @@ interface ICTPublisher {
     /// @param category The category for which this allowance applies.
     /// @return minimumPrice The minimum price a poster must pay to publish a new NFT.
     /// @return minimumTotalSupply The minimum total supply a poster must set for a new NFT.
-    /// @return maximumTotalSupply The maximum total supply allowed for a new NFT. 0 means no limit.
+    /// @return maximumTotalSupply The maximum total supply allowed for a new NFT. Must be >= minimumTotalSupply.
     /// @return maximumSplitPercent The maximum split percent allowed for a new NFT.
     /// @return allowedAddresses The addresses allowed to post. Empty if all addresses are allowed.
     function allowanceFor(
