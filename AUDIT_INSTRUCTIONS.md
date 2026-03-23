@@ -79,56 +79,56 @@ Quick reference for where the money is:
 
 The core flow is `CTPublisher.mintFrom()`. This is the primary entry point for all content publishing.
 
-### Step-by-step execution (CTPublisher.sol lines 307-420)
+### Step-by-step execution (CTPublisher.sol lines 310-430)
 
 ```
 Poster calls mintFrom(hook, posts[], nftBeneficiary, feeBeneficiary, additionalPayMetadata, feeMetadata)
   with msg.value = sum(post prices) + 5% fee
 
-1. Read projectId from hook.PROJECT_ID()                              [line 326]
-2. _setupPosts(hook, posts) returns:                                  [line 330-331]
+1. Read projectId from hook.PROJECT_ID()                              [line 329]
+2. _setupPosts(hook, posts) returns:                                  [line 333-334]
    (tiersToAdd[], tierIdsToMint[], totalPrice)
 
    For each post in the batch:
-     a. Revert if encodedIPFSUri == bytes32("")                       [line 463-464]
-     b. O(i) duplicate check against all prior posts in batch         [line 468-472]
-     c. Look up tierIdForEncodedIPFSUriOf[hook][encodedIPFSUri]       [line 477]
-        - If tier exists and NOT removed: reuse tier ID,              [line 486]
-          accumulate store.tierOf().price (on-chain price)            [line 491]
-        - If tier exists but removed: delete stale mapping,           [line 484]
+     a. Revert if encodedIPFSUri == bytes32("")                       [line 473-474]
+     b. O(i) duplicate check against all prior posts in batch         [line 478-482]
+     c. Look up tierIdForEncodedIPFSUriOf[hook][encodedIPFSUri]       [line 487]
+        - If tier exists and NOT removed: reuse tier ID,              [line 496]
+          accumulate store.tierOf().price (on-chain price)            [line 501]
+        - If tier exists but removed: delete stale mapping,           [line 494]
           fall through to new tier creation
-        - If no tier exists: validate against allowance:              [line 500-539]
+        - If no tier exists: validate against allowance:              [line 510-549]
           * Category must be configured (minimumTotalSupply > 0)
           * price >= minimumPrice
           * totalSupply >= minimumTotalSupply
           * totalSupply <= maximumTotalSupply
           * splitPercent <= maximumSplitPercent
           * caller in allowedAddresses (if non-empty)
-          Then build JB721TierConfig and accumulate post.price        [line 543-569]
-     d. Store tierIdForEncodedIPFSUriOf mapping for new tiers         [line 566]
+          Then build JB721TierConfig and accumulate post.price        [line 553-579]
+     d. Store tierIdForEncodedIPFSUriOf mapping for new tiers         [line 576]
 
-   Assembly-resize tiersToAdd if some posts reused existing tiers     [line 574-578]
+   Assembly-resize tiersToAdd if some posts reused existing tiers     [line 584-588]
 
-3. If projectId != FEE_PROJECT_ID:                                    [line 333]
-     payValue = msg.value - (totalPrice / FEE_DIVISOR)                [line 338]
+3. If projectId != FEE_PROJECT_ID:                                    [line 336]
+     payValue = msg.value - (totalPrice / FEE_DIVISOR)                [line 341/348]
    Else: payValue = msg.value (no fee for fee project)
 
-4. Revert if totalPrice > payValue                                    [line 342-344]
+4. Revert if totalPrice > payValue                                    [line 352-354]
 
-5. hook.adjustTiers(tiersToAdd, [])                                   [line 348]
+5. hook.adjustTiers(tiersToAdd, [])                                   [line 358]
 
-6. Build mint metadata:                                               [line 356-367]
+6. Build mint metadata:                                               [line 366-370]
    - JBMetadataResolver.addToMetadata with tier IDs
    - Assembly: write FEE_PROJECT_ID into first 32 bytes (referral)
 
-7. Emit Mint event                                                    [line 370-379]
+7. Emit Mint event                                                    [line 380-389]
 
-8. Look up project's primary ETH terminal via DIRECTORY               [line 383-384]
-   terminal.pay{value: payValue}(...)                                 [line 388-396]
+8. Look up project's primary ETH terminal via DIRECTORY               [line 393-394]
+   terminal.pay{value: payValue}(...)                                 [line 398-406]
 
-9. If address(this).balance != 0:                                     [line 403]
-   Look up fee project's primary ETH terminal                        [line 405-406]
-   feeTerminal.pay{value: address(this).balance}(...)                [line 410-418]
+9. If address(this).balance != 0:                                     [line 413]
+   Look up fee project's primary ETH terminal                        [line 415-416]
+   feeTerminal.pay{value: address(this).balance}(...)                [line 420-428]
 ```
 
 ### Fee Calculation
@@ -148,25 +148,25 @@ Poster calls mintFrom(hook, posts[], nftBeneficiary, feeBeneficiary, additionalP
 
 When a post's `encodedIPFSUri` has no existing mapping (or the mapped tier was removed), a new tier is created:
 
-1. Posting criteria are read from bit-packed `_packedAllowanceFor[hook][category]` (CTPublisher.sol lines 174-187)
+1. Posting criteria are read from bit-packed `_packedAllowanceFor[hook][category]` (CTPublisher.sol lines 177-190)
 2. Each field is validated against the post's parameters
-3. A `JB721TierConfig` is constructed with the post's values (lines 543-560)
-4. The tier ID is computed as `startingTierId + numberOfTiersBeingAdded++` (line 563)
-5. The mapping `tierIdForEncodedIPFSUriOf[hook][encodedIPFSUri]` is set (line 566)
-6. All new tiers are committed to the hook via `hook.adjustTiers()` after the loop (line 348)
+3. A `JB721TierConfig` is constructed with the post's values (lines 553-570)
+4. The tier ID is computed as `startingTierId + numberOfTiersBeingAdded++` (line 573)
+5. The mapping `tierIdForEncodedIPFSUriOf[hook][encodedIPFSUri]` is set (line 576)
+6. All new tiers are committed to the hook via `hook.adjustTiers()` after the loop (line 358)
 
 ### Existing Tier Path
 
 When a post's `encodedIPFSUri` already has a mapping to a live (non-removed) tier:
 
-1. The tier ID is reused (line 486)
-2. The fee is calculated from `store.tierOf().price` -- the on-chain price, not `post.price` (line 491)
+1. The tier ID is reused (line 496)
+2. The fee is calculated from `store.tierOf().price` -- the on-chain price, not `post.price` (line 501)
 3. No new `JB721TierConfig` is added to `tiersToAdd`
 4. The poster still gets a mint of the existing tier
 
 ### Stale Tier Cleanup
 
-If a tier was removed externally via `adjustTiers()`, the publisher detects this via `hook.STORE().isTierRemoved()` (line 483) and deletes the stale mapping (line 484), allowing the URI to be posted as a new tier.
+If a tier was removed externally via `adjustTiers()`, the publisher detects this via `hook.STORE().isTierRemoved()` (line 493) and deletes the stale mapping (line 494), allowing the URI to be posted as a new tier.
 
 ---
 
@@ -182,8 +182,8 @@ Bits 168-199  ( 32 bits): maximumSplitPercent(uint32)
 Bits 200-255  ( 56 bits): unused
 ```
 
-Packing logic: CTPublisher.sol lines 271-281
-Unpacking logic: CTPublisher.sol lines 174-187
+Packing logic: CTPublisher.sol lines 274-282
+Unpacking logic: CTPublisher.sol lines 177-190
 
 The address allowlist is stored separately in `_allowedAddresses[hook][category]` (a dynamic array).
 
@@ -193,18 +193,18 @@ The address allowlist is stored separately in `_allowedAddresses[hook][category]
 
 ### Configuration
 
-`configurePostingCriteriaFor()` (line 240) accepts an array of `CTAllowedPost` structs. For each:
+`configurePostingCriteriaFor()` (line 243) accepts an array of `CTAllowedPost` structs. For each:
 
-1. Emits `ConfigurePostingCriteria` event (line 249)
-2. Checks `ADJUST_721_TIERS` permission from `JBOwnable(hook).owner()` (lines 253-257)
-3. Validates `minimumTotalSupply > 0` (line 260)
-4. Validates `minimumTotalSupply <= maximumTotalSupply` (line 265)
-5. Packs numeric fields into `_packedAllowanceFor` (lines 271-281)
-6. Replaces the entire `_allowedAddresses` array (delete + push loop, lines 286-293)
+1. Emits `ConfigurePostingCriteria` event (line 252)
+2. Checks `ADJUST_721_TIERS` permission from `JBOwnable(hook).owner()` (lines 256-260)
+3. Validates `minimumTotalSupply > 0` (line 263)
+4. Validates `minimumTotalSupply <= maximumTotalSupply` (line 268)
+5. Packs numeric fields into `_packedAllowanceFor` (lines 274-284)
+6. Replaces the entire `_allowedAddresses` array (delete + push loop, lines 289-296)
 
 ### Enforcement
 
-In `_setupPosts()` at line 537:
+In `_setupPosts()` at line 547:
 
 ```solidity
 if (addresses.length != 0 && !_isAllowed({addrs: _msgSender(), addresses: addresses})) {
@@ -212,7 +212,7 @@ if (addresses.length != 0 && !_isAllowed({addrs: _msgSender(), addresses: addres
 }
 ```
 
-`_isAllowed()` (lines 207-217) is a linear scan: O(n) where n = allowlist size.
+`_isAllowed()` (lines 210-220) is a linear scan: O(n) where n = allowlist size.
 
 ### Key Behavior
 
@@ -227,7 +227,7 @@ if (addresses.length != 0 && !_isAllowed({addrs: _msgSender(), addresses: addres
 
 ### Architecture
 
-CTDeployer registers itself as the `dataHook` for every project it deploys (CTDeployer.sol line 286). It implements `IJBRulesetDataHook` and proxies calls:
+CTDeployer registers itself as the `dataHook` for every project it deploys (CTDeployer.sol line 289). It implements `IJBRulesetDataHook` and proxies calls:
 
 - **`beforePayRecordedWith(context)`** (line 160): Forwards directly to `dataHookOf[context.projectId]` (the JB721TiersHook).
 - **`beforeCashOutRecordedWith(context)`** (line 132): Checks `SUCKER_REGISTRY.isSuckerOf()` first. If the holder is a sucker, returns `cashOutTaxRate = 0` (fee-free). Otherwise forwards to the data hook.
@@ -239,7 +239,7 @@ CTDeployer registers itself as the `dataHook` for every project it deploys (CTDe
 
 - All `pay()` calls to the project will revert (line 168)
 - All `cashOut()` calls (for non-sucker holders) will revert (line 150)
-- Since `dataHookOf` is write-once (set at line 303, no setter), the project is permanently bricked
+- Since `dataHookOf` is write-once (set at line 306, no setter), the project is permanently bricked
 
 **Scenarios that could trigger this:**
 
@@ -294,7 +294,7 @@ If an attacker can make `SUCKER_REGISTRY.isSuckerOf()` return `true` for their a
 
 ### Current Implementation
 
-`_isAllowed()` at CTPublisher.sol lines 207-217:
+`_isAllowed()` at CTPublisher.sol lines 210-220:
 
 ```solidity
 function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
@@ -317,7 +317,7 @@ function _isAllowed(address addrs, address[] memory addresses) internal pure ret
 
 ### Storage Scaling
 
-The `_allowedAddresses` array is also written during `configurePostingCriteriaFor()` via a push loop (lines 290-292). For large allowlists, the configuration transaction gas cost could also become prohibitive.
+The `_allowedAddresses` array is also written during `configurePostingCriteriaFor()` via a push loop (lines 293-295). For large allowlists, the configuration transaction gas cost could also become prohibitive.
 
 ### Recommendation for Auditors
 
@@ -329,13 +329,13 @@ Check that no realistic usage pattern could cause a revert due to gas limits. Th
 
 ### P0 -- Critical (fund loss or permanent DoS)
 
-1. **Fee accounting correctness in `_setupPosts()`** (CTPublisher.sol lines 432-579). Verify:
+1. **Fee accounting correctness in `_setupPosts()`** (CTPublisher.sol lines 442-589). Verify:
    - `totalPrice` is always computed from on-chain tier prices for existing tiers (not user-supplied `post.price`)
    - `totalPrice` is always computed from `post.price` for new tiers
    - No path exists where `totalPrice` can be manipulated to be less than the actual value of tiers being minted
-   - The duplicate URI check (lines 468-472) covers all batch orderings
+   - The duplicate URI check (lines 478-482) covers all batch orderings
 
-2. **Fee deduction and routing** (CTPublisher.sol lines 333-418). Verify:
+2. **Fee deduction and routing** (CTPublisher.sol lines 336-428). Verify:
    - `payValue = msg.value - (totalPrice / FEE_DIVISOR)` cannot underflow
    - The check `totalPrice > payValue` correctly prevents underpayment
    - `address(this).balance` after the project payment equals exactly the fee amount (plus any force-sent ETH)
@@ -352,7 +352,7 @@ Check that no realistic usage pattern could cause a revert due to gas limits. Th
    - Only legitimate suckers can trigger the zero-tax path
    - The `hasMintPermissionFor()` function cannot be abused for unauthorized minting
 
-5. **Permission enforcement in `configurePostingCriteriaFor()`** (CTPublisher.sol lines 253-257). Verify:
+5. **Permission enforcement in `configurePostingCriteriaFor()`** (CTPublisher.sol lines 256-260). Verify:
    - The permission check uses `JBOwnable(hook).owner()` and `IJB721TiersHook(hook).PROJECT_ID()` correctly
    - No one besides the hook owner (or permissioned delegate) can modify posting criteria
 
@@ -365,19 +365,19 @@ Check that no realistic usage pattern could cause a revert due to gas limits. Th
 
 7. **Tier spam / unbounded tier creation** (R-1 in RISKS.md). When allowlist is empty, anyone meeting price/supply floors can create unlimited tiers. Assess impact on hook gas costs.
 
-8. **Bit-packing correctness** in `_packedAllowanceFor` storage (CTPublisher.sol lines 271-281 write, lines 174-187 read). Verify no field overlap or silent truncation.
+8. **Bit-packing correctness** in `_packedAllowanceFor` storage (CTPublisher.sol lines 274-282 write, lines 177-190 read). Verify no field overlap or silent truncation.
 
-9. **Assembly metadata injection** (CTPublisher.sol lines 365-367). Verify the `mstore` correctly places `FEE_PROJECT_ID` in the referral position without corrupting the JBMetadataResolver lookup table.
+9. **Assembly metadata injection** (CTPublisher.sol lines 375-377). Verify the `mstore` correctly places `FEE_PROJECT_ID` in the referral position without corrupting the JBMetadataResolver lookup table.
 
-10. **Project deployment front-running** (CTDeployer.sol lines 258, 291-300). Verify the `assert(projectId == ...)` check correctly prevents ID mismatch without permanent fund loss.
+10. **Project deployment front-running** (CTDeployer.sol lines 261, 294-303). Verify the `assert(projectId == ...)` check correctly prevents ID mismatch without permanent fund loss.
 
 ### P3 -- Low (informational, code quality)
 
 11. **`uint64` project ID cast** in CTProjectOwner (line 77) and CTDeployer (line 344). Both now use `uint64`. Confirm no truncation risk for realistic project IDs.
 
-12. **Force-sent ETH routing** (CTPublisher.sol lines 403-418). Confirm this is the intended behavior and cannot be exploited.
+12. **Force-sent ETH routing** (CTPublisher.sol lines 413-428). Confirm this is the intended behavior and cannot be exploited.
 
-13. **Allowlist overwrite behavior** (CTPublisher.sol lines 286-293). Verify that `delete` followed by `push` loop correctly replaces the array with no residual state.
+13. **Allowlist overwrite behavior** (CTPublisher.sol lines 289-296). Verify that `delete` followed by `push` loop correctly replaces the array with no residual state.
 
 ---
 
@@ -432,9 +432,14 @@ ETHEREUM_RPC_URL=<your-rpc> forge test --match-contract ForkTest --fork-url $ETH
 
 | Test File | Focus | Tests |
 |-----------|-------|-------|
-| `test/CTPublisher.t.sol` | Allowance round-trip, bit packing fuzz, permission checks, split validation | 18 tests including fuzz |
+| `test/CTPublisher.t.sol` | Allowance round-trip, bit packing fuzz, permission checks, split validation | 26 tests including fuzz |
+| `test/CTDeployer.t.sol` | Deploy flow, data hook proxy, sucker permissions, onERC721Received, supportsInterface | 21 tests |
+| `test/CTProjectOwner.t.sol` | Permission grants on NFT receipt, rejection of non-project NFTs, rejection of transfers | 7 tests |
+| `test/ClaimCollectionOwnership.t.sol` | NM-002 scenario: ownership transfer, permission breakage, recovery path | 6 tests |
+| `test/TestAuditGaps.sol` | Data hook proxy forwarding failure, sucker impersonation, allowlist gas scaling, force-sent ETH | 19 tests |
 | `test/CroptopAttacks.t.sol` | Adversarial input validation, allowlist bypass, split percent enforcement | 12 tests |
 | `test/Fork.t.sol` | Full deployment integration with real JB infrastructure | 2 fork tests |
+| `test/fork/PublishFork.t.sol` | End-to-end mint flow, fee distribution, duplicate post reuse on mainnet fork | 4 fork tests |
 | `test/Test_MetadataGeneration.t.sol` | Metadata assembly correctness | 1 test |
 | `test/regression/DuplicateUriFeeEvasion.t.sol` | NM-001 fix: duplicate URI detection | 5 tests including fuzz |
 | `test/regression/FeeEvasion.t.sol` | H-19 fix: existing tier price used for fees | 2 tests |
@@ -442,11 +447,8 @@ ETHEREUM_RPC_URL=<your-rpc> forge test --match-contract ForkTest --fork-url $ETH
 
 ### Coverage Gaps (no existing tests)
 
-- Data hook proxy forwarding failure (CTDeployer -> hook reverts)
 - Force-sent ETH handling via selfdestruct
-- Allowlist gas scaling benchmarks
 - Sucker fee-free cash-out abuse / impersonation
-- CTProjectOwner receiving transfers (not just mints)
 - `deployProjectFor` front-running race condition
 - Multiple hooks sharing the same CTPublisher instance
 - Cross-category posting in a single batch (different categories, different allowlists)
@@ -461,15 +463,18 @@ Tests use Foundry's `vm.mockCall()` to isolate CTPublisher from its dependencies
 
 ## 12. Previous Audit Findings
 
-Four findings were fixed (three with regression tests). One finding remains open (low severity). See `RISKS.md` for full details.
+Six Nemesis findings plus two regression-test findings. See `.audit/findings/nemesis-verified.md` for full Nemesis details and `RISKS.md` for context.
 
 | ID | Severity | Status | Description |
 |----|----------|--------|-------------|
-| NM-001 | MEDIUM | FIXED | Duplicate URI fee evasion in batch mints |
-| H-19 | HIGH | FIXED | Fee evasion on existing tier mints via `post.price = 0` |
-| L-52 | LOW | FIXED | Stale tier ID mapping after external tier removal |
-| NM-005 | LOW | FIXED | `uint56` vs `uint64` project ID cast inconsistency |
+| NM-001 | MEDIUM | FALSE POSITIVE | `dataHookOf` write-once = permanent project bricking -- project owner can queue new ruleset to escape (`useDataHookForPay = false`) |
+| NM-002 | MEDIUM | OPEN | `claimCollectionOwnershipOf` breaks all `CTPublisher.mintFrom` calls -- hook ownership transfer does not update CTPublisher permissions |
+| NM-003 | LOW | OPEN | Permission grants to initial owner stale after project NFT transfer -- old owner retains 4 permissions |
+| NM-004 | LOW | OPEN | Stale `tierIdForEncodedIPFSUriOf` in `tiersFor()` view -- removed tiers still returned to off-chain consumers |
+| NM-005 | LOW | FIXED | Fee underflow gives generic panic (`0x11`) instead of custom `CTPublisher_InsufficientEthSent` error -- the `if (payValue < fee)` check now guards the subtraction |
 | NM-006 | LOW | OPEN | Cannot fully disable posting for a configured category |
+| H-19 | HIGH | FIXED | Fee evasion on existing tier mints via `post.price = 0` *(regression test naming, not from Nemesis audit)* |
+| L-52 | LOW | FIXED | Stale tier ID mapping after external tier removal *(regression test naming, not from Nemesis audit)* |
 
 ---
 
@@ -477,7 +482,7 @@ Four findings were fixed (three with regression tests). One finding remains open
 
 - **Solidity**: 0.8.26
 - **EVM target**: Cancun
-- **Optimizer**: via-IR, 200 runs
+- **Optimizer**: 200 runs
 - **Dependencies**: OpenZeppelin 5.x, nana-core-v6, nana-721-hook-v6, nana-suckers-v6
 - **Build**: `forge build` (Foundry)
 
