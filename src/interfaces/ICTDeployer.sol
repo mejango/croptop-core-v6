@@ -24,8 +24,8 @@ interface ICTDeployer {
     function PUBLISHER() external view returns (ICTPublisher);
 
     /// @notice Claim ownership of a tiered ERC-721 hook collection by transferring it to the project.
-    /// @dev After claiming, the project owner must grant CTPublisher the ADJUST_721_TIERS permission for the project
-    /// so that mintFrom() continues to work.
+    /// @dev After claiming, CTPublisher is atomically granted the ADJUST_721_TIERS permission so that mintFrom()
+    /// continues to work.
     /// @param hook The hook to claim ownership of. The caller must own the project the hook belongs to.
     function claimCollectionOwnershipOf(IJB721TiersHook hook) external;
 

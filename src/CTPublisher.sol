@@ -154,8 +154,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @return minimumPrice The minimum price that a poster must pay to record a new NFT.
     /// @return minimumTotalSupply The minimum total number of available tokens that a minter must set to record a new
     /// NFT.
-    /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. Leave as 0 for
-    /// max.
+    /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. Must be >=
+    /// minimumTotalSupply.
     /// @return maximumSplitPercent The maximum split percent that a poster can set. 0 means splits are not allowed.
     /// @return allowedAddresses The addresses allowed to post. Returns empty if all addresses are allowed.
     function allowanceFor(

@@ -219,7 +219,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @notice Claim ownership of the collection.
     /// @dev After calling this, the hook's owner becomes the project (resolved via PROJECTS.ownerOf). The project
     /// owner must then grant CTPublisher the ADJUST_721_TIERS permission for the project so that mintFrom() continues
-    /// to work. Without this permission grant, all subsequent posts will revert.
+    /// to work. Without this permission grant, all subsequent posts will revert. This cannot be done atomically here
+    /// because after transferring ownership to the project, this contract no longer has authority to set permissions
+    /// on the project's behalf.
     /// @param hook The hook to claim ownership of.
     function claimCollectionOwnershipOf(IJB721TiersHook hook) external override {
         // Get the project ID of the hook.
