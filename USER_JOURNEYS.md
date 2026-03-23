@@ -35,7 +35,7 @@ Complete user path documentation for auditors. Each journey describes the entry 
    ```
    - Salt: `keccak256(abi.encode(projectConfig.salt, _msgSender()))`
    - Deployed with empty tiers, ETH currency, 18 decimals
-   - No reserves, no votes, no owner minting, no overspend prevention
+   - All `false` flags: new tiers with reserves, votes, and owner minting are allowed; overspending is not prevented; tokens are not issued for splits
 
 5. **Ruleset configuration -- phase 2** (lines 288-291): Now that the hook is deployed, the remaining metadata fields are set:
    - Cash-out tax rate: `MAX_CASH_OUT_TAX_RATE` (100%)
@@ -75,7 +75,7 @@ Complete user path documentation for auditors. Each journey describes the entry 
 
 ### Constructor (One-Time Setup)
 
-The CTDeployer constructor (lines 92-118) grants two wildcard (`projectId = 0`) permissions from CTDeployer's account. These are set once at contract deployment, not on every `deployProjectFor` call:
+The CTDeployer constructor (lines 82-118) grants two wildcard (`projectId = 0`) permissions from CTDeployer's account. These are set once at contract deployment, not on every `deployProjectFor` call:
 
 1. `JBPermissions` -- sucker registry granted `MAP_SUCKER_TOKEN` (wildcard, all projects).
 2. `JBPermissions` -- CTPublisher granted `ADJUST_721_TIERS` (wildcard, all projects).
@@ -614,7 +614,7 @@ After claiming, the hook's ownership follows the project NFT. Whoever owns the p
 
 2. **Sucker check** (line 144):
    ```
-   if (SUCKER_REGISTRY.isSuckerOf(projectId, context.holder))
+   if (SUCKER_REGISTRY.isSuckerOf(context.projectId, context.holder))
        return (0, context.cashOutCount, context.totalSupply, [])
    ```
    If the holder is a registered sucker: return zero tax rate (fee-free cash out). Skip the hook entirely.
