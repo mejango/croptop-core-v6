@@ -31,11 +31,7 @@ contract MockPermissions is IJBPermissions {
         return true;
     }
 
-    function hasPermissions(address, address, uint256, uint256[] calldata, bool, bool)
-        external
-        pure
-        returns (bool)
-    {
+    function hasPermissions(address, address, uint256, uint256[] calldata, bool, bool) external pure returns (bool) {
         return true;
     }
 
@@ -165,9 +161,7 @@ contract ReentrantProjectTerminal {
                 splits: new JBSplit[](0)
             });
 
-            publisher.mintFrom{value: 21}(
-                hook, posts, address(this), attackerFeeBeneficiary, bytes(""), bytes("")
-            );
+            publisher.mintFrom{value: 21}(hook, posts, address(this), attackerFeeBeneficiary, bytes(""), bytes(""));
         }
 
         return 0;
@@ -195,9 +189,8 @@ contract CodexFeeBeneficiaryReentrancyTest is Test {
         hook = new MockHook(2, IJB721TiersHookStore(address(store)), address(this));
         publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, address(0));
         feeTerminal = new FeeTerminalRecorder();
-        projectTerminal = new ReentrantProjectTerminal(
-            publisher, IJB721TiersHook(address(hook)), attackerFeeBeneficiary
-        );
+        projectTerminal =
+            new ReentrantProjectTerminal(publisher, IJB721TiersHook(address(hook)), attackerFeeBeneficiary);
         directory.setTerminals(address(projectTerminal), address(feeTerminal));
 
         CTAllowedPost[] memory allowedPosts = new CTAllowedPost[](1);
@@ -213,7 +206,7 @@ contract CodexFeeBeneficiaryReentrancyTest is Test {
         publisher.configurePostingCriteriaFor(allowedPosts);
     }
 
-    function test_reentrantInnerCallStealsOuterFeeBeneficiaryPayment() public {
+    function test_reentrantInnerCallCannotStealOuterFee() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             encodedIPFSUri: keccak256("outer"),
@@ -228,9 +221,11 @@ contract CodexFeeBeneficiaryReentrancyTest is Test {
             IJB721TiersHook(address(hook)), posts, address(this), victimFeeBeneficiary, bytes(""), bytes("")
         );
 
-        assertEq(feeTerminal.callCount(), 1, "only the reentrant inner fee payment should execute");
-        assertEq(feeTerminal.totalReceived(), 6, "inner fee sweep should collect both inner and outer fees");
-        assertEq(feeTerminal.lastBeneficiary(), attackerFeeBeneficiary, "attacker controls the fee beneficiary");
-        assertEq(address(publisher).balance, 0, "publisher balance should be empty after the sweep");
+        // With the fix, fee amounts are pinned before external calls, so both inner and outer fees
+        // are paid separately with correct beneficiaries.
+        assertEq(feeTerminal.callCount(), 2, "both inner and outer fee payments should execute");
+        assertEq(feeTerminal.totalReceived(), 6, "total fees should be inner(1) + outer(5) = 6");
+        assertEq(feeTerminal.lastBeneficiary(), victimFeeBeneficiary, "outer fee should go to victim beneficiary");
+        assertEq(address(publisher).balance, 0, "publisher balance should be empty after both fee payments");
     }
 }

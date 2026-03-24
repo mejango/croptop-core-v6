@@ -406,20 +406,21 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             });
         }
 
-        // Pay a fee if there are funds left.
-        // Force-sent ETH (via selfdestruct or coinbase) cannot be prevented. Routing it to the fee
-        // project (project #1) is the safest option — it prevents ETH from being permanently locked and benefits the
-        // protocol.
-        if (address(this).balance != 0) {
+        // Reuse payValue to hold the pre-computed fee amount, avoiding reliance on address(this).balance
+        // after the external call above (which could be manipulated by reentrancy or force-sent ETH).
+        payValue = msg.value - payValue;
+
+        // Pay the fee if there is one.
+        if (payValue != 0) {
             // Get a reference to the fee project's current ETH payment terminal.
             IJBTerminal feeTerminal =
                 DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
 
             // Make the fee payment.
             // slither-disable-next-line unused-return
-            feeTerminal.pay{value: address(this).balance}({
+            feeTerminal.pay{value: payValue}({
                 projectId: FEE_PROJECT_ID,
-                amount: address(this).balance,
+                amount: payValue,
                 token: JBConstants.NATIVE_TOKEN,
                 beneficiary: feeBeneficiary,
                 minReturnedTokens: 0,
