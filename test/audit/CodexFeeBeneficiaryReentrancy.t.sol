@@ -51,6 +51,9 @@ contract MockStore {
         return tier;
     }
 
+    // Accept direct ether transfers (required alongside payable fallback to silence compiler warning 3628).
+    receive() external payable {}
+
     fallback() external payable {}
 }
 
@@ -75,6 +78,9 @@ contract MockHook {
         return OWNER;
     }
 
+    // Accept direct ether transfers (required alongside payable fallback to silence compiler warning 3628).
+    receive() external payable {}
+
     fallback() external payable {}
 }
 
@@ -90,6 +96,9 @@ contract MockDirectory {
     function primaryTerminalOf(uint256 projectId, address) external view returns (IJBTerminal) {
         return IJBTerminal(projectId == 1 ? feeTerminal : projectTerminal);
     }
+
+    // Accept direct ether transfers (required alongside payable fallback to silence compiler warning 3628).
+    receive() external payable {}
 
     fallback() external payable {}
 }
@@ -119,6 +128,9 @@ contract FeeTerminalRecorder {
         lastAmount = amount;
         return 0;
     }
+
+    // Accept direct ether transfers (required alongside payable fallback to silence compiler warning 3628).
+    receive() external payable {}
 
     fallback() external payable {}
 }
