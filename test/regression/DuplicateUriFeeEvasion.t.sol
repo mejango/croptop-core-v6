@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity ^0.8.26;
 
 // forge-lint: disable-next-line(unaliased-plain-import)
 import "forge-std/Test.sol";
