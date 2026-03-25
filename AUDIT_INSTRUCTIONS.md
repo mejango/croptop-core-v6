@@ -2,7 +2,7 @@
 
 Audit preparation document for experienced Solidity auditors. This repo contains the Croptop content publishing system: three contracts that allow permissioned posting of NFT content as 721 tiers to Juicebox V6 projects, with fee accounting, an allowlist system, and a data hook proxy for cross-chain cash-out interception.
 
-Compiler: `solc 0.8.26`. Framework: Foundry.
+Compiler: `solc ^0.8.26`. Framework: Foundry.
 
 ---
 
@@ -479,7 +479,7 @@ Six Nemesis findings plus two regression-test findings. See `.audit/findings/nem
 
 ## Compiler and Version Info
 
-- **Solidity**: 0.8.26
+- **Solidity**: ^0.8.26
 - **EVM target**: Cancun
 - **Optimizer**: 200 runs
 - **Dependencies**: OpenZeppelin 5.x, nana-core-v6, nana-721-hook-v6, nana-suckers-v6
