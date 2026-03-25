@@ -15,7 +15,7 @@ This document describes all changes between `croptop-core` (v5) and `croptop-cor
 ## 1. Breaking Changes
 
 ### Solidity Version
-- Compiler version bumped from `0.8.23` to `^0.8.26` across all implementation contracts (`CTDeployer`, `CTProjectOwner`, `CTPublisher`).
+- Compiler version bumped from `0.8.23` to `0.8.28` across all implementation contracts (`CTDeployer`, `CTProjectOwner`, `CTPublisher`).
 
 ### Dependency Namespace Migration
 All imports updated from v5 to v6 namespaces:
@@ -259,7 +259,7 @@ No field changes. Import path updated from `@bananapus/suckers-v5` to `@bananapu
 | `JB721TiersHookFlags`: 4 flags | `JB721TiersHookFlags`: 5 flags | Added `issueTokensForSplits` |
 | -- | `CTPublisher_DuplicatePost` | New error |
 | -- | `CTPublisher_SplitPercentExceedsMaximum` | New error |
-| Solidity `0.8.23` | Solidity `^0.8.26` | Compiler bump |
+| Solidity `0.8.23` | Solidity `0.8.28` | Compiler bump |
 | `@bananapus/*-v5` | `@bananapus/*-v6` | All dependency namespaces |
 
 > **Cross-repo impact**: The `CTPost.splitPercent` and `splits` fields feed directly into `nana-721-hook-v6`'s tier splits system. `nana-suckers-v6` suckers are detected via `SUCKER_REGISTRY.isSuckerOf` for the 0% tax cashout path. `nana-permission-ids-v6` `uint64` projectId width change drove the `CTProjectOwner` cast update.
