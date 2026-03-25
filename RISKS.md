@@ -13,7 +13,7 @@
 
 - **Fee evasion via duplicate posts across hooks.** `tierIdForEncodedIPFSUriOf` is keyed per hook. The same `encodedIPFSUri` can be posted to different hooks without duplicate detection, potentially creating fee-arbitrage opportunities.
 - **Fee calculation rounding.** Fee is `totalPrice / FEE_DIVISOR` (FEE_DIVISOR=20, so 5% fee). Integer division truncates, losing up to 19 wei per post. Negligible individually but could compound across many micro-priced posts. Explicit validation: reverts `CTPublisher_InsufficientEthSent` if `msg.value < fee` (before subtraction) or if `msg.value - fee < totalPrice` (after subtraction).
-- **Balance-based fee routing.** `CTPublisher.mintFrom` sends fees based on `address(this).balance` after the main payment. Force-sent ETH (via selfdestruct) is routed to the fee project.
+- **Pre-computed fee routing.** `CTPublisher.mintFrom` computes the fee as `msg.value - payValue` before the external payment call, so the fee amount is determined from `msg.value` alone. Force-sent ETH (via selfdestruct) does not affect fee calculation.
 - **Split percent manipulation.** Posters can set `splitPercent` up to `maximumSplitPercent`. Splits route funds away from the project treasury to poster-specified addresses. If `maximumSplitPercent` is set high, posters can redirect most of the tier revenue.
 
 ## 3. Access Control
@@ -34,12 +34,12 @@
 ## 5. Reentrancy Surface
 
 - **`mintFrom` external call chain.** `mintFrom` makes three categories of external calls: (1) `hook.adjustTiers()` to create new tiers, (2) `terminal.pay{value}()` to pay the project, (3) `terminal.pay{value}()` to pay the fee project. The first `terminal.pay` can trigger pay hooks on the target project, which could call back into `CTPublisher`. However, `mintFrom` has no mutable state between the tier adjustment and the payment — `totalPrice` and `payValue` are computed from local variables before the external calls. A re-entrant `mintFrom` call would process independently.
-- **Fee payment ordering.** The fee is sent AFTER the main payment (line ordering in `mintFrom`). If the main payment's pay hook re-enters and calls `mintFrom` again, the fee for the first call has not yet been sent. This is safe because the fee is computed from `address(this).balance` AFTER the main payment, and each call independently computes its own fee from its own `msg.value`. Force-sent ETH (via selfdestruct) would inflate the fee calculation, routing the excess to the fee project — an attacker subsidizes the fee project, not themselves.
+- **Fee payment ordering.** The fee is sent AFTER the main payment (line ordering in `mintFrom`). If the main payment's pay hook re-enters and calls `mintFrom` again, the fee for the first call has not yet been sent. This is safe because the fee is pre-computed from `msg.value` before the external call (`msg.value - payValue`), and each call independently computes its own fee from its own `msg.value`. Force-sent ETH (via selfdestruct) does not affect fee calculation since the fee is derived from `msg.value`, not `address(this).balance`.
 - **No `ReentrancyGuard`.** The publisher relies on independent local state per call. This is safe for the current implementation but fragile if mutable contract storage is added in future versions.
 
 ## 6. Integration Risks
 
-- **CTDeployer forwards all pay/cashout calls to `dataHookOf`.** `beforePayRecordedWith` and `beforeCashOutRecordedWith` delegate to the stored data hook without try-catch. If the data hook reverts, all payments/cashouts for the project are blocked.
+- **CTDeployer forwards pay/cashout calls to `dataHookOf` with null check.** `beforePayRecordedWith` and `beforeCashOutRecordedWith` check for a null `dataHookOf` and return defaults (context weight, empty specs) instead of reverting. If a non-null data hook reverts, payments/cashouts for the project are still blocked.
 - **No mechanism for hook migration.** `dataHookOf` is written once in `deployProjectFor` and never updated. If the data hook becomes compromised, there is no governance path to replace it without deploying a new project.
 - **Tier ID prediction.** `_setupPosts` predicts new tier IDs as `maxTierIdOf(hook) + 1 + i`. If another transaction adds tiers between `maxTierIdOf` read and `adjustTiers` execution, tier IDs shift and the wrong tiers are minted. This is a race condition in concurrent posting.
 - **CTProjectOwner accepts any project NFT.** `onERC721Received` grants `ADJUST_721_TIERS` to `PUBLISHER` for whatever tokenId is received. If a non-Croptop project is accidentally transferred to `CTProjectOwner`, the publisher gains tier adjustment permission for it.

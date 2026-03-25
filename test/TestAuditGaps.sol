@@ -238,22 +238,28 @@ contract TestAuditGaps is Test {
         deployer.beforePayRecordedWith(context);
     }
 
-    /// @notice When the data hook is not set (address(0)), calling beforeCashOutRecordedWith should revert.
-    function test_dataHookProxy_cashOut_revertsWhenNoDataHookSet() public {
+    /// @notice When the data hook is not set (address(0)), calling beforeCashOutRecordedWith returns defaults.
+    function test_dataHookProxy_cashOut_returnsDefaultsWhenNoDataHookSet() public {
         // dataHookOf[999] is address(0) by default (never set).
         JBBeforeCashOutRecordedContext memory context = _buildCashOutContext(999, unauthorized, 100e18, 1000e18);
 
-        // Calling a function on address(0) will revert.
-        vm.expectRevert();
-        deployer.beforeCashOutRecordedWith(context);
+        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply, JBCashOutHookSpecification[] memory specs) =
+            deployer.beforeCashOutRecordedWith(context);
+
+        assertEq(taxRate, context.cashOutTaxRate, "cashOutTaxRate should be returned as-is from context");
+        assertEq(cashOutCount, context.cashOutCount, "cashOutCount should be returned as-is from context");
+        assertEq(totalSupply, context.totalSupply, "totalSupply should be returned as-is from context");
+        assertEq(specs.length, 0, "hookSpecifications should be empty");
     }
 
-    /// @notice When the data hook is not set (address(0)), calling beforePayRecordedWith should revert.
-    function test_dataHookProxy_pay_revertsWhenNoDataHookSet() public {
+    /// @notice When the data hook is not set (address(0)), calling beforePayRecordedWith returns defaults.
+    function test_dataHookProxy_pay_returnsDefaultsWhenNoDataHookSet() public {
         JBBeforePayRecordedContext memory context = _buildPayContext(999);
 
-        vm.expectRevert();
-        deployer.beforePayRecordedWith(context);
+        (uint256 weight, JBPayHookSpecification[] memory specs) = deployer.beforePayRecordedWith(context);
+
+        assertEq(weight, context.weight, "weight should be returned as-is from context");
+        assertEq(specs.length, 0, "hookSpecifications should be empty");
     }
 
     /// @notice When the data hook is set and works, the proxy should forward correctly for cash outs.

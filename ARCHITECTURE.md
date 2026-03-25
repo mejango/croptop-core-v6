@@ -88,7 +88,7 @@ Categories cannot be fully removed after creation. This is by design -- once a c
 
 CTDeployer registers itself as the ruleset's `dataHook` so it can intercept both payments and cash-outs. It acts as a transparent proxy that adds sucker-awareness:
 
-**`beforePayRecordedWith`**: Pure passthrough. Forwards the call directly to `dataHookOf[projectId]` (the project's 721 hook). The 721 hook returns the weight and pay hook specifications that handle NFT minting. CTDeployer does not modify pay behavior.
+**`beforePayRecordedWith`**: Passthrough with null check. If `dataHookOf[projectId]` is `address(0)`, returns the context weight and empty hook specifications (defaults). Otherwise, forwards the call to the stored data hook (the project's 721 hook). The 721 hook returns the weight and pay hook specifications that handle NFT minting. CTDeployer does not modify pay behavior.
 
 **`beforeCashOutRecordedWith`**: Checks if the `holder` is a sucker for the project (via `SUCKER_REGISTRY.isSuckerOf`). If yes, returns `cashOutTaxRate = 0` with no hook specifications -- suckers cash out without any tax. If no, forwards to `dataHookOf[projectId]` for standard cash-out behavior.
 

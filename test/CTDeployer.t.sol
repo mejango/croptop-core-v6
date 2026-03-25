@@ -413,12 +413,14 @@ contract TestCTDeployer is Test {
     }
 
     /// @notice beforePayRecordedWith reverts when no data hook is set.
-    function test_beforePayRecordedWith_revertsWhenNoDataHook() public {
+    function test_beforePayRecordedWith_returnsDefaultsWhenNoDataHook() public {
         // dataHookOf[999] is address(0) by default.
         JBBeforePayRecordedContext memory context = _buildPayContext(999);
 
-        vm.expectRevert();
-        deployer.beforePayRecordedWith(context);
+        (uint256 weight, JBPayHookSpecification[] memory specs) = deployer.beforePayRecordedWith(context);
+
+        assertEq(weight, context.weight, "weight should be returned as-is from context");
+        assertEq(specs.length, 0, "hookSpecifications should be empty");
     }
 
     //*********************************************************************//
@@ -460,12 +462,17 @@ contract TestCTDeployer is Test {
         assertEq(totalSupply, 1000e18, "totalSupply should pass through");
     }
 
-    /// @notice beforeCashOutRecordedWith reverts when no data hook is set and holder is not a sucker.
-    function test_beforeCashOutRecordedWith_revertsWhenNoDataHook() public {
+    /// @notice beforeCashOutRecordedWith returns defaults when no data hook is set and holder is not a sucker.
+    function test_beforeCashOutRecordedWith_returnsDefaultsWhenNoDataHook() public {
         JBBeforeCashOutRecordedContext memory context = _buildCashOutContext(999, unauthorized, 100e18, 1000e18);
 
-        vm.expectRevert();
-        deployer.beforeCashOutRecordedWith(context);
+        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply, JBCashOutHookSpecification[] memory specs) =
+            deployer.beforeCashOutRecordedWith(context);
+
+        assertEq(taxRate, context.cashOutTaxRate, "cashOutTaxRate should be returned as-is from context");
+        assertEq(cashOutCount, context.cashOutCount, "cashOutCount should be returned as-is from context");
+        assertEq(totalSupply, context.totalSupply, "totalSupply should be returned as-is from context");
+        assertEq(specs.length, 0, "hookSpecifications should be empty");
     }
 
     //*********************************************************************//

@@ -146,8 +146,12 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         }
 
         // If the ruleset has a data hook, forward the call to the datahook.
+        IJBRulesetDataHook hook = dataHookOf[context.projectId];
+        if (address(hook) == address(0)) {
+            return (context.cashOutTaxRate, context.cashOutCount, context.totalSupply, hookSpecifications);
+        }
         // slither-disable-next-line unused-return
-        return dataHookOf[context.projectId].beforeCashOutRecordedWith(context);
+        return hook.beforeCashOutRecordedWith(context);
     }
 
     /// @notice Forward the call to the original data hook.
@@ -164,8 +168,12 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
     {
         // Forward the call to the data hook.
+        IJBRulesetDataHook hook = dataHookOf[context.projectId];
+        if (address(hook) == address(0)) {
+            return (context.weight, hookSpecifications);
+        }
         // slither-disable-next-line unused-return
-        return dataHookOf[context.projectId].beforePayRecordedWith(context);
+        return hook.beforePayRecordedWith(context);
     }
 
     /// @notice A flag indicating whether an address has permission to mint a project's tokens on-demand.
