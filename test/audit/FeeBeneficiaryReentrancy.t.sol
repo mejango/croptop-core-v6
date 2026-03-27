@@ -182,7 +182,7 @@ contract ReentrantProjectTerminal {
     receive() external payable {}
 }
 
-contract CodexFeeBeneficiaryReentrancyTest is Test {
+contract FeeBeneficiaryReentrancyTest is Test {
     MockPermissions permissions;
     MockDirectory directory;
     MockStore store;
