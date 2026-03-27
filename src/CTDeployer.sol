@@ -225,9 +225,12 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     //*********************************************************************//
 
     /// @notice Claim ownership of the collection.
-    /// @dev After calling this, the hook's owner becomes the project (resolved via PROJECTS.ownerOf). The project
-    /// owner must then grant CTPublisher the ADJUST_721_TIERS permission for the project so that mintFrom() continues
-    /// to work. Without this permission grant, all subsequent posts will revert. This cannot be done atomically here
+    /// @dev Two-step ownership transfer process:
+    ///   Step 1 (this function): Transfers hook ownership to the project via `transferOwnershipToProject()`.
+    ///     After this call, `hook.owner()` resolves dynamically through `PROJECTS.ownerOf(projectId)`.
+    ///   Step 2 (caller must do separately): The project owner grants CTPublisher the `ADJUST_721_TIERS` permission
+    ///     for the project so that `mintFrom()` continues to work.
+    /// Without the Step 2 permission grant, all subsequent posts will revert. This cannot be done atomically here
     /// because after transferring ownership to the project, this contract no longer has authority to set permissions
     /// on the project's behalf.
     /// @param hook The hook to claim ownership of.
@@ -337,9 +340,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
 
         // Set permission for the project's owner to do all the NFT things.
-        // These permissions are granted from CTDeployer (address(this)), not from the project owner.
-        // Transferring the project NFT does not invalidate them because the permission account is CTDeployer,
-        // which remains the hook's owner regardless of who holds the project NFT.
+        // These permissions are granted from CTDeployer (address(this)) to the initial owner.
+        // The hook checks permissions against hook.owner(), which after claimCollectionOwnershipOf() resolves
+        // dynamically via PROJECTS.ownerOf(projectId). Before claiming, CTDeployer is the static hook owner,
+        // so these permissions allow the project owner to manage tiers through CTDeployer.
         uint8[] memory permissionIds = new uint8[](4);
         permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
         permissionIds[1] = JBPermissionIds.SET_721_METADATA;

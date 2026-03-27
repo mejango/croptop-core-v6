@@ -103,6 +103,10 @@ Posts can now include a `splitPercent` and an array of `splits` (JBSplit[]) that
 
 ## 3. Event Changes
 
+Indexer note:
+- event names are stable, but embedded struct payloads changed ABI shape;
+- if your graph decodes `ConfigurePostingCriteria` or `Mint`, update the event-decoding schema for the new `maximumSplitPercent`, `splitPercent`, and `splits` fields.
+
 No event signatures were changed. Both versions emit the same two events:
 - `ConfigurePostingCriteria(address indexed hook, CTAllowedPost allowedPost, address caller)` — note that the `CTAllowedPost` struct gained a `maximumSplitPercent` field, which changes the ABI encoding of this event's data.
 - `Mint(uint256 indexed projectId, IJB721TiersHook indexed hook, address indexed nftBeneficiary, address feeBeneficiary, CTPost[] posts, uint256 postValue, uint256 txValue, address caller)` — note that the `CTPost` struct gained `splitPercent` and `splits` fields, which changes the ABI encoding of this event's data.

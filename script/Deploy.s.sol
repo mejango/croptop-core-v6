@@ -64,9 +64,28 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
-        // If the fee project id is 0, then we want to deploy a new fee project.
+        // If the fee project id is 0, then we want to deploy a new fee project — but only if the publisher
+        // singleton doesn't already exist. Re-running with FEE_PROJECT_ID=0 would create a second fee project
+        // with different CREATE2 addresses, stranding the previous suite.
         if (FEE_PROJECT_ID == 0) {
-            FEE_PROJECT_ID = core.projects.createFor(safeAddress());
+            // Check if the publisher already exists by scanning existing project IDs.
+            uint256 _existingCount = core.projects.count();
+            bool _found;
+            for (uint256 _candidateId = 1; _candidateId <= _existingCount; _candidateId++) {
+                (, bool _exists) = _isDeployed({
+                    salt: PUBLISHER_SALT,
+                    creationCode: type(CTPublisher).creationCode,
+                    arguments: abi.encode(core.directory, core.permissions, _candidateId, TRUSTED_FORWARDER)
+                });
+                if (_exists) {
+                    FEE_PROJECT_ID = _candidateId;
+                    _found = true;
+                    break;
+                }
+            }
+            if (!_found) {
+                FEE_PROJECT_ID = core.projects.createFor(safeAddress());
+            }
         }
 
         CTPublisher publisher;
