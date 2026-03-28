@@ -286,7 +286,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                 tiersConfig: JB721InitTiersConfig({
                     tiers: new JB721TierConfig[](0), currency: JBCurrencyIds.ETH, decimals: 18
                 }),
-                reserveBeneficiary: address(0),
                 flags: JB721TiersHookFlags({
                     noNewTiersWithReserves: false,
                     noNewTiersWithVotes: false,
