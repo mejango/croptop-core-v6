@@ -19,6 +19,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
 contract MockPermissions is IJBPermissions {
+    // forge-lint: disable-next-line(mixed-case-function)
     function WILDCARD_PROJECT_ID() external pure returns (uint256) {
         return 0;
     }
@@ -136,8 +137,11 @@ contract FeeTerminalRecorder {
 }
 
 contract ReentrantProjectTerminal {
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
     CTPublisher public immutable publisher;
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
     IJB721TiersHook public immutable hook;
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
     address public immutable attackerFeeBeneficiary;
     bool internal entered;
 
