@@ -2,52 +2,57 @@
 
 ## Who This Repo Serves
 
-- project owners who want community-posted NFT content
-- posters publishing content into another project's collection
-- operators deploying a full Croptop project in one transaction
+- project owners turning a Juicebox 721 project into a publishing marketplace
+- publishers creating or reusing NFT tiers as posts
+- operators locking project administration into Croptop-specific ownership patterns
 
 ## Journey 1: Turn A Project Into A Croptop Publisher
 
-**Starting state:** you control a Juicebox project with a 721 hook, and you know what categories, pricing bounds, and split rules posters should follow.
+**Starting state:** a project already exists or is about to launch, and the owner wants category-level posting rules.
 
-**Success:** the project has explicit posting criteria and can accept compliant community posts.
+**Success:** Croptop posting criteria are installed and future posts must satisfy them.
 
 **Flow**
-1. Configure allowed post rules per category with `configurePostingCriteriaFor(...)`.
-2. Define minimum price, supply bounds, max split percent, and optional address allowlists.
-3. Keep the 721 hook permissions aligned so `CTPublisher` can create or reuse tiers.
-4. Share the posting policy offchain so posters know what will validate.
-
-**Important constraint:** Croptop does not remove editorial judgment. It formalizes it onchain.
+1. Configure category-level posting constraints such as price floor, supply bounds, split limits, and optional allowlists.
+2. Install or verify the 721 hook shape the project expects.
+3. Route the project through Croptop's publisher logic so future post creation is policy-checked instead of free-form tier editing.
 
 ## Journey 2: Publish Content Into An Existing Croptop Project
 
-**Starting state:** a project has already published its Croptop rules, and your post satisfies them.
+**Starting state:** a publisher has a post that satisfies the target project's posting rules.
 
-**Success:** your post becomes a mintable tier and the first copy is minted to the beneficiary you specified.
+**Success:** the post becomes a valid 721 tier and the first mint settles correctly.
 
 **Flow**
-1. Prepare the `CTPost` payload with content URI, supply, category, price, and splits.
-2. Call `mintFrom(hook, posts, nftBeneficiary, feeBeneficiary, ...)` with enough value.
-3. `CTPublisher` validates each post against the project's criteria.
-4. Matching posts create new tiers or reuse existing tiers when the URI already exists.
-5. The project receives the payment net of Croptop's 5% fee, and the poster receives the first minted copy.
+1. The publisher calls `mintFrom(...)` or the equivalent publishing surface with the content URI and pricing data.
+2. `CTPublisher` checks the post against category rules and fee policy.
+3. It creates or reuses the underlying 721 tier, mints the first copy, and routes both project revenue and the Croptop fee.
 
-**Failure modes that matter:** invalid category rules, disallowed poster address, out-of-range price or supply, and duplicate content expectations that do not match how URI reuse works.
+**Failure cases that matter:** duplicate URIs, split configurations that evade fees, stale tier mappings, and publisher inputs that satisfy the 721 hook but violate Croptop's stricter publishing rules.
 
 ## Journey 3: Launch A New Croptop Project End To End
 
-**Starting state:** you want the project, collection, and posting rules created together rather than bolted on after launch.
+**Starting state:** the product wants a fresh project that already has Croptop deployment choices baked in.
 
-**Success:** a complete Croptop-ready project exists with posting rules and optional sucker support.
+**Success:** one deployment flow launches the project, wires the 721 hook, and installs the initial posting rules.
 
 **Flow**
-1. Build a `CTProjectConfig` with terminals, metadata, collection name and symbol, and allowed post rules.
-2. Call `CTDeployer.deployProjectFor(...)`.
-3. The deployer creates the Juicebox project and 721 hook, configures Croptop posting rules, and can optionally deploy suckers.
-4. If you want immutable collection ownership, transfer the project NFT into `CTProjectOwner`.
+1. Use `CTDeployer` with project config, posting rules, and any omnichain deployment config.
+2. The deployer launches the Juicebox project, configures the Croptop-specific owner model, and wires in publisher behavior.
+3. The project is ready for publishers without a manual post-launch setup phase.
+
+## Journey 4: Lock Administration Into Croptop's Owner Surface
+
+**Starting state:** the project should continue operating through Croptop's policy surface instead of ordinary project-owner discretion.
+
+**Success:** the project's admin path is burn-locked or otherwise routed through `CTProjectOwner`.
+
+**Flow**
+1. Transfer or configure ownership so Croptop's owner helper controls the relevant admin surface.
+2. Restrict future edits to the paths Croptop intentionally exposes.
+3. Accept that this is a product-shaping choice, not a cosmetic deployment detail.
 
 ## Hand-Offs
 
-- Use [nana-721-hook-v6](../nana-721-hook-v6/USER_JOURNEYS.md) for the underlying tiered collection behavior.
-- Use [nana-suckers-v6](../nana-suckers-v6/USER_JOURNEYS.md) if the Croptop project is meant to be cross-chain.
+- Use [nana-721-hook-v6](../nana-721-hook-v6/USER_JOURNEYS.md) for the underlying tier issuance behavior Croptop wraps.
+- Use [nana-core-v6](../nana-core-v6/USER_JOURNEYS.md) when the question is about base project accounting rather than post validation or fee routing.
