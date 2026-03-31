@@ -65,7 +65,7 @@ Publisher → CTPublisher.mintFrom(hook, posts[], nftBeneficiary, feeBeneficiary
   → adjustTiers on the 721 hook to add new tiers
   → Pay the project terminal: payValue = msg.value - fee
      Metadata encodes tier IDs to mint, so the 721 hook mints one NFT per post
-  → Pay fee to FEE_PROJECT_ID terminal with remaining balance
+  → Pay pre-computed fee to FEE_PROJECT_ID terminal (try-catch; falls back to feeBeneficiary, then msg.sender)
 ```
 
 ### Allowed Post Rules

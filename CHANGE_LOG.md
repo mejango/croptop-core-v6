@@ -242,6 +242,10 @@ No field changes. Import path updated from `@bananapus/suckers-v5` to `@bananapu
 ### `CTPublisher.mintFrom` — Named Arguments
 - **v6:** Uses named arguments for `DIRECTORY.primaryTerminalOf(...)`, `hook.adjustTiers(...)`, `JBMetadataResolver.getId(...)`, and `_isAllowed(...)`.
 
+### `CTPublisher.mintFrom` — Fee Payment Resilience (Audit Remediation)
+- **Previous:** Fee terminal payment was a bare `feeTerminal.pay{value}()` call. If the fee terminal reverted, the entire `mintFrom()` transaction reverted, blocking all mints.
+- **Current:** Fee amount is pre-computed as `msg.value - payValue` (no longer relies on `address(this).balance`). The fee terminal payment is wrapped in try-catch. On failure, the fee is sent to `feeBeneficiary` via low-level call. If that also fails, the fee is sent to `msg.sender`. A broken fee terminal never blocks mints.
+
 ### NatDoc / Comments
 - **v6:** Adds extensive NatDoc comments to all interface functions, events, and struct fields. Adds `forge-lint` disable comments for mixed-case variables. Adds explanatory comments for design decisions (e.g., fee rounding behavior, force-sent ETH handling, category irrevocability, linear scan scaling).
 

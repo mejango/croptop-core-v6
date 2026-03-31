@@ -142,6 +142,6 @@ What admins CANNOT do:
 
 8. **No admin can modify existing tier prices.** Once a tier is created via `_setupPosts()`, the price is set in the `JB721TiersHookStore`. CTPublisher uses the stored price for fee calculation on subsequent mints (not `post.price`). See H-19 fix.
 
-9. **No admin can drain CTPublisher funds.** CTPublisher has no `withdraw()` function and no `receive()` / `fallback()`. The only ETH that enters the contract is during `mintFrom()` and it is fully routed to the project terminal and fee terminal within the same transaction.
+9. **No admin can drain CTPublisher funds.** CTPublisher has no `withdraw()` function and no `receive()` / `fallback()`. The only ETH that enters the contract is during `mintFrom()` and it is fully routed to the project terminal and fee terminal (or fallback recipients) within the same transaction. The fee terminal payment is wrapped in try-catch with fallback to `feeBeneficiary` then `msg.sender`, so ETH is never stranded by a fee terminal failure.
 
 10. **Sucker registry trust is irrevocable.** The `MAP_SUCKER_TOKEN` permission is granted at CTDeployer construction with `projectId: 0` (wildcard). There is no function to revoke this permission from within CTDeployer.

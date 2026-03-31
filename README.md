@@ -56,7 +56,7 @@ Every `mintFrom` call collects a 5% fee on the total tier price. The fee is calc
 
 - If the project being posted to **is** the fee project, no fee is collected (avoids circular payments).
 - Integer division truncates, so the fee loses up to 19 wei of dust per mint.
-- Any ETH remaining in the contract after the main payment (including force-sent ETH) is forwarded to the fee project terminal.
+- The fee amount is pre-computed as `msg.value - payValue` (not derived from `address(this).balance`), so force-sent ETH does not affect fee routing. The fee terminal payment is wrapped in try-catch with a fallback to `feeBeneficiary` then `msg.sender`.
 
 ### One-Click Deployment
 
@@ -173,4 +173,4 @@ script/
 - **Fee skipping:** When `projectId == FEE_PROJECT_ID`, no fee is collected. This is intentional but means the fee project itself never pays Croptop fees.
 - **Allowlist scaling:** `_isAllowed()` uses linear scan over the address allowlist. Large allowlists (100+ addresses) increase gas costs proportionally.
 - **Tier reuse via IPFS URI:** If the same encoded IPFS URI has already been minted, the existing tier is reused rather than creating a new one. This prevents duplicate content but means a poster cannot create a second tier with the same content.
-- **Exact payment edge case:** `mintFrom` sends the remaining contract balance as the fee payment after the main payment. If exactly the right amount is sent (no remainder), the fee transfer is skipped.
+- **Fee terminal failure:** The fee terminal payment is wrapped in try-catch. If the fee terminal reverts, the fee is sent to `feeBeneficiary` via low-level call, then to `msg.sender` if that also fails. A broken fee terminal never blocks mints, but the fee project loses revenue during the outage.
