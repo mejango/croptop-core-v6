@@ -11,6 +11,7 @@ import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
+import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTPublisher} from "../../src/CTPublisher.sol";
@@ -110,11 +111,13 @@ contract H19_FeeEvasion is Test {
             encodedIPFSUri: TEST_URI,
             category: 5,
             discountPercent: 0,
-            allowOwnerMint: false,
-            transfersPausable: false,
-            cantBeRemoved: false,
-            cantIncreaseDiscountPercent: false,
-            cantBuyWithCredits: false,
+            flags: JB721TierFlags({
+                allowOwnerMint: false,
+                transfersPausable: false,
+                cantBeRemoved: false,
+                cantIncreaseDiscountPercent: false,
+                cantBuyWithCredits: false
+            }),
             splitPercent: 0,
             resolvedUri: ""
         });
@@ -207,11 +210,13 @@ contract H19_FeeEvasion is Test {
             encodedIPFSUri: TEST_URI,
             category: 5,
             discountPercent: 0,
-            allowOwnerMint: false,
-            transfersPausable: false,
-            cantBeRemoved: false,
-            cantIncreaseDiscountPercent: false,
-            cantBuyWithCredits: false,
+            flags: JB721TierFlags({
+                allowOwnerMint: false,
+                transfersPausable: false,
+                cantBeRemoved: false,
+                cantIncreaseDiscountPercent: false,
+                cantBuyWithCredits: false
+            }),
             splitPercent: 0,
             resolvedUri: ""
         });

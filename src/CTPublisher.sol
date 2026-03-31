@@ -5,6 +5,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+import {JB721TierConfigFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierConfigFlags.sol";
 import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
@@ -569,13 +570,15 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     encodedIPFSUri: post.encodedIPFSUri,
                     category: post.category,
                     discountPercent: 0,
-                    allowOwnerMint: false,
-                    useReserveBeneficiaryAsDefault: false,
-                    transfersPausable: false,
-                    useVotingUnits: true,
-                    cantBeRemoved: false,
-                    cantIncreaseDiscountPercent: false,
-                    cantBuyWithCredits: false,
+                    flags: JB721TierConfigFlags({
+                        allowOwnerMint: false,
+                        useReserveBeneficiaryAsDefault: false,
+                        transfersPausable: false,
+                        useVotingUnits: true,
+                        cantBeRemoved: false,
+                        cantIncreaseDiscountPercent: false,
+                        cantBuyWithCredits: false
+                    }),
                     splitPercent: post.splitPercent,
                     splits: post.splits
                 });
