@@ -1,4 +1,21 @@
-# RISKS.md -- croptop-core-v6
+# Croptop Core Risk Register
+
+This file focuses on the publishing, fee-routing, and hook-composition risks that matter once third parties can create NFT tiers on someone else's Juicebox project.
+
+## How to use this file
+
+- Read `Priority risks` first to understand the failure modes with the highest user or treasury impact.
+- Use the detailed sections for contract-level reasoning about posting criteria, fee routing, and deployer composition.
+- Treat `Accepted Behaviors` and `Invariants to Verify` as the line between intentional tradeoffs and defects.
+
+## Priority risks
+
+| Priority | Risk | Why it matters | Primary controls |
+|----------|------|----------------|------------------|
+| P0 | Hook/store and terminal trust | `mintFrom` depends on hook storage and directory terminal resolution; a bad integration can misprice posts or redirect value. | Audit integration assumptions, verify hook/store pairings, and monitor terminal configuration. |
+| P1 | Tier ID race during concurrent posting | `_setupPosts` predicts future tier IDs before `adjustTiers`; concurrent writes can shift those IDs and break the batch. | Application-layer ordering, atomic reverts on mismatch, and operator awareness of concurrent posting. |
+| P1 | Fee-path degradation without mint failure | The fee terminal is fail-open via try/catch, so posting continues even if the fee project temporarily stops receiving revenue. | Terminal health monitoring, fallback beneficiary handling, and explicit operational checks around fee routing. |
+
 
 ## 1. Trust Assumptions
 

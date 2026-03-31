@@ -2,6 +2,33 @@
 
 Admin privileges and their scope in croptop-core-v6.
 
+## At A Glance
+
+| Item | Details |
+|------|---------|
+| Scope | Croptop project deployment, posting-criteria management, publisher permissions, and project burn-lock ownership flows. |
+| Operators | Project owners, hook owners and delegates, the `CTDeployer`, `CTPublisher`, optional `CTProjectOwner`, and the configured sucker registry. |
+| Highest-risk actions | Sending a project NFT to `CTProjectOwner`, misconfiguring posting criteria, or relying on the write-once `dataHookOf` mapping without validating the hook first. |
+| Recovery posture | Ownership burn-lock mistakes are not recoverable in place. Operational fixes usually mean updating criteria if the project is still controlled, or deploying a new project/hook if it is not. |
+
+## Routine Operations
+
+- Configure posting criteria before broad publisher access, because `mintFrom()` enforces those rules for every post.
+- Use `claimCollectionOwnershipOf()` when the project should own its hook directly instead of leaving hook control with the deployer path.
+- Treat sucker deployment as a project extension that still depends on the Croptop data-hook proxy remaining correct for the project.
+- Avoid transferring project NFTs to `CTProjectOwner` unless the intention is to burn human control permanently.
+
+## One-Way Or High-Risk Actions
+
+- `CTProjectOwner` permanently locks any JBProjects NFT it receives.
+- `dataHookOf[projectId]` is set during deployment and has no later setter.
+- Constructor-time wildcard permissions granted by `CTDeployer` are structural and cannot be revoked from within the deployer.
+
+## Recovery Notes
+
+- If posting rules are wrong but the project still controls the hook, fix them through the hook-owner surface.
+- If ownership was accidentally burned into `CTProjectOwner` or the wrong hook path was deployed, recovery generally means abandoning that control path and redeploying the project or hook composition.
+
 ## Roles
 
 ### 1. Project Owner
@@ -69,7 +96,7 @@ Admin privileges and their scope in croptop-core-v6.
 
 | Function | Required Role | Permission ID | Scope | What It Does |
 |----------|--------------|---------------|-------|-------------|
-| `onERC721Received()` | Anyone who transfers a JBProjects NFT | None | Per-project | On receiving a project NFT from `PROJECTS` (mint only, `from == address(0)` is NOT enforced here), grants `CTPublisher` the `ADJUST_721_TIERS` permission for that project. |
+| `onERC721Received()` | Anyone who transfers a JBProjects NFT | None | Per-project | On receiving a project NFT from `PROJECTS`, grants `CTPublisher` the `ADJUST_721_TIERS` permission for that project. The contract does not restrict this to mint receipts; any transferred JBProjects NFT will be accepted and effectively burn human ownership. |
 
 ### Permissions Granted at CTDeployer Construction
 

@@ -1,99 +1,41 @@
 # Croptop Core
 
-Permissioned NFT publishing for Juicebox projects -- anyone can post content as NFT tiers to a project's 721 hook, provided the posts meet criteria set by the project owner. A 5% fee is routed to a designated fee project on each mint.
+Croptop turns a Juicebox project with a 721 hook into a permissioned publishing marketplace. Project owners define posting criteria, then anyone who meets those rules can publish new NFT tiers and mint the first copy of each post.
 
-[Docs](https://docs.juicebox.money) | [Discord](https://discord.gg/juicebox) | [Croptop](https://croptop.eth.limo)
+Docs: <https://docs.juicebox.money>  
+Site: <https://croptop.eth.limo>
+Architecture: [ARCHITECTURE.md](./ARCHITECTURE.md)
 
-**Supported Chains:** Ethereum, Optimism, Base, Arbitrum (mainnets) and Ethereum Sepolia, Optimism Sepolia, Base Sepolia, Arbitrum Sepolia (testnets). See `script/Deploy.s.sol` for the Sphinx deployment configuration.
+## Overview
 
-## Conceptual Overview
+Croptop is built around three ideas:
 
-Croptop turns any Juicebox project with a 721 tiers hook into a permissioned content marketplace. Project owners define posting criteria -- minimum price, supply bounds, address allowlists -- and anyone who meets those criteria can publish new NFT tiers on the project. The poster's content becomes a mintable NFT tier, and the first copy is minted to them automatically.
+- project owners set category-level posting criteria such as price floors, supply bounds, split limits, and optional allowlists
+- publishers call `mintFrom` to create or reuse 721 tiers that represent their post
+- a one-click deployer can create a full Juicebox project, its 721 hook configuration, and its posting rules in a single transaction
 
-### How It Works
+Every mint collects a 5% Croptop fee unless the target project is itself the fee project.
 
-```
-1. Project owner configures posting criteria per category
-   → configurePostingCriteriaFor(allowedPosts)
-   → Sets min price, supply bounds, max split %, address allowlist
-   |
-2. Anyone posts content that meets the criteria
-   → mintFrom(hook, posts, nftBeneficiary, feeBeneficiary, ...)
-   → Validates each post against category rules
-   → Creates new 721 tiers on the hook (or reuses existing ones)
-   → Mints first copy of each tier to the poster
-   |
-3. Payment routing
-   → 5% fee (totalPrice / FEE_DIVISOR) sent to fee project
-   → Remainder paid into the project's primary terminal
-   |
-4. Anyone can mint additional copies
-   → Standard 721 tier minting via the project's hook
-```
+Use this repo when the product is "permissioned publishing on a Juicebox project." Do not use it when you only need plain 721 tier sales; that belongs in `nana-721-hook-v6`.
 
-```mermaid
-sequenceDiagram
-    participant Poster
-    participant CTPublisher
-    participant Hook as 721 Tiers Hook
-    participant Terminal as Project Terminal
-    participant FeeTerminal as Fee Project Terminal
+If a bug looks like ordinary tier issuance or terminal accounting, start in the 721 hook or core repo first. Croptop is where posting policy, fee routing, and publishing-specific project wiring begin.
 
-    Poster->>CTPublisher: mintFrom(hook, posts, ...)
-    CTPublisher->>CTPublisher: Validate each post against category criteria
-    loop For each post
-        CTPublisher->>Hook: adjustTiersOf() -- create new tier (or reuse existing)
-    end
-    CTPublisher->>Terminal: pay() -- total price minus fee
-    Note over Terminal: Mints first copy of each tier to poster
-    CTPublisher->>FeeTerminal: pay() -- 5% fee (totalPrice / 20)
-    Note over FeeTerminal: Routes fee to designated fee project
-```
+## Key Contracts
 
-### Fee Structure
+| Contract | Role |
+| --- | --- |
+| `CTPublisher` | Validates posts, adjusts 721 tiers, mints the first copy, and routes protocol and project payments. |
+| `CTDeployer` | Launches a project, configures Croptop posting rules, and can wire in omnichain sucker deployments. |
+| `CTProjectOwner` | Burn-lock ownership helper that can permanently route project administration through Croptop's publishing surface. |
 
-Every `mintFrom` call collects a 5% fee on the total tier price. The fee is calculated as `totalPrice / FEE_DIVISOR` where `FEE_DIVISOR = 20`. The fee is paid to the primary ETH terminal of a designated fee project (`FEE_PROJECT_ID`, set at deployment). The remainder goes to the target project's primary terminal as a normal payment.
+## Mental Model
 
-- If the project being posted to **is** the fee project, no fee is collected (avoids circular payments).
-- Integer division truncates, so the fee loses up to 19 wei of dust per mint.
-- The fee amount is pre-computed as `msg.value - payValue` (not derived from `address(this).balance`), so force-sent ETH does not affect fee routing. The fee terminal payment is wrapped in try-catch with a fallback to `feeBeneficiary` then `msg.sender`.
+There are two separate concerns here:
 
-### One-Click Deployment
+1. `CTPublisher` governs whether a post is allowed and how it becomes a tier
+2. `CTDeployer` governs how a Croptop-flavored project is packaged and launched
 
-`CTDeployer` creates a complete Juicebox project + 721 hook + posting criteria in a single transaction. It also:
-- Acts as a data hook proxy, forwarding pay/cash-out calls to the underlying 721 hook
-- Grants fee-free cash outs to cross-chain suckers
-- Optionally deploys suckers for omnichain support
-
-### Burn-Lock Ownership
-
-`CTProjectOwner` provides an ownership burn-lock pattern. Transferring a project's NFT to this contract permanently locks ownership while granting `CTPublisher` tier-adjustment permissions -- making the project's configuration immutable except through Croptop posts.
-
-## Architecture
-
-| Contract | Description |
-|----------|-------------|
-| `CTPublisher` | Core publishing engine. Validates posts against owner-configured allowances (min price, supply bounds, address allowlists, max split percent), creates new 721 tiers on the hook, mints the first copy to the poster, and routes a 5% fee to a designated fee project. Inherits `JBPermissioned` and `ERC2771Context`. |
-| `CTDeployer` | One-click project factory. Deploys a Juicebox project with a 721 tiers hook pre-wired, configures posting criteria via `CTPublisher`, optionally deploys cross-chain suckers, and acts as an `IJBRulesetDataHook` proxy that forwards pay/cash-out calls to the underlying hook while granting fee-free cash outs to suckers. |
-| `CTProjectOwner` | Burn-lock ownership helper. Receives a project's ERC-721 ownership token and automatically grants `CTPublisher` the `ADJUST_721_TIERS` permission, effectively making the project's tier configuration immutable except through Croptop posts. |
-
-### Structs
-
-| Struct | Purpose |
-|--------|---------|
-| `CTAllowedPost` | Full posting criteria: hook address, category, price/supply bounds, max split percent, and address allowlist. |
-| `CTDeployerAllowedPost` | Same as `CTAllowedPost` but without the hook address (inferred during deployment). |
-| `CTPost` | A post to publish: encoded IPFS URI, total supply, price, category, split percent, and splits. |
-| `CTProjectConfig` | Project deployment configuration: terminals, metadata URIs, allowed posts, collection name/symbol, and deterministic salt. |
-| `CTSuckerDeploymentConfig` | Cross-chain sucker deployment: deployer configurations and deterministic salt. |
-
-### Interfaces
-
-| Interface | Description |
-|-----------|-------------|
-| `ICTPublisher` | Publishing engine: `mintFrom`, `configurePostingCriteriaFor`, `allowanceFor`, `tiersFor`, plus events. |
-| `ICTDeployer` | Factory: `deployProjectFor`, `claimCollectionOwnershipOf`, `deploySuckersFor`. |
-| `ICTProjectOwner` | Burn-lock: `onERC721Received` (IERC721Receiver). |
+That distinction matters because many "Croptop bugs" are deployment-shape bugs rather than publishing-rule bugs.
 
 ## Install
 
@@ -101,76 +43,45 @@ Every `mintFrom` call collects a 5% fee on the total tier price. The fee is calc
 npm install @croptop/core-v6
 ```
 
-If using Forge directly:
+## Development
 
 ```bash
-forge install
+npm install
+forge build
+forge test
 ```
 
-## Develop
+Useful scripts:
 
-| Command | Description |
-|---------|-------------|
-| `forge build` | Compile contracts |
-| `forge test` | Run all tests (12 test files covering publishing, deployer, attacks, fork integration, metadata, and regressions) |
-| `forge test -vvv` | Run tests with full trace |
+- `npm run deploy:mainnets`
+- `npm run deploy:testnets`
+- `npm run deploy:mainnets:project`
+- `npm run deploy:testnets:project`
+
+## Deployment Notes
+
+Deployments are handled through Sphinx using the environments configured in the repo scripts. `CTDeployer` can also compose cross-chain sucker deployments when the target publishing project needs omnichain support.
 
 ## Repository Layout
 
-```
+```text
 src/
-  CTPublisher.sol                        # Core publishing engine (~590 lines)
-  CTDeployer.sol                         # Project factory + data hook proxy (~433 lines)
-  CTProjectOwner.sol                     # Burn-lock ownership helper (~84 lines)
+  CTPublisher.sol
+  CTDeployer.sol
+  CTProjectOwner.sol
   interfaces/
-    ICTPublisher.sol                     # Publisher interface + events
-    ICTDeployer.sol                      # Factory interface
-    ICTProjectOwner.sol                  # Burn-lock interface
   structs/
-    CTAllowedPost.sol                    # Posting criteria with hook address
-    CTDeployerAllowedPost.sol            # Posting criteria without hook (for deployment)
-    CTPost.sol                           # Post data: IPFS URI, supply, price, category
-    CTProjectConfig.sol                  # Full project deployment config
-    CTSuckerDeploymentConfig.sol         # Cross-chain sucker config
 test/
-  CTPublisher.t.sol                      # Unit tests (~865 lines, ~26 cases)
-  CTDeployer.t.sol                       # Deployer tests (~608 lines)
-  CTProjectOwner.t.sol                   # Project owner tests (~185 lines)
-  ClaimCollectionOwnership.t.sol         # Collection ownership claim tests (~315 lines)
-  CroptopAttacks.t.sol                   # Security/adversarial tests (~437 lines, ~12 cases)
-  Fork.t.sol                             # Mainnet fork integration tests
-  TestAuditGaps.sol                      # Audit gap coverage tests (~689 lines)
-  Test_MetadataGeneration.t.sol          # JBMetadataResolver roundtrip tests
-  fork/
-    PublishFork.t.sol                    # Fork-based publish tests (~437 lines)
-  regression/
-    DuplicateUriFeeEvasion.t.sol         # Duplicate URI fee evasion regression (~312 lines)
-    FeeEvasion.t.sol                     # Fee evasion regression (~279 lines)
-    StaleTierIdMapping.t.sol             # Stale tier ID mapping regression (~214 lines)
+  publisher, deployer, fork, attack, audit, metadata, and regression coverage
 script/
-  Deploy.s.sol                           # Sphinx multi-chain deployment
-  ConfigureFeeProject.s.sol              # Fee project configuration
+  Deploy.s.sol
+  ConfigureFeeProject.s.sol
   helpers/
-    CroptopDeploymentLib.sol             # Deployment artifact reader
 ```
 
-## Permissions
+## Risks And Notes
 
-| Permission | Required For |
-|------------|-------------|
-| `ADJUST_721_TIERS` | `configurePostingCriteriaFor` -- set posting criteria on a hook (from hook owner) |
-| `DEPLOY_SUCKERS` | `deploySuckersFor` -- deploy cross-chain suckers for an existing project |
-
-`CTDeployer` grants the following to the project owner during deployment:
-- `ADJUST_721_TIERS` -- modify tiers directly
-- `SET_721_METADATA` -- update collection metadata
-- `MINT_721` -- mint NFTs directly
-- `SET_721_DISCOUNT_PERCENT` -- adjust discount rates
-
-## Risks
-
-- **Sucker registry compromise:** `CTDeployer.beforeCashOutRecordedWith` checks `SUCKER_REGISTRY.isSuckerOf` to grant fee-free cash outs. If the sucker registry is compromised, any address could cash out without tax.
-- **Fee skipping:** When `projectId == FEE_PROJECT_ID`, no fee is collected. This is intentional but means the fee project itself never pays Croptop fees.
-- **Allowlist scaling:** `_isAllowed()` uses linear scan over the address allowlist. Large allowlists (100+ addresses) increase gas costs proportionally.
-- **Tier reuse via IPFS URI:** If the same encoded IPFS URI has already been minted, the existing tier is reused rather than creating a new one. This prevents duplicate content but means a poster cannot create a second tier with the same content.
-- **Fee terminal failure:** The fee terminal payment is wrapped in try-catch. If the fee terminal reverts, the fee is sent to `feeBeneficiary` via low-level call, then to `msg.sender` if that also fails. A broken fee terminal never blocks mints, but the fee project loses revenue during the outage.
+- posting criteria are only as safe as the project owner configures them
+- fee routing depends on the designated fee project remaining correctly configured
+- burn-lock ownership is intentionally irreversible and should only be used when immutability is desired
+- duplicate-content and stale-tier edge cases are guarded by tests, but integrations should still treat metadata reuse carefully
