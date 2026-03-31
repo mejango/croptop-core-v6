@@ -71,7 +71,7 @@ Quick reference for where the money is:
 | Fee-free cashout | `CTDeployer.beforeCashOutRecordedWith()` | Full treasury value | Only legitimate suckers (via registry) get 0% tax |
 | Unauthorized minting | `CTDeployer.hasMintPermissionFor()` | Arbitrary token minting | Only registered suckers get mint permission |
 | Tier spam | `CTPublisher._setupPosts()` | Gas griefing, hook degradation | Allowlist + price/supply floors gate tier creation |
-| Fee routing failure | `CTPublisher.mintFrom()` residual balance | Fee project loses 5% | `address(this).balance` after project payment is sent to fee project |
+| Fee routing failure | `CTPublisher.mintFrom()` pre-computed fee | Fee project loses 5% | Pre-computed fee (`msg.value - payValue`) sent via try-catch to fee terminal, with fallback to `feeBeneficiary` then `msg.sender` |
 
 ---
 
@@ -126,9 +126,11 @@ Poster calls mintFrom(hook, posts[], nftBeneficiary, feeBeneficiary, additionalP
 8. Look up project's primary ETH terminal via DIRECTORY               [line 393-394]
    terminal.pay{value: payValue}(...)                                 [line 398-406]
 
-9. If address(this).balance != 0:                                     [line 413]
-   Look up fee project's primary ETH terminal                        [line 415-416]
-   feeTerminal.pay{value: address(this).balance}(...)                [line 420-428]
+9. payValue = msg.value - payValue (pre-computed fee)                  [line 411]
+   If payValue != 0:                                                   [line 414]
+   Look up fee project's primary ETH terminal                        [line 416-417]
+   try feeTerminal.pay{value: payValue}(...) {}                      [line 421-429]
+   catch { feeBeneficiary.call{value}; fallback msg.sender.call }    [line 430-437]
 ```
 
 ### Fee Calculation
@@ -137,7 +139,7 @@ Poster calls mintFrom(hook, posts[], nftBeneficiary, feeBeneficiary, additionalP
 - Fee = `totalPrice / 20` (integer division, truncates)
 - Maximum rounding loss: 19 wei per transaction
 - Fee is deducted from `msg.value` before the project payment
-- Residual `address(this).balance` (fee + any force-sent ETH) goes to fee project
+- Pre-computed fee (`msg.value - payValue`) goes to fee terminal via try-catch, with fallback to `feeBeneficiary` then `msg.sender`
 - Fee is skipped entirely when `projectId == FEE_PROJECT_ID`
 
 ---
@@ -338,8 +340,8 @@ Check that no realistic usage pattern could cause a revert due to gas limits. Th
 2. **Fee deduction and routing** (CTPublisher.sol lines 336-428). Verify:
    - `payValue = msg.value - (totalPrice / FEE_DIVISOR)` cannot underflow
    - The check `totalPrice > payValue` correctly prevents underpayment
-   - `address(this).balance` after the project payment equals exactly the fee amount (plus any force-sent ETH)
-   - The fee terminal payment cannot silently fail
+   - The pre-computed fee (`msg.value - payValue`) equals exactly the intended fee amount, independent of `address(this).balance`
+   - The fee terminal payment is wrapped in try-catch with fallback to `feeBeneficiary` then `msg.sender` — verify the fallback chain cannot lose ETH
 
 3. **Data hook proxy forwarding** (CTDeployer.sol lines 132-169). Verify:
    - `dataHookOf[projectId]` is always set before any pay/cashout can occur for that project
@@ -375,7 +377,7 @@ Check that no realistic usage pattern could cause a revert due to gas limits. Th
 
 11. **`uint64` project ID cast** in CTProjectOwner (line 77) and CTDeployer (line 344). Both now use `uint64`. Confirm no truncation risk for realistic project IDs.
 
-12. **Force-sent ETH routing** (CTPublisher.sol lines 413-428). Confirm this is the intended behavior and cannot be exploited.
+12. **Force-sent ETH stranding** (CTPublisher.sol lines 409-438). Fee is now pre-computed from `msg.value`, not `address(this).balance`. Force-sent ETH remains stranded. Confirm this is acceptable and the try-catch fallback chain cannot lose ETH from `msg.value`.
 
 13. **Allowlist overwrite behavior** (CTPublisher.sol lines 289-296). Verify that `delete` followed by `push` loop correctly replaces the array with no residual state.
 
@@ -391,7 +393,7 @@ These properties should hold across all operations. They are suitable targets fo
 
 2. **No fee for fee project:** When `projectId == FEE_PROJECT_ID`, the full `msg.value` is sent to the project terminal (zero deducted for fees).
 
-3. **ETH conservation:** For every `mintFrom()` call, `msg.value == payValue + feeAmount + dust`, where `dust <= 19 wei`. No ETH remains in the CTPublisher contract after the call completes (unless an external `selfdestruct` force-sends ETH between the two `pay()` calls).
+3. **ETH conservation:** For every `mintFrom()` call, `msg.value == payValue + feeAmount + dust`, where `dust <= 19 wei`. The fee amount is pre-computed as `msg.value - payValue` and routed via try-catch to the fee terminal, then `feeBeneficiary`, then `msg.sender`. No ETH from `msg.value` is lost. Force-sent ETH (via `selfdestruct`) is not routed and remains stranded in the contract.
 
 ### Posting Invariants
 
@@ -447,7 +449,7 @@ ETHEREUM_RPC_URL=<your-rpc> forge test --match-contract ForkTest --fork-url $ETH
 
 ### Coverage Gaps (no existing tests)
 
-- Force-sent ETH handling via selfdestruct
+- Force-sent ETH handling via selfdestruct (fee is now pre-computed from `msg.value`, not `address(this).balance`, so force-sent ETH remains stranded)
 - `deployProjectFor` front-running race condition
 - Multiple hooks sharing the same CTPublisher instance
 - Cross-category posting in a single batch (different categories, different allowlists)

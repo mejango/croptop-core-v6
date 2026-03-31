@@ -168,11 +168,19 @@ Build JBMetadataResolver-compatible metadata with tier IDs and referral ID.
 projectTerminal.pay{value: payValue}(projectId, NATIVE_TOKEN, payValue, nftBeneficiary, 0, "Minted from Croptop", mintMetadata)
 ```
 
-**Phase 6: Fee payment** (lines 413-429)
+**Phase 6: Fee payment** (lines 409-438)
 
 ```
-if (address(this).balance != 0) {
-    feeTerminal.pay{value: address(this).balance}(FEE_PROJECT_ID, ...)
+payValue = msg.value - payValue   // reuse payValue for pre-computed fee amount
+
+if (payValue != 0) {
+    feeTerminal = DIRECTORY.primaryTerminalOf(FEE_PROJECT_ID, NATIVE_TOKEN)
+    try feeTerminal.pay{value: payValue}(FEE_PROJECT_ID, ...) {}
+    catch {
+        // Fallback: send fee to feeBeneficiary, then msg.sender
+        feeBeneficiary.call{value: payValue}("")
+        // If that fails too, msg.sender.call{value: payValue}("")
+    }
 }
 ```
 
@@ -205,9 +213,9 @@ if (address(this).balance != 0) {
 - **Empty posts array:** `_setupPosts` returns with `totalPrice = 0`, `tiersToAdd` and `tierIdsToMint` both empty. `adjustTiers` is called with an empty array (no-op). The project terminal receives `msg.value` (no fee deducted since `totalPrice / 20 = 0`). The fee terminal receives nothing.
 - **All posts reuse existing tiers:** No new tiers are created. `tiersToAdd` is resized to length 0 via assembly. `adjustTiers` is a no-op. Fees are calculated from on-chain tier prices.
 - **Mixed new and existing tiers:** `tiersToAdd` is resized via assembly to contain only new tiers. `tierIdsToMint` contains a mix of new and existing IDs.
-- **`msg.value` exceeds required amount:** Excess ETH is sent to the fee project (via `address(this).balance`). The poster overpays the fee project.
-- **`msg.value` is exactly right:** `address(this).balance` after the project payment equals the fee. Fee project receives the correct amount.
-- **`projectId == FEE_PROJECT_ID`:** No fee is deducted. Full `msg.value` goes to the project terminal. `address(this).balance` is 0 after the project payment (no fee payment occurs).
+- **`msg.value` exceeds required amount:** Excess ETH goes to the fee project via the pre-computed fee (`msg.value - payValue`). The poster overpays the fee project.
+- **`msg.value` is exactly right:** The pre-computed fee amount equals the expected fee. Fee project receives the correct amount.
+- **`projectId == FEE_PROJECT_ID`:** No fee is deducted. Full `msg.value` goes to the project terminal. The pre-computed fee is 0 (no fee payment occurs).
 - **Tier price is 0:** Posting criteria allow `minimumPrice = 0`. A post with `price = 0` creates a free tier. Fee on a free tier is 0. The poster sends 0 ETH (or only ETH for other posts in the batch).
 - **`nftBeneficiary = address(0)`:** The terminal payment may succeed (depending on terminal implementation), but the NFTs would be minted to `address(0)`, effectively burning them.
 - **`hook.adjustTiers()` reverts:** The entire transaction reverts. No state changes are committed. The poster's ETH is returned.
@@ -329,20 +337,29 @@ When `projectId == FEE_PROJECT_ID`, the fee calculation is skipped entirely. The
 
 ### Fee Routing
 
-After the project payment completes:
+After the project payment completes, the fee amount is pre-computed as `msg.value - payValue`:
 
 ```solidity
-if (address(this).balance != 0) {
+payValue = msg.value - payValue;  // reuse payValue for the pre-computed fee amount
+
+if (payValue != 0) {
     IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_PROJECT_ID, NATIVE_TOKEN);
-    feeTerminal.pay{value: address(this).balance}({
+    try feeTerminal.pay{value: payValue}({
         projectId: FEE_PROJECT_ID,
-        amount: address(this).balance,
+        amount: payValue,
         token: NATIVE_TOKEN,
         beneficiary: feeBeneficiary,
         minReturnedTokens: 0,
         memo: "",
         metadata: feeMetadata
-    });
+    }) {}
+    catch {
+        // Fallback: send fee to feeBeneficiary, then msg.sender if that fails too.
+        (bool success,) = feeBeneficiary.call{value: payValue}("");
+        if (!success) {
+            (success,) = msg.sender.call{value: payValue}("");
+        }
+    }
 }
 ```
 
@@ -368,10 +385,10 @@ The `feeBeneficiary` parameter in `mintFrom()` determines who receives the fee p
 
 ### Edge Cases
 
-- **Fee project has no primary terminal:** `DIRECTORY.primaryTerminalOf()` returns `address(0)`. The `pay()` call to address(0) reverts. The entire `mintFrom()` transaction reverts (including the project payment).
-- **Fee terminal reverts:** Same as above -- entire `mintFrom()` reverts. No state changes persist.
-- **`address(this).balance == 0` after project payment:** This happens when `fee == 0` (e.g., `totalPrice < FEE_DIVISOR` or `projectId == FEE_PROJECT_ID`). The fee payment is skipped entirely.
-- **Force-sent ETH (via `selfdestruct`):** If ETH was force-sent to CTPublisher before the `mintFrom()` call, it is included in `address(this).balance` and routed to the fee project. CTPublisher has no `receive()` or `fallback()`, so normal sends revert. Only `selfdestruct` (deprecated post-Dencun) can force-send ETH.
+- **Fee project has no primary terminal:** `DIRECTORY.primaryTerminalOf()` returns `address(0)`. The `pay()` call to address(0) reverts inside the try-catch. The fee falls back to `feeBeneficiary.call{value}`, then `msg.sender.call{value}`. The main project payment is not affected.
+- **Fee terminal reverts:** The fee terminal payment is wrapped in try-catch. If the fee terminal reverts, the fee is sent to `feeBeneficiary` via low-level call. If that also fails, the fee is sent to `msg.sender`. The main project payment is never rolled back due to a fee terminal failure. The fee project loses revenue during the outage.
+- **Pre-computed fee is 0:** This happens when `fee == 0` (e.g., `totalPrice < FEE_DIVISOR` or `projectId == FEE_PROJECT_ID`). The fee payment is skipped entirely.
+- **Force-sent ETH (via `selfdestruct`):** The fee amount is now pre-computed as `msg.value - payValue` rather than using `address(this).balance`. Force-sent ETH does not affect fee calculation or routing. CTPublisher has no `receive()` or `fallback()`, so normal sends revert. Only `selfdestruct` (deprecated post-Dencun) can force-send ETH, and it remains in the contract.
 
 ---
 
