@@ -172,8 +172,8 @@ contract L52_StaleTierIdMapping is Test {
             discountPercent: 0,
             allowOwnerMint: false,
             transfersPausable: false,
-            cannotBeRemoved: false,
-            cannotIncreaseDiscountPercent: false,
+            cantBeRemoved: false,
+            cantIncreaseDiscountPercent: false,
             cantBuyWithCredits: false,
             splitPercent: 0,
             resolvedUri: ""

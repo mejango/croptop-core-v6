@@ -813,8 +813,8 @@ contract TestCTPublisher is Test {
             useReserveBeneficiaryAsDefault: false,
             transfersPausable: false,
             useVotingUnits: true,
-            cannotBeRemoved: false,
-            cannotIncreaseDiscountPercent: false,
+            cantBeRemoved: false,
+            cantIncreaseDiscountPercent: false,
             cantBuyWithCredits: false,
             splitPercent: 250_000_000,
             splits: splits

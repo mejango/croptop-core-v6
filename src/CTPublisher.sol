@@ -573,8 +573,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     useReserveBeneficiaryAsDefault: false,
                     transfersPausable: false,
                     useVotingUnits: true,
-                    cannotBeRemoved: false,
-                    cannotIncreaseDiscountPercent: false,
+                    cantBeRemoved: false,
+                    cantIncreaseDiscountPercent: false,
                     cantBuyWithCredits: false,
                     splitPercent: post.splitPercent,
                     splits: post.splits
