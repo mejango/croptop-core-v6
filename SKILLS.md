@@ -1,200 +1,41 @@
 # Croptop Core
 
+## Use This File For
+
+- Use this file when the task touches Croptop publishing, project deployment, data-hook forwarding, fee routing, or burn-locked ownership behavior.
+- Start here, then jump into the publisher, deployer, or owner contract depending on which path the user is actually asking about.
+
+## Read This Next
+
+| If you need... | Open this next |
+|---|---|
+| Repo overview and expected flow | [`README.md`](./README.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
+| Publishing and metadata behavior | [`src/CTPublisher.sol`](./src/CTPublisher.sol) |
+| Deployment and fee-project wiring | [`src/CTDeployer.sol`](./src/CTDeployer.sol), [`script/Deploy.s.sol`](./script/Deploy.s.sol), [`script/ConfigureFeeProject.s.sol`](./script/ConfigureFeeProject.s.sol) |
+| Ownership burn-lock behavior | [`src/CTProjectOwner.sol`](./src/CTProjectOwner.sol) |
+| Regression, attack, or fork coverage | [`test/regression/`](./test/regression/), [`test/fork/`](./test/fork/), [`test/`](./test/) |
+
+## Repo Map
+
+| Area | Where to look |
+|---|---|
+| Main contracts | [`src/`](./src/) |
+| Types | [`src/structs/`](./src/structs/), [`src/interfaces/`](./src/interfaces/) |
+| Scripts | [`script/`](./script/) |
+| Tests | [`test/`](./test/) |
+
 ## Purpose
 
-Permissioned NFT publishing system that lets anyone post content as 721 tiers to a Juicebox project, subject to owner-defined criteria for price, supply, split percentages, and poster identity. Routes a 5% fee on each mint to a designated fee project.
+Permissioned publishing layer for Juicebox 721 projects. Project owners define posting rules, publishers mint content as tiers through a 721 hook, Croptop routes fees, and the deployer can package the whole project shape in one transaction.
 
-## Contracts
+## Reference Files
 
-| Contract | Role |
-|----------|------|
-| `CTPublisher` | Core publishing engine. Validates posts against bit-packed allowances, creates 721 tiers on hooks, mints first copies to posters, and routes fees. Inherits `JBPermissioned`, `ERC2771Context`. |
-| `CTDeployer` | Factory that deploys a Juicebox project + 721 hook + posting criteria in one transaction. Also acts as `IJBRulesetDataHook` proxy that forwards pay/cash-out calls to the underlying hook while granting fee-free cash outs to suckers. |
-| `CTProjectOwner` | Burn-lock contract: receives the project ownership NFT and grants `CTPublisher` the `ADJUST_721_TIERS` permission permanently. Since `CTProjectOwner` has no `transferFrom`, `reconfigure`, or `withdraw` functions, ownership is effectively burned -- no one can reclaim the project NFT, change rulesets, or modify posting criteria after transfer. Use this when you want a fully autonomous project where only community posting (within pre-set criteria) is possible. If you need to retain the ability to reconfigure the project, adjust tiers, or withdraw funds, keep ownership yourself (or use a multisig) instead. Configure all desired posting criteria **before** transferring the project NFT here, as they become immutable once ownership moves. Accepts both mints and `safeTransferFrom` calls originating from the `PROJECTS` contract. |
+- Open [`references/runtime.md`](./references/runtime.md) when you need publisher behavior, fee routing, data-hook forwarding, or the main invariants around posting criteria and tier reuse.
+- Open [`references/operations.md`](./references/operations.md) when you need deployer behavior, burn-lock ownership implications, script breadcrumbs, or the common sources of stale assumptions.
 
-## Key Functions
+## Working Rules
 
-### Publishing
-
-| Function | What it does |
-|----------|-------------|
-| `CTPublisher.mintFrom(hook, posts, nftBeneficiary, feeBeneficiary, additionalPayMetadata, feeMetadata)` | Publishes posts as new 721 tiers, mints first copies to `nftBeneficiary`, deducts a 5% fee (`totalPrice / FEE_DIVISOR`) routed to `FEE_PROJECT_ID`, and pays the remainder into the project's primary terminal. Reuses existing tiers if the IPFS URI was already minted. |
-| `CTPublisher.configurePostingCriteriaFor(allowedPosts)` | Sets per-category posting rules (min price, min/max supply, max split percent, address allowlist) for a given hook. Requires `ADJUST_721_TIERS` permission from the hook owner. |
-
-### Views
-
-| Function | What it does |
-|----------|-------------|
-| `CTPublisher.allowanceFor(hook, category)` | Returns the posting criteria for a hook/category: minimum price (uint104), min supply (uint32), max supply (uint32), max split percent (uint32), plus the address allowlist. Reads from bit-packed storage. |
-| `CTPublisher.tiersFor(hook, encodedIPFSUris)` | Resolves an array of encoded IPFS URIs to their corresponding `JB721Tier` structs via the stored `tierIdForEncodedIPFSUriOf` mapping. |
-
-### Project Deployment
-
-| Function | What it does |
-|----------|-------------|
-| `CTDeployer.deployProjectFor(owner, projectConfig, suckerDeploymentConfiguration, controller)` | Deploys a new Juicebox project with a 721 tiers hook, configures posting criteria, optionally deploys suckers, and transfers project ownership to the specified owner. Uses `CTDeployer` as data hook proxy. Returns `(projectId, hook)`. |
-| `CTDeployer.claimCollectionOwnershipOf(hook)` | Transfers hook ownership to the project via `JBOwnable.transferOwnershipToProject`. Only callable by the project owner. After claiming, the project owner must grant CTPublisher `ADJUST_721_TIERS` permission for the project so that `mintFrom()` continues to work. |
-| `CTDeployer.deploySuckersFor(projectId, suckerDeploymentConfiguration)` | Deploys new cross-chain suckers for an existing project. Requires `DEPLOY_SUCKERS` permission. |
-
-### Data Hook Proxy
-
-| Function | What it does |
-|----------|-------------|
-| `CTDeployer.beforePayRecordedWith(context)` | Forwards pay context to the stored `dataHookOf[projectId]` (typically the 721 tiers hook). Hook specifications returned include a `noop` field — the 721 hook always returns `noop: false`. |
-| `CTDeployer.beforeCashOutRecordedWith(context)` | Returns zero tax rate for sucker addresses (fee-free cross-chain cash outs). Otherwise forwards to the stored data hook. Forwarded hook specifications preserve the inner hook's `noop` flag. |
-| `CTDeployer.hasMintPermissionFor(projectId, ruleset, addr)` | Returns `true` if `addr` is a sucker for the project. |
-
-### Burn-Lock Ownership
-
-| Function | What it does |
-|----------|-------------|
-| `CTProjectOwner.onERC721Received(operator, from, tokenId, data)` | On receiving the project NFT, grants `CTPublisher` the `ADJUST_721_TIERS` permission for that project. Accepts both mints and transfers from `PROJECTS` (reverts if `msg.sender` is not `PROJECTS`). |
-
-## Integration Points
-
-| Dependency | Import | Used For |
-|------------|--------|----------|
-| `@bananapus/core-v6` | `IJBDirectory`, `IJBPermissions`, `IJBTerminal`, `IJBProjects`, `IJBController`, `JBConstants`, `JBMetadataResolver` | Project lookup, permission enforcement, payment routing, project creation, metadata encoding |
-| `@bananapus/721-hook-v6` | `IJB721TiersHook`, `IJB721TiersHookDeployer`, `JB721TierConfig`, `JB721Tier` | Tier creation/adjustment, hook deployment, tier data resolution |
-| `@bananapus/ownable-v6` | `JBOwnable` | Ownership checks and transfers for hooks |
-| `@bananapus/suckers-v6` | `IJBSuckerRegistry`, `JBSuckerDeployerConfig` | Cross-chain sucker deployment and fee-free cash-out detection |
-| `@bananapus/permission-ids-v6` | `JBPermissionIds` | Permission ID constants (`ADJUST_721_TIERS`, `DEPLOY_SUCKERS`, `MAP_SUCKER_TOKEN`, etc.) |
-| `@openzeppelin/contracts` | `ERC2771Context`, `IERC721Receiver` | Meta-transaction support, safe project NFT receipt |
-
-## Key Types
-
-| Struct | Key Fields | Used In |
-|--------|------------|---------|
-| `CTAllowedPost` | `hook`, `category` (uint24), `minimumPrice` (uint104), `minimumTotalSupply` (uint32), `maximumTotalSupply` (uint32), `maximumSplitPercent` (uint32), `allowedAddresses[]` | `configurePostingCriteriaFor` -- used when calling `CTPublisher` directly on an existing hook |
-| `CTDeployerAllowedPost` | Same fields as `CTAllowedPost` minus `hook` | `CTProjectConfig.allowedPosts` -- used during `deployProjectFor` because the hook address is not yet known; `CTDeployer._configurePostingCriteriaFor` fills in the `hook` field automatically after deploying the hook |
-| `CTPost` | `encodedIPFSUri` (bytes32), `totalSupply` (uint32), `price` (uint104), `category` (uint24), `splitPercent` (uint32), `splits[]` (JBSplit[]) | `mintFrom` |
-| `CTProjectConfig` | `terminalConfigurations`, `projectUri`, `allowedPosts` (CTDeployerAllowedPost[]), `contractUri`, `name`, `symbol`, `salt` | `deployProjectFor` |
-| `CTSuckerDeploymentConfig` | `deployerConfigurations` (JBSuckerDeployerConfig[]), `salt` | `deployProjectFor`, `deploySuckersFor` |
-
-## Events
-
-| Event | When |
-|-------|------|
-| `ConfigurePostingCriteria(hook, allowedPost, caller)` | Posting criteria set or updated for a hook/category |
-| `Mint(projectId, hook, nftBeneficiary, feeBeneficiary, posts, postValue, txValue, caller)` | Posts published and first copies minted |
-
-## Errors
-
-| Error | When |
-|-------|------|
-| `CTPublisher_EmptyEncodedIPFSUri` | Post has `encodedIPFSUri == bytes32(0)` |
-| `CTPublisher_InsufficientEthSent` | `totalPrice + fee > msg.value` |
-| `CTPublisher_MaxTotalSupplyLessThanMin` | `minimumTotalSupply > maximumTotalSupply` in config |
-| `CTPublisher_NotInAllowList` | Caller not in allowlist (when allowlist is non-empty) |
-| `CTPublisher_PriceTooSmall` | Post price below `minimumPrice` |
-| `CTPublisher_SplitPercentExceedsMaximum` | Post `splitPercent > maximumSplitPercent` |
-| `CTPublisher_TotalSupplyTooSmall` | Post `totalSupply < minimumTotalSupply` |
-| `CTPublisher_TotalSupplyTooBig` | Post `totalSupply > maximumTotalSupply` (when max > 0) |
-| `CTPublisher_UnauthorizedToPostInCategory` | Category unconfigured (`minSupply == 0`) |
-| `CTPublisher_ZeroTotalSupply` | `configurePostingCriteriaFor` with `minimumTotalSupply == 0` |
-| `CTPublisher_DuplicatePost(bytes32 encodedIPFSUri)` | Same `encodedIPFSUri` appears more than once within the same `mintFrom` batch |
-| `CTDeployer_NotOwnerOfProject` | `claimCollectionOwnershipOf` called by non-owner |
-
-## Constants
-
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `FEE_DIVISOR` | 20 | 5% fee: `totalPrice / 20` |
-| `FEE_PROJECT_ID` | immutable | Fees routed to this project. Fee skipped when `projectId == FEE_PROJECT_ID` |
-
-## Storage
-
-### CTPublisher
-
-| Variable | Type | Purpose |
-|----------|------|---------|
-| `tierIdForEncodedIPFSUriOf` | `hook => encodedIPFSUri => uint256` | Maps IPFS URI to existing tier ID (prevents duplicates) |
-| `_packedAllowanceFor` | `hook => category => uint256` | Bit-packed allowance: price (0-103), minSupply (104-135), maxSupply (136-167), maxSplitPercent (168-199) |
-| `_allowedAddresses` | `hook => category => address[]` | Per-category address allowlist |
-
-### CTDeployer
-
-| Variable | Type | Purpose |
-|----------|------|---------|
-| `PROJECTS` | `IJBProjects` (immutable) | ERC-721 contract for Juicebox project ownership |
-| `DEPLOYER` | `IJB721TiersHookDeployer` (immutable) | Factory for deploying 721 tiers hooks |
-| `PUBLISHER` | `ICTPublisher` (immutable) | CTPublisher instance used for posting |
-| `SUCKER_REGISTRY` | `IJBSuckerRegistry` (immutable) | Registry for cross-chain sucker deployment and lookup |
-| `dataHookOf` | `projectId => IJBRulesetDataHook` | Stores original data hook per project (CTDeployer proxy pattern) |
-
-## Gotchas
-
-1. **Bit-packed allowances.** Allowances are packed into a single `uint256`: price in bits 0-103, min supply in 104-135, max supply in 136-167, max split percent in 168-199. Reading with wrong bit widths silently returns wrong values.
-2. **Fee is 1/20, not a percentage.** `FEE_DIVISOR = 20` means fee = `totalPrice / 20` = 5%. Integer division truncates (rounding down favors payer).
-3. **Fee skipped for fee project.** When `projectId == FEE_PROJECT_ID`, no fee is deducted. This prevents self-referential fee loops.
-4. **Fee payment is pre-computed and try-catch wrapped.** After the main payment, `mintFrom` computes the fee as `msg.value - payValue` and sends it to the fee terminal via try-catch. If the fee terminal reverts, the fee falls back to `feeBeneficiary.call{value}`, then `msg.sender.call{value}`. A broken fee terminal never blocks mints.
-5. **Tier reuse by IPFS URI.** If an encoded IPFS URI was already minted on the hook, the existing tier ID is reused instead of creating a new tier. The poster still gets a mint of the existing tier. The fee is calculated from the actual tier price stored on-chain (not from `post.price`), preventing fee evasion (H-19 fix).
-6. **Stale tier mapping cleanup.** If a tier was removed externally via `adjustTiers()`, the `tierIdForEncodedIPFSUriOf` mapping is automatically cleared when the same IPFS URI is posted again, allowing a new tier to be created (L-52 fix).
-7. **Array resizing via assembly.** `_setupPosts` resizes `tiersToAdd` via inline assembly when some posts reuse existing tiers. The `tierIdsToMint` array is NOT resized and may contain zeros for pre-existing tiers.
-8. **CTProjectOwner only accepts from PROJECTS contract.** `onERC721Received` reverts if `msg.sender != address(PROJECTS)`. It does NOT check the `from` address, so both mints and transfers through `PROJECTS.safeTransferFrom` are accepted.
-9. **CTDeployer rejects direct transfers.** `CTDeployer.onERC721Received` reverts if `from != address(0)`. It only accepts mints from `PROJECTS`.
-10. **Temporary ownership during deployment.** `CTDeployer` owns the project NFT temporarily during `deployProjectFor` (to configure permissions and hooks), then transfers it to the specified `owner`. If the transfer reverts, the entire deployment fails.
-11. **Data hook proxy pattern.** `CTDeployer` wraps itself as the data hook, forwarding to `dataHookOf[projectId]`. This is needed to intercept cash-out calls and grant fee-free cash outs to suckers. Both `useDataHookForPay` and `useDataHookForCashOut` are enabled (M-37 fix).
-12. **Sucker registry trust.** `CTDeployer.beforeCashOutRecordedWith` trusts `SUCKER_REGISTRY.isSuckerOf` to determine fee exemption. If the registry is compromised, any address could cash out without tax.
-13. **Allowlist uses linear scan.** `_isAllowed()` iterates the full allowlist array. Acceptable for <100 addresses; gas cost scales linearly with list size. This also affects `mintFrom` with large post batches: each post in the batch triggers a separate allowlist scan, so gas scales as `O(posts * allowlistSize)`. Keep batches under ~20 posts with allowlists under ~50 addresses to stay within block gas limits.
-14. **Referral ID in metadata.** `FEE_PROJECT_ID` is stored in the first 32 bytes of mint metadata (via assembly `mstore`), allowing the fee terminal to track referrals.
-15. **Deterministic deployment.** Hook salt is `keccak256(abi.encode(projectConfig.salt, msg.sender))` and sucker salt is `keccak256(abi.encode(suckerConfig.salt, msg.sender))`. Different callers with the same salt get different addresses.
-16. **Default project weight.** `CTDeployer` deploys projects with `weight = 1_000_000 * 10^18`, ETH currency, and `maxCashOutTaxRate`. These defaults are hardcoded.
-17. **ERC2771 meta-transaction support.** Both `CTPublisher` and `CTDeployer` support meta-transactions via `ERC2771Context` with a configurable trusted forwarder, allowing relayers to submit transactions on behalf of users.
-
-## Example Integration
-
-```solidity
-import {ICTPublisher} from "@croptop/core-v6/src/interfaces/ICTPublisher.sol";
-import {CTPost} from "@croptop/core-v6/src/structs/CTPost.sol";
-import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
-
-// --- Post content to a Croptop-enabled project ---
-
-CTPost[] memory posts = new CTPost[](1);
-posts[0] = CTPost({
-    encodedIPFSUri: 0x1234..., // encoded IPFS CID
-    totalSupply: 100,
-    price: 0.01 ether,
-    category: 1,
-    splitPercent: 0,
-    splits: new JBSplit[](0)
-});
-
-// Price + 5% fee
-uint256 totalCost = 0.01 ether + (0.01 ether / 20);
-
-publisher.mintFrom{value: totalCost}(
-    IJB721TiersHook(hookAddress),
-    posts,
-    msg.sender, // NFT beneficiary
-    msg.sender, // fee beneficiary
-    "",         // additional pay metadata
-    ""          // fee metadata
-);
-
-// --- Deploy a new Croptop project ---
-
-(uint256 projectId, IJB721TiersHook hook) = deployer.deployProjectFor({
-    owner: msg.sender,
-    projectConfig: CTProjectConfig({
-        terminalConfigurations: terminals,
-        projectUri: "ipfs://...",
-        allowedPosts: allowedPosts,
-        contractUri: "ipfs://...",
-        name: "My Collection",
-        symbol: "MYC",
-        salt: bytes32("my-project")
-    }),
-    suckerDeploymentConfiguration: CTSuckerDeploymentConfig({
-        deployerConfigurations: new JBSuckerDeployerConfig[](0),
-        salt: bytes32(0)
-    }),
-    controller: IJBController(controllerAddress)
-});
-
-// --- Lock ownership via CTProjectOwner ---
-// Transfer the project NFT to CTProjectOwner to burn-lock ownership
-// while keeping Croptop posting enabled.
-IERC721(projects).safeTransferFrom(msg.sender, address(projectOwner), projectId);
-```
+- Start in [`src/CTPublisher.sol`](./src/CTPublisher.sol) for posting-rule and fee behavior, but check [`src/CTDeployer.sol`](./src/CTDeployer.sol) when the bug might come from project shape or hook forwarding.
+- Treat posting criteria, fee routing, and duplicate-content handling as treasury-sensitive and product-sensitive at the same time.
+- If the task mentions project immutability or admin recovery, inspect [`src/CTProjectOwner.sol`](./src/CTProjectOwner.sol) before changing deployer or publisher code.
+- When a bug looks like generic 721 issuance, confirm it is not actually in `nana-721-hook-v6`.
