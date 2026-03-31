@@ -115,6 +115,11 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
         // Set permission for the CTPublisher to adjust the tier.
         PERMISSIONS.setPermissionsFor({account: address(this), permissionsData: permissionData});
+
+        // Give this deployer permission to deploy suckers on behalf of projects.
+        permissionIds[0] = JBPermissionIds.DEPLOY_SUCKERS;
+        permissionData = JBPermissionsData({operator: address(this), projectId: 0, permissionIds: permissionIds});
+        PERMISSIONS.setPermissionsFor({account: address(this), permissionsData: permissionData});
     }
 
     //*********************************************************************//

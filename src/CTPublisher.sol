@@ -416,9 +416,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             IJBTerminal feeTerminal =
                 DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
 
-            // Make the fee payment.
+            // Make the fee payment. Wrapped in try-catch so a reverting fee terminal doesn't block mints.
             // slither-disable-next-line unused-return
-            feeTerminal.pay{value: payValue}({
+            try feeTerminal.pay{value: payValue}({
                 projectId: FEE_PROJECT_ID,
                 amount: payValue,
                 token: JBConstants.NATIVE_TOKEN,
@@ -426,7 +426,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 minReturnedTokens: 0,
                 memo: "",
                 metadata: feeMetadata
-            });
+            }) {}
+            catch {
+                // If the fee payment fails, send the fee to the beneficiary instead.
+                (bool success,) = feeBeneficiary.call{value: payValue}("");
+                if (!success) {
+                    // If that also fails, send to the msg.sender.
+                    // slither-disable-next-line low-level-calls
+                    (success,) = msg.sender.call{value: payValue}("");
+                }
+            }
         }
     }
 
