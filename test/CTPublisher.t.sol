@@ -815,6 +815,7 @@ contract TestCTPublisher is Test {
             useVotingUnits: true,
             cannotBeRemoved: false,
             cannotIncreaseDiscountPercent: false,
+            cantBuyWithCredits: false,
             splitPercent: 250_000_000,
             splits: splits
         });

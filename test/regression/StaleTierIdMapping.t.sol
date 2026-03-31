@@ -174,6 +174,7 @@ contract L52_StaleTierIdMapping is Test {
             transfersPausable: false,
             cannotBeRemoved: false,
             cannotIncreaseDiscountPercent: false,
+            cantBuyWithCredits: false,
             splitPercent: 0,
             resolvedUri: ""
         });

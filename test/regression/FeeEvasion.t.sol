@@ -114,6 +114,7 @@ contract H19_FeeEvasion is Test {
             transfersPausable: false,
             cannotBeRemoved: false,
             cannotIncreaseDiscountPercent: false,
+            cantBuyWithCredits: false,
             splitPercent: 0,
             resolvedUri: ""
         });
@@ -210,6 +211,7 @@ contract H19_FeeEvasion is Test {
             transfersPausable: false,
             cannotBeRemoved: false,
             cannotIncreaseDiscountPercent: false,
+            cantBuyWithCredits: false,
             splitPercent: 0,
             resolvedUri: ""
         });

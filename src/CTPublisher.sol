@@ -575,6 +575,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     useVotingUnits: true,
                     cannotBeRemoved: false,
                     cannotIncreaseDiscountPercent: false,
+                    cantBuyWithCredits: false,
                     splitPercent: post.splitPercent,
                     splits: post.splits
                 });
