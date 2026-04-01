@@ -34,6 +34,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
+    error CTPublisher_FeePaymentFailed(uint256 feeAmount);
     error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
     error CTPublisher_TotalSupplyTooSmall(uint256 totalSupply, uint256 minimumTotalSupply);
@@ -417,7 +418,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             IJBTerminal feeTerminal =
                 DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
 
-            // Make the fee payment. Wrapped in try-catch so a reverting fee terminal doesn't block mints.
+            // Make the fee payment. If the fee sink is unavailable, revert rather than silently
+            // diverting or trapping the protocol fee.
             // slither-disable-next-line unused-return
             try feeTerminal.pay{value: payValue}({
                 projectId: FEE_PROJECT_ID,
@@ -429,13 +431,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 metadata: feeMetadata
             }) {}
             catch {
-                // If the fee payment fails, send the fee to the beneficiary instead.
-                (bool success,) = feeBeneficiary.call{value: payValue}("");
-                if (!success) {
-                    // If that also fails, send to the msg.sender.
-                    // slither-disable-next-line low-level-calls
-                    (success,) = msg.sender.call{value: payValue}("");
-                }
+                revert CTPublisher_FeePaymentFailed(payValue);
             }
         }
     }
