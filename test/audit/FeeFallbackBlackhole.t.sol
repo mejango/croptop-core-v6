@@ -155,6 +155,23 @@ contract RejectingMintCaller {
     }
 }
 
+contract AcceptingMintCaller {
+    function execute(
+        CTPublisher publisher,
+        IJB721TiersHook hook,
+        CTPost[] memory posts,
+        address nftBeneficiary,
+        address feeBeneficiary
+    )
+        external
+        payable
+    {
+        publisher.mintFrom{value: msg.value}(hook, posts, nftBeneficiary, feeBeneficiary, bytes(""), bytes(""));
+    }
+
+    receive() external payable {}
+}
+
 contract FeeFallbackBlackholeTest is Test {
     BlackholeMockPermissions permissions;
     BlackholeDirectory directory;
@@ -164,6 +181,7 @@ contract FeeFallbackBlackholeTest is Test {
     RevertingFeeTerminal feeTerminal;
     RejectingFeeBeneficiary feeBeneficiary;
     RejectingMintCaller caller;
+    AcceptingMintCaller acceptingCaller;
     CTPublisher publisher;
 
     function setUp() public {
@@ -175,6 +193,7 @@ contract FeeFallbackBlackholeTest is Test {
         feeTerminal = new RevertingFeeTerminal();
         feeBeneficiary = new RejectingFeeBeneficiary();
         caller = new RejectingMintCaller();
+        acceptingCaller = new AcceptingMintCaller();
         publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, address(0));
 
         directory.setTerminals(address(projectTerminal), address(feeTerminal));
@@ -192,9 +211,33 @@ contract FeeFallbackBlackholeTest is Test {
         publisher.configurePostingCriteriaFor(allowedPosts);
 
         vm.deal(address(caller), 105);
+        vm.deal(address(acceptingCaller), 105);
     }
 
-    function test_feePaymentFailure_revertsInsteadOfBlackholingFunds() public {
+    function test_feePaymentFailure_refundsMsgSenderAndPreservesMint() public {
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("post"),
+            totalSupply: 1,
+            price: 100,
+            category: 1,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        vm.prank(address(acceptingCaller));
+        acceptingCaller.execute{value: 105}(
+            publisher, IJB721TiersHook(address(hook)), posts, address(this), address(feeBeneficiary)
+        );
+
+        assertEq(projectTerminal.totalReceived(), 100, "main project payment should still succeed");
+        assertEq(address(feeTerminal).balance, 0, "fee terminal should receive nothing after reverting");
+        assertEq(address(feeBeneficiary).balance, 0, "fee beneficiary should receive nothing");
+        assertEq(address(acceptingCaller).balance, 5, "caller should receive the refunded fee");
+        assertEq(address(publisher).balance, 0, "publisher should not retain trapped fees");
+    }
+
+    function test_feePaymentFailure_revertsIfMsgSenderRejectsRefund() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             encodedIPFSUri: keccak256("post"),

@@ -418,8 +418,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             IJBTerminal feeTerminal =
                 DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
 
-            // Make the fee payment. If the fee sink is unavailable, revert rather than silently
-            // diverting or trapping the protocol fee.
+            // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
+            // rather than trapping or silently redirecting protocol funds.
             // slither-disable-next-line unused-return
             try feeTerminal.pay{value: payValue}({
                 projectId: FEE_PROJECT_ID,
@@ -431,7 +431,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 metadata: feeMetadata
             }) {}
             catch {
-                revert CTPublisher_FeePaymentFailed(payValue);
+                // slither-disable-next-line low-level-calls
+                (bool success,) = _msgSender().call{value: payValue}("");
+                if (!success) revert CTPublisher_FeePaymentFailed(payValue);
             }
         }
     }

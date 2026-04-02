@@ -14,7 +14,9 @@ Croptop is built around three ideas:
 - publishers call `mintFrom` to create or reuse 721 tiers that represent their post
 - a one-click deployer can create a full Juicebox project, its 721 hook configuration, and its posting rules in a single transaction
 
-Every mint collects a 5% Croptop fee unless the target project is itself the fee project.
+Every mint collects a 5% Croptop fee unless the target project is itself the fee project. If the configured fee
+terminal rejects that fee payment, Croptop refunds the fee portion to `_msgSender()` and still lets the publish
+continue. If `_msgSender()` cannot receive ETH, the mint reverts.
 
 Use this repo when the product is "permissioned publishing on a Juicebox project." Do not use it when you only need plain 721 tier sales; that belongs in `nana-721-hook-v6`.
 
@@ -62,6 +64,9 @@ Useful scripts:
 
 Deployments are handled through Sphinx using the environments configured in the repo scripts. `CTDeployer` can also compose cross-chain sucker deployments when the target publishing project needs omnichain support.
 
+The deploy script now expects an explicit nonzero `FEE_PROJECT_ID` for canonical deployments. It does not safely
+autodiscover a fee project by scanning existing project IDs.
+
 ## Repository Layout
 
 ```text
@@ -82,6 +87,7 @@ script/
 ## Risks And Notes
 
 - posting criteria are only as safe as the project owner configures them
-- fee routing depends on the designated fee project remaining correctly configured
+- fee routing depends on the designated fee project remaining correctly configured; if its terminal rejects payments,
+  Croptop refunds the fee to `_msgSender()` instead of trapping ETH in `CTPublisher`
 - burn-lock ownership is intentionally irreversible and should only be used when immutability is desired
 - duplicate-content and stale-tier edge cases are guarded by tests, but integrations should still treat metadata reuse carefully

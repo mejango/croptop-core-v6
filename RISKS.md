@@ -31,7 +31,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Fee evasion via duplicate posts across hooks.** `tierIdForEncodedIPFSUriOf` is keyed per hook. The same `encodedIPFSUri` can be posted to different hooks without duplicate detection, potentially creating fee-arbitrage opportunities.
 - **Fee calculation rounding.** Fee is `totalPrice / FEE_DIVISOR` (FEE_DIVISOR=20, so 5% fee). Integer division truncates, losing up to 19 wei per post. Negligible individually but could compound across many micro-priced posts. Explicit validation: reverts `CTPublisher_InsufficientEthSent` if `msg.value < fee` (before subtraction) or if `msg.value - fee < totalPrice` (after subtraction).
 - **Pre-computed fee routing.** `CTPublisher.mintFrom` computes the fee as `msg.value - payValue` before the external payment call, so the fee amount is determined from `msg.value` alone. Force-sent ETH (via selfdestruct) does not affect fee calculation.
-- **Fee terminal liveness is now fail-closed.** If the configured fee terminal cannot accept the fee payment, `mintFrom` reverts. Fees are no longer redirected to arbitrary fallback recipients.
+- **Fee terminal fallback refunds the caller.** If the configured fee terminal cannot accept the fee payment, `mintFrom` refunds the fee portion to `_msgSender()`. This preserves mint liveness for normal callers, but relayers or contracts that cannot receive ETH will still cause the mint to revert.
 - **Split percent manipulation.** Posters can set `splitPercent` up to `maximumSplitPercent`. Splits route funds away from the project treasury to poster-specified addresses. If `maximumSplitPercent` is set high, posters can redirect most of the tier revenue.
 
 ## 3. Access Control
@@ -61,7 +61,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **No mechanism for hook migration.** `dataHookOf` is written once in `deployProjectFor` and never updated. If the data hook becomes compromised, there is no governance path to replace it without deploying a new project.
 - **Tier ID prediction.** `_setupPosts` predicts new tier IDs as `maxTierIdOf(hook) + 1 + i`. If another transaction adds tiers between `maxTierIdOf` read and `adjustTiers` execution, tier IDs shift and the wrong tiers are minted. This is a race condition in concurrent posting.
 - **CTProjectOwner accepts any project NFT.** `onERC721Received` grants `ADJUST_721_TIERS` to `PUBLISHER` for whatever tokenId is received. If a non-Croptop project is accidentally transferred to `CTProjectOwner`, the publisher gains tier adjustment permission for it.
-- **Fee payment destination.** Fees are routed to `FEE_PROJECT_ID` via its primary terminal. If the fee project changes its terminal or token acceptance incompatibly, `mintFrom` now reverts instead of silently misrouting that ETH.
+- **Fee payment destination.** Fees are routed to `FEE_PROJECT_ID` via its primary terminal. If the fee project changes its terminal or token acceptance incompatibly, `mintFrom` attempts to refund the fee to `_msgSender()`. If the caller cannot receive ETH, the mint reverts.
 
 ## 7. Accepted Behaviors
 
