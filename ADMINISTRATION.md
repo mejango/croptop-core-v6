@@ -161,7 +161,7 @@ What admins CANNOT do:
 
 4. **Project owners cannot disable Croptop posting entirely for a category.** `configurePostingCriteriaFor()` requires `minimumTotalSupply > 0`. The workaround is to set an astronomically high `minimumPrice` with `minimumTotalSupply = maximumTotalSupply = 1`. See finding NM-006.
 
-5. **Project owners cannot bypass posting criteria to mint directly through CTPublisher.** They must use `mintFrom()` like anyone else, which enforces all configured rules. However, owners can adjust tiers directly on the hook (bypassing CTPublisher) if they have `ADJUST_721_TIERS` permission.
+5. **Project owners cannot bypass posting criteria through `CTPublisher`, but they may still bypass the publisher surface entirely.** `mintFrom()` enforces all configured rules. Separately, the initial owner/operator can hold direct hook-management permissions from `CTDeployer`, which lets them adjust tiers or mint without going through `CTPublisher` until ownership is claimed away or permissions are narrowed.
 
 6. **CTPublisher cannot mint without paying.** `mintFrom()` requires `msg.value >= totalPrice + fee`. There is no free-mint path through CTPublisher.
 
@@ -169,6 +169,6 @@ What admins CANNOT do:
 
 8. **No admin can modify existing tier prices.** Once a tier is created via `_setupPosts()`, the price is set in the `JB721TiersHookStore`. CTPublisher uses the stored price for fee calculation on subsequent mints (not `post.price`). See H-19 fix.
 
-9. **No admin can drain CTPublisher funds.** CTPublisher has no `withdraw()` function and no `receive()` / `fallback()`. The only ETH that enters the contract is during `mintFrom()` and it is fully routed to the project terminal and fee terminal (or fallback recipients) within the same transaction. The fee terminal payment is wrapped in try-catch with fallback to `feeBeneficiary` then `msg.sender`, so ETH is never stranded by a fee terminal failure.
+9. **No admin can drain CTPublisher funds.** CTPublisher has no `withdraw()` function and no `receive()` / `fallback()`. The only ETH that enters the contract is during `mintFrom()` and it is fully routed to the project terminal and fee terminal (or refunded to the caller if the fee terminal reverts) within the same transaction. If that refund also fails, the mint reverts rather than trapping ETH in the publisher.
 
 10. **Sucker registry trust is irrevocable.** The `MAP_SUCKER_TOKEN` permission is granted at CTDeployer construction with `projectId: 0` (wildcard). There is no function to revoke this permission from within CTDeployer.

@@ -30,7 +30,7 @@ poster
   -> publisher validates each post against project-defined criteria
   -> publisher calls the 721 hook to create or reuse tiers
   -> project terminal receives the publish payment
-  -> fee project receives the fixed fee slice
+  -> fee project receives the fixed fee slice, or `_msgSender()` is refunded that fee if the fee terminal rejects it
   -> first copy of each created tier is minted to the poster
 ```
 
@@ -46,6 +46,7 @@ creator
 
 - A post is valid only if it satisfies the configured category, price, supply, split, and allowlist constraints.
 - Fee routing must be computed from the payment value, not transient contract balance, so forced ETH cannot distort the fee.
+- Fee routing must not strand ETH in `CTPublisher`. If the fee terminal rejects payment, the fee is refunded to `_msgSender()`; if that refund fails, the mint reverts.
 - `CTProjectOwner` only makes sense as a lock, not a flexible admin layer. Once a project is burn-locked, Croptop becomes the only intended tier-adjustment path.
 - Publishing should not bypass the 721 hook's own invariants around tier creation and minting.
 
@@ -53,7 +54,7 @@ creator
 
 - Post validation is spread across category rules, split limits, supply bounds, and optional allowlists.
 - `CTDeployer` is subtle because it is both a launch helper and, in some flows, a runtime hook proxy.
-- Fee routing has multiple fallback paths and needs to stay value-conserving under failure.
+- Fee routing is intentionally liveness-first: it prefers refunding `_msgSender()` over blocking the mint when the fee terminal is down, but still reverts if the refund itself cannot be delivered.
 
 ## Dependencies
 
