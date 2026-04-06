@@ -26,9 +26,9 @@
 **Flow**
 1. The publisher calls `mintFrom(...)` or the equivalent publishing surface with the content URI and pricing data.
 2. `CTPublisher` checks the post against category rules and fee policy.
-3. It creates or reuses the underlying 721 tier, mints the first copy, and routes both project revenue and the Croptop fee.
+3. It creates or reuses the underlying 721 tier, mints the first copy, and routes both project revenue and the Croptop fee. If the fee terminal is unavailable, the fee is refunded to `_msgSender()` instead.
 
-**Failure cases that matter:** duplicate URIs, split configurations that evade fees, stale tier mappings, and publisher inputs that satisfy the 721 hook but violate Croptop's stricter publishing rules.
+**Failure cases that matter:** duplicate URIs, split configurations that evade fees, stale tier mappings, publisher inputs that satisfy the 721 hook but violate Croptop's stricter publishing rules, and callers that cannot receive ETH when a fee refund fallback is needed.
 
 ## Journey 3: Launch A New Croptop Project End To End
 

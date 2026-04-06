@@ -31,7 +31,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Fee evasion via duplicate posts across hooks.** `tierIdForEncodedIPFSUriOf` is keyed per hook. The same `encodedIPFSUri` can be posted to different hooks without duplicate detection, potentially creating fee-arbitrage opportunities.
 - **Fee calculation rounding.** Fee is `totalPrice / FEE_DIVISOR` (FEE_DIVISOR=20, so 5% fee). Integer division truncates, losing up to 19 wei per post. Negligible individually but could compound across many micro-priced posts. Explicit validation: reverts `CTPublisher_InsufficientEthSent` if `msg.value < fee` (before subtraction) or if `msg.value - fee < totalPrice` (after subtraction).
 - **Pre-computed fee routing.** `CTPublisher.mintFrom` computes the fee as `msg.value - payValue` before the external payment call, so the fee amount is determined from `msg.value` alone. Force-sent ETH (via selfdestruct) does not affect fee calculation.
-- **Try-catch fee payment.** The fee terminal payment is wrapped in try-catch. If the fee terminal reverts, the fee is sent to `feeBeneficiary` via low-level call. If that also fails, the fee is sent to `msg.sender`. This means a broken fee terminal does not block mints, but the fee project may lose fee revenue during the outage.
+- **Fee terminal fallback refunds the caller.** If the configured fee terminal cannot accept the fee payment, `mintFrom` refunds the fee portion to `_msgSender()`. This preserves mint liveness for normal callers, but relayers or contracts that cannot receive ETH will still cause the mint to revert.
 - **Split percent manipulation.** Posters can set `splitPercent` up to `maximumSplitPercent`. Splits route funds away from the project treasury to poster-specified addresses. If `maximumSplitPercent` is set high, posters can redirect most of the tier revenue.
 
 ## 3. Access Control
@@ -61,7 +61,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **No mechanism for hook migration.** `dataHookOf` is written once in `deployProjectFor` and never updated. If the data hook becomes compromised, there is no governance path to replace it without deploying a new project.
 - **Tier ID prediction.** `_setupPosts` predicts new tier IDs as `maxTierIdOf(hook) + 1 + i`. If another transaction adds tiers between `maxTierIdOf` read and `adjustTiers` execution, tier IDs shift and the wrong tiers are minted. This is a race condition in concurrent posting.
 - **CTProjectOwner accepts any project NFT.** `onERC721Received` grants `ADJUST_721_TIERS` to `PUBLISHER` for whatever tokenId is received. If a non-Croptop project is accidentally transferred to `CTProjectOwner`, the publisher gains tier adjustment permission for it.
-- **Fee payment destination.** Fees are routed to `FEE_PROJECT_ID` via its primary terminal. If the fee project changes its terminal or token acceptance, fee payments will fail. However, the fee terminal payment is wrapped in try-catch: on failure, the fee is sent to `feeBeneficiary` via low-level call, then to `msg.sender` if that also fails. Minting is never blocked by a broken fee terminal, but the fee project loses revenue during the outage.
+- **Fee payment destination.** Fees are routed to `FEE_PROJECT_ID` via its primary terminal. If the fee project changes its terminal or token acceptance incompatibly, `mintFrom` attempts to refund the fee to `_msgSender()`. If the caller cannot receive ETH, the mint reverts.
 
 ## 7. Accepted Behaviors
 
@@ -72,6 +72,13 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 ### 7.2 Tier ID prediction assumes no concurrent transactions
 
 `_setupPosts` predicts new tier IDs as `maxTierIdOf(hook) + 1 + i`. A concurrent `adjustTiers` call between the `maxTierIdOf` read and the `adjustTiers` execution shifts all predicted IDs, causing the wrong tiers to be minted. This is a known race condition. Mitigation is at the application layer: frontends should use nonce-based transaction ordering or warn users about concurrent posting. The hook-level `adjustTiers` is atomic (all-or-nothing), so a failed prediction reverts the entire batch cleanly.
+
+### 7.3 Project owners can bypass the publisher surface while they retain direct hook permissions
+
+`CTDeployer.deployProjectFor` intentionally grants the initial owner/operator enough hook permissions to manage the
+collection directly. That means the owner can bypass `CTPublisher`'s policy and fee path until ownership is moved into
+another authority surface or those permissions are narrowed. This is an accepted product tradeoff and should be treated
+as part of the trust model, not as a hidden invariant enforced by `CTPublisher`.
 
 ## 8. Invariants to Verify
 

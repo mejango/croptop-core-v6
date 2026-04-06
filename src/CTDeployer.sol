@@ -248,6 +248,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     }
 
     /// @notice Deploy a simple project meant to receive posts from Croptop templates.
+    /// @dev The initial project owner is intentionally granted direct hook-management permissions from
+    /// `CTDeployer`. This means the owner/operator can bypass the Croptop publisher path and interact
+    /// with the hook directly if they choose to. That is an explicit product tradeoff.
     /// @param owner The address that'll own the project.
     /// @param projectConfig The configuration for the project.
     /// @param suckerDeploymentConfiguration The configuration for the suckers to deploy.
@@ -342,7 +345,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         // These permissions are granted from CTDeployer (address(this)) to the initial owner.
         // The hook checks permissions against hook.owner(), which after claimCollectionOwnershipOf() resolves
         // dynamically via PROJECTS.ownerOf(projectId). Before claiming, CTDeployer is the static hook owner,
-        // so these permissions allow the project owner to manage tiers through CTDeployer.
+        // so these permissions allow the project owner to manage tiers through CTDeployer. As a tradeoff,
+        // the owner can also bypass the Croptop publisher surface until ownership is claimed away.
         uint8[] memory permissionIds = new uint8[](4);
         permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
         permissionIds[1] = JBPermissionIds.SET_721_METADATA;
