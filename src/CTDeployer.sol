@@ -407,7 +407,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         CTDeployerAllowedPost memory post;
 
         // Iterate through each post to add it to the formatted list.
-        for (uint256 i; i < numberOfAllowedPosts; i++) {
+        for (uint256 i; i < numberOfAllowedPosts;) {
             // Set the post being iterated on.
             post = allowedPosts[i];
 
@@ -421,6 +421,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                 maximumSplitPercent: post.maximumSplitPercent,
                 allowedAddresses: post.allowedAddresses
             });
+
+            unchecked {
+                ++i;
+            }
         }
 
         // Set up the allowed posts in the publisher.
