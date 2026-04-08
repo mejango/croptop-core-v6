@@ -5,8 +5,10 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
+import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
+import {ICTDeployer} from "./interfaces/ICTDeployer.sol";
 import {ICTProjectOwner} from "./interfaces/ICTProjectOwner.sol";
 import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
 
@@ -18,6 +20,9 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
+
+    /// @notice The Croptop deployer used to look up each project's data hook.
+    ICTDeployer public immutable override DEPLOYER;
 
     /// @notice The contract where operator permissions are stored.
     IJBPermissions public immutable override PERMISSIONS;
@@ -32,10 +37,12 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
+    /// @param deployer The Croptop deployer used to look up each project's data hook.
     /// @param permissions The contract where operator permissions are stored.
     /// @param projects The contract from which project are minted.
     /// @param publisher The Croptop publisher.
-    constructor(IJBPermissions permissions, IJBProjects projects, ICTPublisher publisher) {
+    constructor(ICTDeployer deployer, IJBPermissions permissions, IJBProjects projects, ICTPublisher publisher) {
+        DEPLOYER = deployer;
         PERMISSIONS = permissions;
         PROJECTS = projects;
         PUBLISHER = publisher;
@@ -63,6 +70,17 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
 
         // Make sure the 721 received is the JBProjects contract.
         if (msg.sender != address(PROJECTS)) revert();
+
+        // Revert if the hook is still owned by the deployer (collection ownership not claimed).
+        {
+            address hookAddress = address(DEPLOYER.dataHookOf(tokenId));
+            if (hookAddress != address(0)) {
+                (address hookOwner,,) = IJBOwnable(hookAddress).jbOwner();
+                if (hookOwner == address(DEPLOYER)) {
+                    revert CTProjectOwner_HookNotClaimed();
+                }
+            }
+        }
 
         // Set the correct permission.
         uint8[] memory permissionIds = new uint8[](1);

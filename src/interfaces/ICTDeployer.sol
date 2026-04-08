@@ -5,6 +5,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
+import {IJBRulesetDataHook} from "@bananapus/core-v6/src/interfaces/IJBRulesetDataHook.sol";
 import {CTProjectConfig} from "../structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "../structs/CTSuckerDeploymentConfig.sol";
 import {ICTPublisher} from "./ICTPublisher.sol";
@@ -22,6 +23,11 @@ interface ICTDeployer {
     /// @notice The Croptop publisher that manages posting criteria and minting.
     /// @return The publisher contract.
     function PUBLISHER() external view returns (ICTPublisher);
+
+    /// @notice Each project's data hook provided on deployment.
+    /// @param projectId The ID of the project to get the data hook for.
+    /// @return The data hook for the project.
+    function dataHookOf(uint256 projectId) external view returns (IJBRulesetDataHook);
 
     /// @notice Claim ownership of a tiered ERC-721 hook collection by transferring it to the project.
     /// @dev After claiming, CTPublisher is atomically granted the ADJUST_721_TIERS permission so that mintFrom()

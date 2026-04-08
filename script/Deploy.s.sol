@@ -119,13 +119,13 @@ contract DeployScript is Script, Sphinx {
             (address _owner, bool _ownerIsDeployed) = _isDeployed({
                 salt: PROJECT_OWNER_SALT,
                 creationCode: type(CTProjectOwner).creationCode,
-                arguments: abi.encode(core.permissions, core.projects, publisher)
+                arguments: abi.encode(deployer, core.permissions, core.projects, publisher)
             });
 
             // Deploy it if it has not been deployed yet.
             owner = !_ownerIsDeployed
                 ? new CTProjectOwner{salt: PROJECT_OWNER_SALT}({
-                    permissions: core.permissions, projects: core.projects, publisher: publisher
+                    deployer: deployer, permissions: core.permissions, projects: core.projects, publisher: publisher
                 })
                 : CTProjectOwner(_owner);
         }
