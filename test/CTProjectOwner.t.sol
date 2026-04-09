@@ -7,19 +7,16 @@ import "forge-std/Test.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
-import {IJBRulesetDataHook} from "@bananapus/core-v6/src/interfaces/IJBRulesetDataHook.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
 import {CTProjectOwner} from "../src/CTProjectOwner.sol";
-import {ICTDeployer} from "../src/interfaces/ICTDeployer.sol";
 import {ICTPublisher} from "../src/interfaces/ICTPublisher.sol";
 
 /// @notice Unit tests for CTProjectOwner.
 contract CTProjectOwnerTest is Test {
     CTProjectOwner projectOwner;
 
-    ICTDeployer deployer = ICTDeployer(makeAddr("deployer"));
     IJBPermissions permissions = IJBPermissions(makeAddr("permissions"));
     IJBProjects projects = IJBProjects(makeAddr("projects"));
     ICTPublisher publisher = ICTPublisher(makeAddr("publisher"));
@@ -28,18 +25,11 @@ contract CTProjectOwnerTest is Test {
     address from = makeAddr("from");
 
     function setUp() public {
-        projectOwner = new CTProjectOwner(deployer, permissions, projects, publisher);
+        projectOwner = new CTProjectOwner(permissions, projects, publisher);
 
         // Mock setPermissionsFor to succeed by default.
         vm.mockCall(
             address(permissions), abi.encodeWithSelector(IJBPermissions.setPermissionsFor.selector), abi.encode()
-        );
-
-        // Mock dataHookOf to return address(0) by default (no hook = guard is skipped).
-        vm.mockCall(
-            address(deployer),
-            abi.encodeWithSelector(ICTDeployer.dataHookOf.selector),
-            abi.encode(IJBRulesetDataHook(address(0)))
         );
     }
 
@@ -47,9 +37,8 @@ contract CTProjectOwnerTest is Test {
     // --- Constructor --------------------------------------------------- //
     //*********************************************************************//
 
-    /// @notice Verify that the constructor sets all four immutables correctly.
+    /// @notice Verify that the constructor sets all three immutables correctly.
     function test_constructor() public {
-        assertEq(address(projectOwner.DEPLOYER()), address(deployer));
         assertEq(address(projectOwner.PERMISSIONS()), address(permissions));
         assertEq(address(projectOwner.PROJECTS()), address(projects));
         assertEq(address(projectOwner.PUBLISHER()), address(publisher));
