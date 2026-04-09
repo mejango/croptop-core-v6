@@ -134,7 +134,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         tiers = new JB721Tier[](numberOfEncodedIPFSUris);
 
         // Get the tier for each provided encoded IPFS URI.
-        for (uint256 i; i < numberOfEncodedIPFSUris; i++) {
+        for (uint256 i; i < numberOfEncodedIPFSUris;) {
             // Check if there's a tier ID stored for the encoded IPFS URI.
             uint256 tierId = tierIdForEncodedIPFSUriOf[hook][encodedIPFSUris[i]];
 
@@ -142,6 +142,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             if (tierId != 0) {
                 // slither-disable-next-line calls-loop
                 tiers[i] = IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
@@ -214,8 +218,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         uint256 numberOfAddresses = addresses.length;
 
         // Check if the address is included
-        for (uint256 i; i < numberOfAddresses; i++) {
+        for (uint256 i; i < numberOfAddresses;) {
             if (addrs == addresses[i]) return true;
+            unchecked {
+                ++i;
+            }
         }
 
         return false;
@@ -247,7 +254,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         uint256 numberOfAllowedPosts = allowedPosts.length;
 
         // For each post criteria, save the specifications.
-        for (uint256 i; i < numberOfAllowedPosts; i++) {
+        for (uint256 i; i < numberOfAllowedPosts;) {
             // Set the post criteria being iterated on.
             CTAllowedPost memory allowedPost = allowedPosts[i];
 
@@ -285,16 +292,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // Store the packed value.
             _packedAllowanceFor[allowedPost.hook][allowedPost.category] = packed;
 
-            // Store the allow list.
-            uint256 numberOfAddresses = allowedPost.allowedAddresses.length;
-            // Reset the addresses.
-            delete _allowedAddresses[allowedPost.hook][allowedPost.category];
-            // Add the number allowed addresses.
-            if (numberOfAddresses != 0) {
-                // Keep a reference to the storage of the allowed addresses.
-                for (uint256 j = 0; j < numberOfAddresses; j++) {
-                    _allowedAddresses[allowedPost.hook][allowedPost.category].push(allowedPost.allowedAddresses[j]);
-                }
+            // Store the allow list. Direct assignment replaces the entire storage array in one operation,
+            // avoiding the gas overhead of delete + individual push() calls in a loop.
+            if (allowedPost.allowedAddresses.length != 0) {
+                _allowedAddresses[allowedPost.hook][allowedPost.category] = allowedPost.allowedAddresses;
+            } else {
+                delete _allowedAddresses[allowedPost.hook][allowedPost.category];
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
@@ -473,7 +480,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         // For each post, create tiers after validating to make sure they fulfill the allowance specified by the
         // project's owner.
-        for (uint256 i; i < posts.length; i++) {
+        for (uint256 i; i < posts.length;) {
             // Get the current post being iterated on.
             CTPost memory post = posts[i];
 
@@ -484,9 +491,12 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             }
 
             // Check for duplicate encodedIPFSUri within the same batch to prevent fee evasion.
-            for (uint256 j; j < i; j++) {
+            for (uint256 j; j < i;) {
                 if (posts[j].encodedIPFSUri == post.encodedIPFSUri) {
                     revert CTPublisher_DuplicatePost(post.encodedIPFSUri);
+                }
+                unchecked {
+                    ++j;
                 }
             }
 
@@ -499,7 +509,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     // If the tier was removed externally (via adjustTiers), clear the stale mapping
                     // so the code falls through to create a new tier.
                     // slither-disable-next-line calls-loop
-                    if (hook.STORE().isTierRemoved(address(hook), tierId)) {
+                    if (store.isTierRemoved(address(hook), tierId)) {
                         delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
                     } else {
                         tierIdsToMint[i] = tierId;
@@ -589,6 +599,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
                 // For new tiers, use the post's price for totalPrice accumulation.
                 totalPrice += post.price;
+            }
+
+            unchecked {
+                ++i;
             }
         }
 
