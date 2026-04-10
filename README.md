@@ -90,4 +90,6 @@ script/
 - fee routing depends on the designated fee project remaining correctly configured; if its terminal rejects payments,
   Croptop refunds the fee to `_msgSender()` instead of trapping ETH in `CTPublisher`
 - burn-lock ownership is intentionally irreversible and should only be used when immutability is desired
+- after burn-locking into `CTProjectOwner`, the previous owner no longer holds the project NFT directly; control is
+  intentionally mediated through Croptop's owner helper and hook-admin surface instead of remaining a plain owner EOA
 - duplicate-content and stale-tier edge cases are guarded by tests, but integrations should still treat metadata reuse carefully
