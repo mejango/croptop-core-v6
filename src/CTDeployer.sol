@@ -25,7 +25,6 @@ import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.so
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
-import {JBRelayBeneficiary} from "@bananapus/suckers-v6/src/libraries/JBRelayBeneficiary.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
@@ -349,23 +348,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         IJBRulesetDataHook hook = dataHookOf[context.projectId];
         if (address(hook) == address(0)) {
             return (context.weight, hookSpecifications);
-        }
-
-        // Resolve the relay beneficiary — if the payer is a sucker with relay metadata,
-        // swap the beneficiary so downstream hooks see the real user.
-        address effectiveBeneficiary = JBRelayBeneficiary.resolve({
-            payer: context.payer,
-            beneficiary: context.beneficiary,
-            projectId: context.projectId,
-            metadata: context.metadata,
-            registry: SUCKER_REGISTRY
-        });
-
-        // If the beneficiary was swapped, create a memory copy with the new beneficiary.
-        if (effectiveBeneficiary != context.beneficiary) {
-            JBBeforePayRecordedContext memory hookContext = context;
-            hookContext.beneficiary = effectiveBeneficiary;
-            return hook.beforePayRecordedWith(hookContext);
         }
 
         // slither-disable-next-line unused-return
