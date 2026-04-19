@@ -13,6 +13,7 @@
         "deploy:mainnets:project": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/ConfigureFeeProject.s.sol --networks mainnets",
         "deploy:testnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks testnets",
         "deploy:testnets:project": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/ConfigureFeeProject.s.sol --networks testnets",
+        "postinstall": "bash scripts/patch-revnet.sh",
         "artifacts": "source ./.env && npx sphinx artifacts --org-id 'ea165b21-7cdc-4d7b-be59-ecdd4c26bee4' --project-name 'croptop-core-v5'"
     },
     "dependencies": {
@@ -27,7 +28,7 @@
     },
     "devDependencies": {
         "@bananapus/address-registry-v6": "^0.0.17",
-        "@rev-net/core-v6": "^0.0.30",
+        "@rev-net/core-v6": "^0.0.31",
         "@sphinx-labs/plugins": "^0.33.3"
     }
 }

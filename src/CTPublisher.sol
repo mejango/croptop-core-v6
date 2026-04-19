@@ -286,7 +286,27 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         // Pay the fee if there is one.
         if (payValue != 0) {
-            _tryPayFee(payValue, feeBeneficiary, feeMetadata);
+            // Get a reference to the fee project's current ETH payment terminal.
+            IJBTerminal feeTerminal =
+                DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
+
+            // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
+            // rather than trapping or silently redirecting protocol funds.
+            // slither-disable-next-line unused-return
+            try feeTerminal.pay{value: payValue}({
+                projectId: FEE_PROJECT_ID,
+                amount: payValue,
+                token: JBConstants.NATIVE_TOKEN,
+                beneficiary: feeBeneficiary,
+                minReturnedTokens: 0,
+                memo: "",
+                metadata: feeMetadata
+            }) {}
+            catch {
+                // slither-disable-next-line low-level-calls
+                (bool success,) = _msgSender().call{value: payValue}("");
+                if (!success) revert CTPublisher_FeePaymentFailed(payValue);
+            }
         }
     }
 
@@ -594,35 +614,4 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         return ERC2771Context._msgSender();
     }
 
-    //*********************************************************************//
-    // ------------------------ private helpers -------------------------- //
-    //*********************************************************************//
-
-    /// @notice Pay the fee to the fee project, refunding to the caller on failure.
-    /// @param amount The fee amount to pay.
-    /// @param beneficiary The beneficiary of the fee project's token.
-    /// @param metadata The metadata to send alongside the fee payment.
-    function _tryPayFee(uint256 amount, address beneficiary, bytes calldata metadata) private {
-        // Get a reference to the fee project's current ETH payment terminal.
-        IJBTerminal feeTerminal =
-            DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
-
-        // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
-        // rather than trapping or silently redirecting protocol funds.
-        // slither-disable-next-line unused-return
-        try feeTerminal.pay{value: amount}({
-            projectId: FEE_PROJECT_ID,
-            amount: amount,
-            token: JBConstants.NATIVE_TOKEN,
-            beneficiary: beneficiary,
-            minReturnedTokens: 0,
-            memo: "",
-            metadata: metadata
-        }) {}
-        catch {
-            // slither-disable-next-line low-level-calls
-            (bool success,) = _msgSender().call{value: amount}("");
-            if (!success) revert CTPublisher_FeePaymentFailed(amount);
-        }
-    }
 }
