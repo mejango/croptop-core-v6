@@ -56,10 +56,11 @@ contract MockDataHook is IJBRulesetDataHook {
             uint256 cashOutTaxRate,
             uint256 cashOutCount,
             uint256 totalSupply,
+            uint256 surplusValue,
             JBCashOutHookSpecification[] memory hookSpecifications
         )
     {
-        return (TAX_RATE, context.cashOutCount, context.totalSupply, hookSpecifications);
+        return (TAX_RATE, context.cashOutCount, context.totalSupply, context.surplus.value, hookSpecifications);
     }
 
     function beforePayRecordedWith(JBBeforePayRecordedContext calldata)
@@ -434,7 +435,7 @@ contract TestCTDeployer is Test {
         JBBeforeCashOutRecordedContext memory context =
             _buildCashOutContext(deployedProjectId, unauthorized, 100e18, 1000e18);
 
-        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply,) = deployer.beforeCashOutRecordedWith(context);
+        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply,,) = deployer.beforeCashOutRecordedWith(context);
 
         assertEq(taxRate, 5000, "tax rate should come from data hook");
         assertEq(cashOutCount, 100e18, "cashOutCount should be forwarded");
@@ -455,7 +456,7 @@ contract TestCTDeployer is Test {
         JBBeforeCashOutRecordedContext memory context =
             _buildCashOutContext(deployedProjectId, suckerAddr, 100e18, 1000e18);
 
-        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply,) = deployer.beforeCashOutRecordedWith(context);
+        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply,,) = deployer.beforeCashOutRecordedWith(context);
 
         assertEq(taxRate, 0, "sucker should get 0% tax rate");
         assertEq(cashOutCount, 100e18, "cashOutCount should pass through");
@@ -466,7 +467,7 @@ contract TestCTDeployer is Test {
     function test_beforeCashOutRecordedWith_returnsDefaultsWhenNoDataHook() public {
         JBBeforeCashOutRecordedContext memory context = _buildCashOutContext(999, unauthorized, 100e18, 1000e18);
 
-        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply, JBCashOutHookSpecification[] memory specs) =
+        (uint256 taxRate, uint256 cashOutCount, uint256 totalSupply,, JBCashOutHookSpecification[] memory specs) =
             deployer.beforeCashOutRecordedWith(context);
 
         assertEq(taxRate, context.cashOutTaxRate, "cashOutTaxRate should be returned as-is from context");

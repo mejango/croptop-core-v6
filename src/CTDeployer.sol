@@ -129,6 +129,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// out.
     /// @return cashOutCount The number of project tokens that are cashed out.
     /// @return totalSupply The total project token supply.
+    /// @return surplusValue The surplus value to use for the bonding curve calculation.
     /// @return hookSpecifications The amount of funds and the data to send to cash out hooks (this contract).
     function beforeCashOutRecordedWith(JBBeforeCashOutRecordedContext calldata context)
         external
@@ -138,18 +139,25 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             uint256 cashOutTaxRate,
             uint256 cashOutCount,
             uint256 totalSupply,
+            uint256 surplusValue,
             JBCashOutHookSpecification[] memory hookSpecifications
         )
     {
         // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
         if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, addr: context.holder})) {
-            return (0, context.cashOutCount, context.totalSupply, hookSpecifications);
+            return (0, context.cashOutCount, context.totalSupply, context.surplus.value, hookSpecifications);
         }
 
         // If the ruleset has a data hook, forward the call to the datahook.
         IJBRulesetDataHook hook = dataHookOf[context.projectId];
         if (address(hook) == address(0)) {
-            return (context.cashOutTaxRate, context.cashOutCount, context.totalSupply, hookSpecifications);
+            return (
+                context.cashOutTaxRate,
+                context.cashOutCount,
+                context.totalSupply,
+                context.surplus.value,
+                hookSpecifications
+            );
         }
         // slither-disable-next-line unused-return
         return hook.beforeCashOutRecordedWith(context);

@@ -32,6 +32,7 @@ import {MockPriceFeed} from "@bananapus/core-v6/test/mock/MockPriceFeed.sol";
 import {JB721TiersHookStore} from "@bananapus/721-hook-v6/src/JB721TiersHookStore.sol";
 import {JB721TiersHook} from "@bananapus/721-hook-v6/src/JB721TiersHook.sol";
 import {JB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/JB721TiersHookDeployer.sol";
+import {JB721CheckpointsDeployer} from "@bananapus/721-hook-v6/src/JB721CheckpointsDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {JBAddressRegistry} from "@bananapus/address-registry-v6/src/JBAddressRegistry.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -276,7 +277,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         jbPermissions = new JBPermissions(trustedForwarder);
         jbProjects = new JBProjects(multisig, address(0), trustedForwarder);
         jbDirectory = new JBDirectory(jbPermissions, jbProjects, multisig);
-        JBERC20 jbErc20 = new JBERC20();
+        JBERC20 jbErc20 = new JBERC20(jbPermissions, jbProjects);
         jbTokens = new JBTokens(jbDirectory, jbErc20);
         jbRulesets = new JBRulesets(jbDirectory);
         jbPrices = new JBPrices(jbDirectory, jbPermissions, jbProjects, multisig, trustedForwarder);
@@ -321,9 +322,11 @@ contract PublishForkTest is Test, DeployPermit2 {
     function _deploy721Hook() internal {
         JB721TiersHookStore store = new JB721TiersHookStore();
         JBAddressRegistry addressRegistry = new JBAddressRegistry();
+        JB721CheckpointsDeployer checkpointsDeployer = new JB721CheckpointsDeployer();
 
-        JB721TiersHook hookImpl =
-            new JB721TiersHook(jbDirectory, jbPermissions, jbPrices, jbRulesets, store, jbSplits, trustedForwarder);
+        JB721TiersHook hookImpl = new JB721TiersHook(
+            jbDirectory, jbPermissions, jbPrices, jbRulesets, store, jbSplits, checkpointsDeployer, trustedForwarder
+        );
 
         hookDeployer = new JB721TiersHookDeployer(hookImpl, store, addressRegistry, trustedForwarder);
     }
