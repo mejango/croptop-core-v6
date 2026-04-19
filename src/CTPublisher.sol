@@ -106,141 +106,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     }
 
     //*********************************************************************//
-    // ------------------------- external views -------------------------- //
-    //*********************************************************************//
-
-    /// @notice Get the tiers for the provided encoded IPFS URIs.
-    /// @dev The returned tier IDs may be stale if the corresponding tiers were removed externally via adjustTiers.
-    /// In that case, the store's tierOf call will return a tier with default/empty values. Callers should check
-    /// the returned tier's initialSupply or other fields to confirm the tier still exists.
-    /// @param hook The hook from which to get tiers.
-    /// @param encodedIPFSUris The URIs to get tiers of.
-    /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. If there's no tier yet, an empty tier
-    /// is returned.
-    function tiersFor(
-        address hook,
-        // forge-lint: disable-next-line(mixed-case-variable)
-        bytes32[] memory encodedIPFSUris
-    )
-        external
-        view
-        override
-        returns (JB721Tier[] memory tiers)
-    {
-        // forge-lint: disable-next-line(mixed-case-variable)
-        uint256 numberOfEncodedIPFSUris = encodedIPFSUris.length;
-
-        // Initialize the tier array being returned.
-        tiers = new JB721Tier[](numberOfEncodedIPFSUris);
-
-        // Get the tier for each provided encoded IPFS URI.
-        for (uint256 i; i < numberOfEncodedIPFSUris;) {
-            // Check if there's a tier ID stored for the encoded IPFS URI.
-            uint256 tierId = tierIdForEncodedIPFSUriOf[hook][encodedIPFSUris[i]];
-
-            // If there's a tier ID stored, resolve it.
-            if (tierId != 0) {
-                // slither-disable-next-line calls-loop
-                tiers[i] = IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    //*********************************************************************//
-    // -------------------------- public views --------------------------- //
-    //*********************************************************************//
-
-    /// @notice Post allowances for a particular category on a particular hook.
-    /// @param hook The hook contract for which this allowance applies.
-    /// @param category The category for which this allowance applies.
-    /// @return minimumPrice The minimum price that a poster must pay to record a new NFT.
-    /// @return minimumTotalSupply The minimum total number of available tokens that a minter must set to record a new
-    /// NFT.
-    /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. Must be >=
-    /// minimumTotalSupply.
-    /// @return maximumSplitPercent The maximum split percent that a poster can set. 0 means splits are not allowed.
-    /// @return allowedAddresses The addresses allowed to post. Returns empty if all addresses are allowed.
-    function allowanceFor(
-        address hook,
-        uint256 category
-    )
-        public
-        view
-        override
-        returns (
-            uint256 minimumPrice,
-            uint256 minimumTotalSupply,
-            uint256 maximumTotalSupply,
-            uint256 maximumSplitPercent,
-            address[] memory allowedAddresses
-        )
-    {
-        // Get a reference to the packed values.
-        uint256 packed = _packedAllowanceFor[hook][category];
-
-        // minimum price in bits 0-103 (104 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        minimumPrice = uint256(uint104(packed));
-        // minimum supply in bits 104-135 (32 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        minimumTotalSupply = uint256(uint32(packed >> 104));
-        // maximum supply in bits 136-167 (32 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        maximumTotalSupply = uint256(uint32(packed >> 136));
-        // maximum split percent in bits 168-199 (32 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        maximumSplitPercent = uint256(uint32(packed >> 168));
-
-        allowedAddresses = _allowedAddresses[hook][category];
-    }
-
-    //*********************************************************************//
-    // -------------------------- internal views ------------------------- //
-    //*********************************************************************//
-
-    /// @dev ERC-2771 specifies the context as being a single address (20 bytes).
-    function _contextSuffixLength() internal view virtual override(ERC2771Context, Context) returns (uint256) {
-        return super._contextSuffixLength();
-    }
-
-    /// @notice Check if an address is included in an allow list.
-    /// @dev Uses an O(n) linear scan over the `addresses` array. This is acceptable for typical allow list sizes
-    /// (fewer than ~100 addresses), where gas cost is negligible. For very large allow lists, a Merkle proof
-    /// pattern would scale better, but the added complexity is not warranted for the expected use case.
-    /// @param addrs The candidate address.
-    /// @param addresses An array of allowed addresses.
-    function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
-        // Keep a reference to the number of address to check against.
-        uint256 numberOfAddresses = addresses.length;
-
-        // Check if the address is included
-        for (uint256 i; i < numberOfAddresses;) {
-            if (addrs == addresses[i]) return true;
-            unchecked {
-                ++i;
-            }
-        }
-
-        return false;
-    }
-
-    /// @notice Returns the calldata, prefered to use over `msg.data`
-    /// @return calldata the `msg.data` of this call
-    function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
-        return ERC2771Context._msgData();
-    }
-
-    /// @notice Returns the sender, prefered to use over `msg.sender`
-    /// @return sender the sender address of this call.
-    function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
-        return ERC2771Context._msgSender();
-    }
-
-    //*********************************************************************//
     // ---------------------- external transactions ---------------------- //
     //*********************************************************************//
 
@@ -421,32 +286,105 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         // Pay the fee if there is one.
         if (payValue != 0) {
-            // Get a reference to the fee project's current ETH payment terminal.
-            IJBTerminal feeTerminal =
-                DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
+            _tryPayFee(payValue, feeBeneficiary, feeMetadata);
+        }
+    }
 
-            // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
-            // rather than trapping or silently redirecting protocol funds.
-            // slither-disable-next-line unused-return
-            try feeTerminal.pay{value: payValue}({
-                projectId: FEE_PROJECT_ID,
-                amount: payValue,
-                token: JBConstants.NATIVE_TOKEN,
-                beneficiary: feeBeneficiary,
-                minReturnedTokens: 0,
-                memo: "",
-                metadata: feeMetadata
-            }) {}
-            catch {
-                // slither-disable-next-line low-level-calls
-                (bool success,) = _msgSender().call{value: payValue}("");
-                if (!success) revert CTPublisher_FeePaymentFailed(payValue);
+    //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
+
+    /// @notice Get the tiers for the provided encoded IPFS URIs.
+    /// @dev The returned tier IDs may be stale if the corresponding tiers were removed externally via adjustTiers.
+    /// In that case, the store's tierOf call will return a tier with default/empty values. Callers should check
+    /// the returned tier's initialSupply or other fields to confirm the tier still exists.
+    /// @param hook The hook from which to get tiers.
+    /// @param encodedIPFSUris The URIs to get tiers of.
+    /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. If there's no tier yet, an empty tier
+    /// is returned.
+    function tiersFor(
+        address hook,
+        // forge-lint: disable-next-line(mixed-case-variable)
+        bytes32[] memory encodedIPFSUris
+    )
+        external
+        view
+        override
+        returns (JB721Tier[] memory tiers)
+    {
+        // forge-lint: disable-next-line(mixed-case-variable)
+        uint256 numberOfEncodedIPFSUris = encodedIPFSUris.length;
+
+        // Initialize the tier array being returned.
+        tiers = new JB721Tier[](numberOfEncodedIPFSUris);
+
+        // Get the tier for each provided encoded IPFS URI.
+        for (uint256 i; i < numberOfEncodedIPFSUris;) {
+            // Check if there's a tier ID stored for the encoded IPFS URI.
+            uint256 tierId = tierIdForEncodedIPFSUriOf[hook][encodedIPFSUris[i]];
+
+            // If there's a tier ID stored, resolve it.
+            if (tierId != 0) {
+                // slither-disable-next-line calls-loop
+                tiers[i] = IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
 
     //*********************************************************************//
-    // ------------------------ internal functions ----------------------- //
+    // -------------------------- public views --------------------------- //
+    //*********************************************************************//
+
+    /// @notice Post allowances for a particular category on a particular hook.
+    /// @param hook The hook contract for which this allowance applies.
+    /// @param category The category for which this allowance applies.
+    /// @return minimumPrice The minimum price that a poster must pay to record a new NFT.
+    /// @return minimumTotalSupply The minimum total number of available tokens that a minter must set to record a new
+    /// NFT.
+    /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. Must be >=
+    /// minimumTotalSupply.
+    /// @return maximumSplitPercent The maximum split percent that a poster can set. 0 means splits are not allowed.
+    /// @return allowedAddresses The addresses allowed to post. Returns empty if all addresses are allowed.
+    function allowanceFor(
+        address hook,
+        uint256 category
+    )
+        public
+        view
+        override
+        returns (
+            uint256 minimumPrice,
+            uint256 minimumTotalSupply,
+            uint256 maximumTotalSupply,
+            uint256 maximumSplitPercent,
+            address[] memory allowedAddresses
+        )
+    {
+        // Get a reference to the packed values.
+        uint256 packed = _packedAllowanceFor[hook][category];
+
+        // minimum price in bits 0-103 (104 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
+        minimumPrice = uint256(uint104(packed));
+        // minimum supply in bits 104-135 (32 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
+        minimumTotalSupply = uint256(uint32(packed >> 104));
+        // maximum supply in bits 136-167 (32 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
+        maximumTotalSupply = uint256(uint32(packed >> 136));
+        // maximum split percent in bits 168-199 (32 bits).
+        // forge-lint: disable-next-line(unsafe-typecast)
+        maximumSplitPercent = uint256(uint32(packed >> 168));
+
+        allowedAddresses = _allowedAddresses[hook][category];
+    }
+
+    //*********************************************************************//
+    // ------------------------ internal helpers ------------------------- //
     //*********************************************************************//
 
     /// @notice Setup the posts.
@@ -611,6 +549,80 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             assembly ("memory-safe") {
                 mstore(tiersToAdd, numberOfTiersBeingAdded)
             }
+        }
+    }
+
+    /// @notice Check if an address is included in an allow list.
+    /// @dev Uses an O(n) linear scan over the `addresses` array. This is acceptable for typical allow list sizes
+    /// (fewer than ~100 addresses), where gas cost is negligible. For very large allow lists, a Merkle proof
+    /// pattern would scale better, but the added complexity is not warranted for the expected use case.
+    /// @param addrs The candidate address.
+    /// @param addresses An array of allowed addresses.
+    function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
+        // Keep a reference to the number of address to check against.
+        uint256 numberOfAddresses = addresses.length;
+
+        // Check if the address is included
+        for (uint256 i; i < numberOfAddresses;) {
+            if (addrs == addresses[i]) return true;
+            unchecked {
+                ++i;
+            }
+        }
+
+        return false;
+    }
+
+    //*********************************************************************//
+    // -------------------------- internal views ------------------------- //
+    //*********************************************************************//
+
+    /// @dev ERC-2771 specifies the context as being a single address (20 bytes).
+    function _contextSuffixLength() internal view virtual override(ERC2771Context, Context) returns (uint256) {
+        return super._contextSuffixLength();
+    }
+
+    /// @notice Returns the calldata, prefered to use over `msg.data`
+    /// @return calldata the `msg.data` of this call
+    function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /// @notice Returns the sender, prefered to use over `msg.sender`
+    /// @return sender the sender address of this call.
+    function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
+        return ERC2771Context._msgSender();
+    }
+
+    //*********************************************************************//
+    // ------------------------ private helpers -------------------------- //
+    //*********************************************************************//
+
+    /// @notice Pay the fee to the fee project, refunding to the caller on failure.
+    /// @param amount The fee amount to pay.
+    /// @param beneficiary The beneficiary of the fee project's token.
+    /// @param metadata The metadata to send alongside the fee payment.
+    function _tryPayFee(uint256 amount, address beneficiary, bytes calldata metadata) private {
+        // Get a reference to the fee project's current ETH payment terminal.
+        IJBTerminal feeTerminal =
+            DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
+
+        // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
+        // rather than trapping or silently redirecting protocol funds.
+        // slither-disable-next-line unused-return
+        try feeTerminal.pay{value: amount}({
+            projectId: FEE_PROJECT_ID,
+            amount: amount,
+            token: JBConstants.NATIVE_TOKEN,
+            beneficiary: beneficiary,
+            minReturnedTokens: 0,
+            memo: "",
+            metadata: metadata
+        }) {}
+        catch {
+            // slither-disable-next-line low-level-calls
+            (bool success,) = _msgSender().call{value: amount}("");
+            if (!success) revert CTPublisher_FeePaymentFailed(amount);
         }
     }
 }
