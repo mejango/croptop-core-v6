@@ -613,5 +613,4 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
         return ERC2771Context._msgSender();
     }
-
 }

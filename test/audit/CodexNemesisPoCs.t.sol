@@ -216,7 +216,8 @@ contract CodexNemesisPoCs is Test {
 
     function test_deploySuckersHelperBreaksAfterOwnershipTransferBecauseRegistrySeesCtDeployerAsCaller() public {
         NemesisMockDirectory directory = new NemesisMockDirectory(IJBProjects(address(projects)));
-        JBSuckerRegistry registry = new JBSuckerRegistry(IJBDirectory(address(directory)), permissions, address(this), address(0));
+        JBSuckerRegistry registry =
+            new JBSuckerRegistry(IJBDirectory(address(directory)), permissions, address(this), address(0));
 
         deployer = new CTDeployer(
             permissions,
