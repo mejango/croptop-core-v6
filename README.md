@@ -1,6 +1,6 @@
 # Croptop Core
 
-Croptop turns a Juicebox project with a 721 hook into a permissioned publishing marketplace. Project owners define posting criteria, then anyone who meets those rules can publish new NFT tiers and mint the first copy of each post.
+Croptop turns a Juicebox project with a 721 hook into a permissioned publishing marketplace. Project owners define posting rules, then anyone who meets those rules can publish new NFT tiers and mint the first copy of each post.
 
 Docs: <https://docs.juicebox.money>  
 Site: <https://croptop.eth.limo>
@@ -15,17 +15,13 @@ Audit instructions: [AUDIT_INSTRUCTIONS.md](./AUDIT_INSTRUCTIONS.md)
 
 Croptop is built around three ideas:
 
-- project owners set category-level posting criteria such as price floors, supply bounds, split limits, and optional allowlists
+- project owners set category-level posting rules such as price floors, supply bounds, split limits, and optional allowlists
 - publishers call `mintFrom` to create or reuse 721 tiers that represent their post
-- a one-click deployer can create a full Juicebox project, its 721 hook configuration, and its posting rules in a single transaction
+- a one-click deployer can create a full Juicebox project, its 721 hook config, and its posting rules in one transaction
 
-Every mint collects a 5% Croptop fee unless the target project is itself the fee project. If the configured fee
-terminal rejects that fee payment, Croptop refunds the fee portion to `_msgSender()` and still lets the publish
-continue. If `_msgSender()` cannot receive ETH, the mint reverts.
+Every mint collects a 5% Croptop fee unless the target project is itself the fee project. If the fee terminal rejects that fee payment, Croptop refunds the fee portion to `_msgSender()` and still lets the publish continue. If `_msgSender()` cannot receive ETH, the mint reverts.
 
-Use this repo when the product is "permissioned publishing on a Juicebox project." Do not use it when you only need plain 721 tier sales; that belongs in `nana-721-hook-v6`.
-
-If a bug looks like ordinary tier issuance or terminal accounting, start in the 721 hook or core repo first. Croptop is where posting policy, fee routing, and publishing-specific project wiring begin.
+Use this repo when the product is permissioned publishing on top of a Juicebox project. Do not use it for plain 721 tier sales.
 
 ## Key Contracts
 
@@ -39,10 +35,10 @@ If a bug looks like ordinary tier issuance or terminal accounting, start in the 
 
 There are two separate concerns here:
 
-1. `CTPublisher` governs whether a post is allowed and how it becomes a tier
-2. `CTDeployer` governs how a Croptop-flavored project is packaged and launched
+1. `CTPublisher` decides whether a post is allowed and how it becomes a tier
+2. `CTDeployer` decides how a Croptop-flavored project is packaged and launched
 
-That distinction matters because many "Croptop bugs" are deployment-shape bugs rather than publishing-rule bugs.
+Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not generic 721 bugs.
 
 ## Read These Files First
 
@@ -62,10 +58,10 @@ That distinction matters because many "Croptop bugs" are deployment-shape bugs r
 
 ## Integration Traps
 
-- Croptop publishing policy is separate from ordinary 721 tier issuance, so readers often stop in the wrong repo
-- fee routing is part of the publish path and has fallback behavior that affects who must be able to receive ETH
-- `CTProjectOwner` intentionally changes the project's ownership shape and should be reviewed as part of the trust model
-- duplicate-content, stale-tier, and fee-evasion edge cases are first-class surfaces, not only UI concerns
+- Croptop publishing policy is separate from ordinary 721 tier issuance
+- fee routing is part of the publish path and its fallback behavior matters
+- `CTProjectOwner` intentionally changes the ownership model and should be reviewed as part of the trust model
+- duplicate-content, stale-tier, and fee-evasion edge cases are runtime behavior, not just UI concerns
 
 ## Where State Lives
 
@@ -97,10 +93,7 @@ Useful scripts:
 
 ## Deployment Notes
 
-Deployments are handled through Sphinx using the environments configured in the repo scripts. `CTDeployer` can also compose cross-chain sucker deployments when a nonzero sucker configuration is supplied for the target publishing project.
-
-The deploy script now expects an explicit nonzero `FEE_PROJECT_ID` for production-style deployments. It does not safely
-autodiscover a fee project by scanning existing project IDs.
+Deployments are handled through Sphinx. `CTDeployer` can also compose cross-chain sucker deployments when a nonzero sucker configuration is supplied. The deploy script expects an explicit nonzero `FEE_PROJECT_ID` for production-style deployments.
 
 ## Repository Layout
 
@@ -122,15 +115,13 @@ script/
 ## Risks And Notes
 
 - posting criteria are only as safe as the project owner configures them
-- fee routing depends on the designated fee project remaining correctly configured; if its terminal rejects payments,
-  Croptop refunds the fee to `_msgSender()` instead of trapping ETH in `CTPublisher`
-- parking a project in `CTProjectOwner` is intentionally irreversible in practice and should only be used when immutability is desired
-- after routing ownership into `CTProjectOwner`, the previous owner no longer holds the project NFT directly; control is
-  intentionally mediated through Croptop's owner helper and hook-admin surface instead of remaining a plain owner EOA
-- duplicate-content and stale-tier edge cases are guarded by tests, but integrations should still treat metadata reuse carefully
+- fee routing depends on the fee project staying correctly configured
+- parking a project in `CTProjectOwner` is effectively irreversible
+- after routing ownership into `CTProjectOwner`, the old owner no longer holds the project NFT directly
+- duplicate-content and stale-tier edge cases are economically relevant, not cosmetic
 
 ## For AI Agents
 
-- Do not describe Croptop as a generic 721 marketplace; it is a rules-driven publishing layer on top of Juicebox.
+- Do not describe Croptop as a generic 721 marketplace.
 - Read `CTPublisher` before `CTDeployer` when the question is about publish eligibility or fee behavior.
 - If the issue is basic tier minting or accounting, move to `nana-721-hook-v6` or `nana-core-v6`.

@@ -7,7 +7,7 @@
 | Scope | Croptop deployment flow, publish-policy administration, and irreversible project owner sink behavior |
 | Control posture | Mixed deployer-managed and project-local control |
 | Highest-risk actions | Burn-locking a project into `CTProjectOwner`, misconfiguring posting criteria, and deploying suckers with the wrong authority assumptions |
-| Recovery posture | Posting policy can often be changed, but burn-lock and some deployer wiring choices require replacement flows |
+| Recovery posture | Posting policy can often be changed, but burn-lock and some deployer wiring choices usually require replacement flows |
 
 ## Purpose
 
@@ -30,7 +30,7 @@
 | Hook owner | `JBOwnable(hook).owner()` | Per hook | Often resolves to the project owner after claim |
 | `CTDeployer` | Immutable singleton | Global | Launch helper and runtime wrapper |
 | `CTPublisher` | Immutable singleton | Global runtime surface | Needs `ADJUST_721_TIERS` authority on relevant hooks |
-| `CTProjectOwner` | Receives project NFT transfer | Per project | Burn-lock path; no return function |
+| `CTProjectOwner` | Receives project NFT transfer | Per project | Burn-lock path with no return function |
 | `SUCKER_REGISTRY` | Immutable dependency | Global | Holds wildcard `MAP_SUCKER_TOKEN` from the deployer |
 
 ## Privileged Surfaces
@@ -44,10 +44,10 @@
 | `CTPublisher` | `mintFrom(...)` | Anyone subject to policy | Publishes posts, mints first copies, and routes the Croptop fee |
 | `CTProjectOwner` | `onERC721Received(...)` | Any project NFT transfer into it | Locks the project into the Croptop owner helper and grants `CTPublisher` tier-adjust authority |
 
-The important nuance is:
+Important nuance:
 
 - after `deployProjectFor(...)`, the initial project owner can directly manage tiers, metadata, minting, and discount percent through permissions granted from `CTDeployer`
-- this means the owner can bypass the publisher path until ownership is claimed away from `CTDeployer`
+- that means the owner can bypass the publisher path until ownership is claimed away from `CTDeployer`
 
 ## Immutable And One-Way
 
@@ -58,7 +58,7 @@ The important nuance is:
 
 ## Operational Notes
 
-- Validate posting criteria before broad publisher access; the publisher enforces those rules on every post.
+- Validate posting criteria before broad publisher access.
 - Decide intentionally whether the project should keep the initial direct-management path or move to project-owned hook control with `claimCollectionOwnershipOf(...)`.
 - Use `claimCollectionOwnershipOf(...)` when the project should own the hook directly instead of relying on the deployer as the ownership bridge.
 - Treat the burn-lock path as governance finality, not convenience.
@@ -67,7 +67,7 @@ The important nuance is:
 ## Machine Notes
 
 - Do not treat `CTDeployer` as a passive script helper; it is also part of the live runtime path.
-- Treat `src/CTPublisher.sol`, `src/CTDeployer.sol`, and `src/CTProjectOwner.sol` as the minimum source set for control-plane crawling.
+- Treat `src/CTPublisher.sol`, `src/CTDeployer.sol`, and `src/CTProjectOwner.sol` as the minimum source set for control-plane review.
 - If a project NFT has already been sent to `CTProjectOwner`, stop assuming the original owner can recover it.
 
 ## Recovery
@@ -78,7 +78,7 @@ The important nuance is:
 
 ## Admin Boundaries
 
-- Neither project owners nor Croptop can change the fixed Croptop fee divisor in `CTPublisher`.
+- Neither project owners nor Croptop can change the fixed fee divisor in `CTPublisher`.
 - `CTPublisher` cannot trap fee ETH intentionally; failed fee-terminal payments refund `_msgSender()` or revert.
 - `CTProjectOwner` cannot return project ownership once it receives the NFT.
 - `CTDeployer` cannot later rewrite `dataHookOf[projectId]` through a setter.
