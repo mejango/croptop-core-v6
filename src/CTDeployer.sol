@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
@@ -28,7 +25,9 @@ import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.so
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
-import {JBRelayBeneficiary} from "@bananapus/suckers-v6/src/libraries/JBRelayBeneficiary.sol";
+import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
 import {ICTDeployer} from "./interfaces/ICTDeployer.sol";
 import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
@@ -116,135 +115,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
         // Set permission for the CTPublisher to adjust the tier.
         PERMISSIONS.setPermissionsFor({account: address(this), permissionsData: permissionData});
-    }
-
-    //*********************************************************************//
-    // ------------------------- external views -------------------------- //
-    //*********************************************************************//
-
-    /// @notice Allow cash outs from suckers without a tax.
-    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a cash out.
-    /// @param context Standard Juicebox cash out context. See `JBBeforeCashOutRecordedContext`.
-    /// @return cashOutTaxRate The cash out tax rate, which influences the amount of terminal tokens which get cashed
-    /// out.
-    /// @return cashOutCount The number of project tokens that are cashed out.
-    /// @return totalSupply The total project token supply.
-    /// @return surplusValue The surplus value to use for the bonding curve calculation.
-    /// @return hookSpecifications The amount of funds and the data to send to cash out hooks (this contract).
-    function beforeCashOutRecordedWith(JBBeforeCashOutRecordedContext calldata context)
-        external
-        view
-        override
-        returns (
-            uint256 cashOutTaxRate,
-            uint256 cashOutCount,
-            uint256 totalSupply,
-            uint256 surplusValue,
-            JBCashOutHookSpecification[] memory hookSpecifications
-        )
-    {
-        // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
-        if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, addr: context.holder})) {
-            return (0, context.cashOutCount, context.totalSupply, context.surplus.value, hookSpecifications);
-        }
-
-        // If the ruleset has a data hook, forward the call to the datahook.
-        IJBRulesetDataHook hook = dataHookOf[context.projectId];
-        if (address(hook) == address(0)) {
-            return (
-                context.cashOutTaxRate,
-                context.cashOutCount,
-                context.totalSupply,
-                context.surplus.value,
-                hookSpecifications
-            );
-        }
-        // slither-disable-next-line unused-return
-        return hook.beforeCashOutRecordedWith(context);
-    }
-
-    /// @notice Forward the call to the original data hook.
-    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a payment.
-    /// @param context Standard Juicebox payment context. See `JBBeforePayRecordedContext`.
-    /// @return weight The weight which project tokens are minted relative to. This can be used to customize how many
-    /// tokens get minted by a payment.
-    /// @return hookSpecifications Amounts (out of what's being paid in) to be sent to pay hooks instead of being paid
-    /// into the project. Useful for automatically routing funds from a treasury as payments come in.
-    function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
-        external
-        view
-        override
-        returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
-    {
-        // Forward the call to the data hook.
-        IJBRulesetDataHook hook = dataHookOf[context.projectId];
-        if (address(hook) == address(0)) {
-            return (context.weight, hookSpecifications);
-        }
-
-        // Resolve the relay beneficiary — if the payer is a sucker with relay metadata,
-        // swap the beneficiary so downstream hooks see the real user.
-        address effectiveBeneficiary = JBRelayBeneficiary.resolve({
-            payer: context.payer,
-            beneficiary: context.beneficiary,
-            projectId: context.projectId,
-            metadata: context.metadata,
-            registry: SUCKER_REGISTRY
-        });
-
-        // If the beneficiary was swapped, create a memory copy with the new beneficiary.
-        if (effectiveBeneficiary != context.beneficiary) {
-            JBBeforePayRecordedContext memory hookContext = context;
-            hookContext.beneficiary = effectiveBeneficiary;
-            return hook.beforePayRecordedWith(hookContext);
-        }
-
-        // slither-disable-next-line unused-return
-        return hook.beforePayRecordedWith(context);
-    }
-
-    /// @notice A flag indicating whether an address has permission to mint a project's tokens on-demand.
-    /// @dev A project's data hook can allow any address to mint its tokens.
-    /// @param projectId The ID of the project whose token can be minted.
-    /// @param addr The address to check the token minting permission of.
-    /// @return flag A flag indicating whether the address has permission to mint the project's tokens on-demand.
-    function hasMintPermissionFor(uint256 projectId, JBRuleset memory, address addr) external view returns (bool flag) {
-        // If the address is a sucker for this project.
-        return SUCKER_REGISTRY.isSuckerOf({projectId: projectId, addr: addr});
-    }
-
-    /// @dev Make sure only mints can be received.
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    )
-        external
-        view
-        returns (bytes4)
-    {
-        data;
-        tokenId;
-        operator;
-
-        // Make sure the 721 received is the JBProjects contract.
-        if (msg.sender != address(PROJECTS)) revert();
-        // Make sure the 721 is being received as a mint.
-        if (from != address(0)) revert();
-        return IERC721Receiver.onERC721Received.selector;
-    }
-
-    //*********************************************************************//
-    // -------------------------- public views --------------------------- //
-    //*********************************************************************//
-
-    /// @notice Indicates if this contract adheres to the specified interface.
-    /// @dev See `IERC165.supportsInterface`.
-    /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(ICTDeployer).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
-            || interfaceId == type(IERC721Receiver).interfaceId;
     }
 
     //*********************************************************************//
@@ -417,6 +287,118 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     }
 
     //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
+
+    /// @notice Allow cash outs from suckers without a tax.
+    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a cash out.
+    /// @param context Standard Juicebox cash out context. See `JBBeforeCashOutRecordedContext`.
+    /// @return cashOutTaxRate The cash out tax rate, which influences the amount of terminal tokens which get cashed
+    /// out.
+    /// @return cashOutCount The number of project tokens that are cashed out.
+    /// @return totalSupply The total project token supply.
+    /// @return surplusValue The surplus value to use for the bonding curve calculation.
+    /// @return hookSpecifications The amount of funds and the data to send to cash out hooks (this contract).
+    function beforeCashOutRecordedWith(JBBeforeCashOutRecordedContext calldata context)
+        external
+        view
+        override
+        returns (
+            uint256 cashOutTaxRate,
+            uint256 cashOutCount,
+            uint256 totalSupply,
+            uint256 surplusValue,
+            JBCashOutHookSpecification[] memory hookSpecifications
+        )
+    {
+        // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
+        if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, addr: context.holder})) {
+            return (0, context.cashOutCount, context.totalSupply, context.surplus.value, hookSpecifications);
+        }
+
+        // If the ruleset has a data hook, forward the call to the datahook.
+        IJBRulesetDataHook hook = dataHookOf[context.projectId];
+        if (address(hook) == address(0)) {
+            return (
+                context.cashOutTaxRate,
+                context.cashOutCount,
+                context.totalSupply,
+                context.surplus.value,
+                hookSpecifications
+            );
+        }
+        // slither-disable-next-line unused-return
+        return hook.beforeCashOutRecordedWith(context);
+    }
+
+    /// @notice Forward the call to the original data hook.
+    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a payment.
+    /// @param context Standard Juicebox payment context. See `JBBeforePayRecordedContext`.
+    /// @return weight The weight which project tokens are minted relative to. This can be used to customize how many
+    /// tokens get minted by a payment.
+    /// @return hookSpecifications Amounts (out of what's being paid in) to be sent to pay hooks instead of being paid
+    /// into the project. Useful for automatically routing funds from a treasury as payments come in.
+    function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
+        external
+        view
+        override
+        returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
+    {
+        // Forward the call to the data hook.
+        IJBRulesetDataHook hook = dataHookOf[context.projectId];
+        if (address(hook) == address(0)) {
+            return (context.weight, hookSpecifications);
+        }
+
+        // slither-disable-next-line unused-return
+        return hook.beforePayRecordedWith(context);
+    }
+
+    /// @notice A flag indicating whether an address has permission to mint a project's tokens on-demand.
+    /// @dev A project's data hook can allow any address to mint its tokens.
+    /// @param projectId The ID of the project whose token can be minted.
+    /// @param addr The address to check the token minting permission of.
+    /// @return flag A flag indicating whether the address has permission to mint the project's tokens on-demand.
+    function hasMintPermissionFor(uint256 projectId, JBRuleset memory, address addr) external view returns (bool flag) {
+        // If the address is a sucker for this project.
+        return SUCKER_REGISTRY.isSuckerOf({projectId: projectId, addr: addr});
+    }
+
+    /// @dev Make sure only mints can be received.
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    )
+        external
+        view
+        returns (bytes4)
+    {
+        data;
+        tokenId;
+        operator;
+
+        // Make sure the 721 received is the JBProjects contract.
+        if (msg.sender != address(PROJECTS)) revert();
+        // Make sure the 721 is being received as a mint.
+        if (from != address(0)) revert();
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
+    //*********************************************************************//
+    // -------------------------- public views --------------------------- //
+    //*********************************************************************//
+
+    /// @notice Indicates if this contract adheres to the specified interface.
+    /// @dev See `IERC165.supportsInterface`.
+    /// @return A flag indicating if the provided interface ID is supported.
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(ICTDeployer).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
+            || interfaceId == type(IERC721Receiver).interfaceId;
+    }
+
+    //*********************************************************************//
     // --------------------- internal transactions ----------------------- //
     //*********************************************************************//
 
@@ -459,7 +441,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     }
 
     //*********************************************************************//
-    // ------------------------ internal functions ----------------------- //
+    // -------------------------- internal views ------------------------- //
     //*********************************************************************//
 
     /// @dev ERC-2771 specifies the context as being a single address (20 bytes).

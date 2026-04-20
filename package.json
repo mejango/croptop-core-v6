@@ -27,7 +27,7 @@
     },
     "devDependencies": {
         "@bananapus/address-registry-v6": "^0.0.17",
-        "@rev-net/core-v6": "^0.0.30",
+        "@rev-net/core-v6": "^0.0.31",
         "@sphinx-labs/plugins": "^0.33.3"
     }
 }

@@ -52,17 +52,6 @@
 2. Restrict future edits to the paths Croptop intentionally exposes.
 3. Accept that this is a product-shaping choice, not a cosmetic deployment detail.
 
-## Journey 5: Support Cross-Chain Payments Through Data Hooks
-
-**Starting state:** a sucker pays the Croptop project on behalf of a remote user via `payRemote`, and `CTDeployer.beforePayRecordedWith` needs to forward the correct beneficiary to downstream hooks.
-
-**Success:** downstream data hooks see the real remote user so any hook-specific accounting accrues to the right person.
-
-**Flow**
-1. The sucker calls `terminal.pay()` with relay-beneficiary metadata.
-2. `CTDeployer.beforePayRecordedWith()` resolves the relay beneficiary when the payer is a registered sucker.
-3. The swapped beneficiary is forwarded to the downstream data hook.
-
 ## Hand-Offs
 
 - Use [nana-721-hook-v6](../nana-721-hook-v6/USER_JOURNEYS.md) for the underlying tier issuance behavior Croptop wraps.
