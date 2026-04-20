@@ -5,6 +5,7 @@ Croptop is a publishing layer on top of Juicebox projects and the tiered 721 sta
 ## Audit Objective
 
 Find issues that:
+
 - let publishers create or mint posts outside configured criteria
 - let users evade Croptop fees or route them incorrectly
 - grant fee-free or privileged cash-outs to the wrong actors
@@ -14,6 +15,7 @@ Find issues that:
 ## Scope
 
 In scope:
+
 - `src/CTPublisher.sol`
 - `src/CTDeployer.sol`
 - `src/CTProjectOwner.sol`
@@ -30,14 +32,16 @@ In scope:
 ## Security Model
 
 Croptop composes several subsystems:
+
 - `CTPublisher` enforces posting criteria, creates or adjusts tiers, and routes fees
 - `CTDeployer` launches projects and wires hooks, criteria, and ownership helpers
 - `CTProjectOwner` lets a project follow Croptop-specific admin rules instead of a fixed EOA
 
 Trust boundaries that matter:
+
 - project owners choose policy, but should not be able to bypass the policy they configured
 - fee recipients and external hooks may revert or reenter
-- sucker-based privileges must be limited to genuine omnichain components
+- sucker-based privileges must stay limited to genuine omnichain components
 
 ## Roles And Privileges
 
@@ -52,7 +56,7 @@ Trust boundaries that matter:
 
 | Dependency | Assumption | What breaks if wrong |
 |------------|------------|----------------------|
-| `nana-721-hook-v6` | Tier state and tier adjustments match Croptop policy checks | Posting criteria and tier reuse safety break |
+| `nana-721-hook-v6` | Tier state and tier adjustments match Croptop policy checks | Posting criteria and tier-reuse safety break |
 | `nana-core-v6` | Terminal and project routing are authentic | Fee routing and publish settlement drift |
 | `nana-ownable-v6` | Ownership helper resolves the intended admin | Projects can end up misowned or stranded |
 | `nana-suckers-v6` | Registry identifies genuine omnichain actors | Fee-free or privileged paths widen incorrectly |
@@ -68,7 +72,7 @@ Trust boundaries that matter:
 ## Attack Surfaces
 
 - publish and mint entrypoints
-- fee computation from user input versus on-chain state
+- fee computation from user input versus onchain state
 - tier creation, adjustment, and reuse logic
 - deployer-mediated pay or cash-out data-hook behavior
 - permission grants during deployment and ownership transfer
