@@ -27,7 +27,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    // forge-lint: disable-next-line(mixed-case-variable)
     error CTPublisher_DuplicatePost(bytes32 encodedIPFSUri);
     error CTPublisher_EmptyEncodedIPFSUri();
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
@@ -66,7 +65,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @notice The ID of the tier that an IPFS metadata has been saved to.
     /// @custom:param hook The hook for which the tier ID applies.
     /// @custom:param encodedIPFSUri The IPFS URI.
-    // forge-lint: disable-next-line(mixed-case-variable)
     mapping(address hook => mapping(bytes32 encodedIPFSUri => uint256)) public override tierIdForEncodedIPFSUriOf;
 
     //*********************************************************************//
@@ -324,7 +322,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// is returned.
     function tiersFor(
         address hook,
-        // forge-lint: disable-next-line(mixed-case-variable)
         bytes32[] memory encodedIPFSUris
     )
         external
@@ -332,7 +329,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         override
         returns (JB721Tier[] memory tiers)
     {
-        // forge-lint: disable-next-line(mixed-case-variable)
         uint256 numberOfEncodedIPFSUris = encodedIPFSUris.length;
 
         // Initialize the tier array being returned.
