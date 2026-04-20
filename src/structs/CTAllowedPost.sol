@@ -11,7 +11,6 @@ pragma solidity ^0.8.0;
 /// @custom:member maximumSplitPercent The maximum split percent (out of JBConstants.SPLITS_TOTAL_PERCENT) that a
 /// poster can set. 0 means splits are not allowed.
 /// @custom:member allowedAddresses A list of addresses that are allowed to post on the category through Croptop.
-// forge-lint: disable-next-line(pascal-case-struct)
 struct CTAllowedPost {
     address hook;
     uint24 category;

@@ -21,5 +21,5 @@
 
 ## Useful Proof Points
 
-- [`test/fork/`](../test/fork/) when deployment shape matters.
-- [`script/helpers/`](../script/helpers/) if the issue is really script/config assembly.
+- [`test/Fork.t.sol`](../test/Fork.t.sol) when deployment shape matters.
+- [`script/ConfigureFeeProject.s.sol`](../script/ConfigureFeeProject.s.sol) if the issue is really script/config assembly.
