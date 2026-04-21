@@ -35,9 +35,7 @@ contract M24_EmptyPostFeeBypass is Test {
 
         vm.prank(poster);
         vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
-        publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), emptyPosts, poster, poster, "", ""
-        );
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, "", "");
     }
 
     /// @notice mintFrom with empty posts and crafted additionalPayMetadata should still revert.
@@ -45,12 +43,11 @@ contract M24_EmptyPostFeeBypass is Test {
         CTPost[] memory emptyPosts = new CTPost[](0);
 
         // Attacker preloads additionalPayMetadata with hook mint metadata.
-        bytes memory craftedMetadata = abi.encodePacked(bytes32(uint256(1)), bytes4(0xdeadbeef), uint256(32), uint256(1));
+        bytes memory craftedMetadata =
+            abi.encodePacked(bytes32(uint256(1)), bytes4(0xdeadbeef), uint256(32), uint256(1));
 
         vm.prank(poster);
         vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
-        publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), emptyPosts, poster, poster, craftedMetadata, ""
-        );
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, craftedMetadata, "");
     }
 }
