@@ -37,6 +37,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
     error CTPublisher_TotalSupplyTooSmall(uint256 totalSupply, uint256 minimumTotalSupply);
+    error CTPublisher_NoPosts();
     error CTPublisher_UnauthorizedToPostInCategory();
     error CTPublisher_ZeroTotalSupply();
 
@@ -191,6 +192,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         payable
         override
     {
+        // Reject empty posts to prevent fee-free metadata shadowing.
+        if (posts.length == 0) revert CTPublisher_NoPosts();
+
         // Keep a reference to the amount being paid, which is msg.value minus the fee.
         uint256 payValue = msg.value;
 
