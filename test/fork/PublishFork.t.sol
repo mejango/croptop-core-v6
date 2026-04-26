@@ -129,8 +129,8 @@ contract PublishForkTest is Test, DeployPermit2 {
     // ─────────────────────────────────────
 
     function setUp() public {
-        // Fork ETH mainnet.
-        vm.createSelectFork("ethereum");
+        // Fork ETH mainnet at a pinned block to avoid RPC tip-of-chain flakiness.
+        vm.createSelectFork("ethereum", 24_960_000);
 
         // Deploy all JB core contracts fresh within the fork.
         _deployJBCore();
