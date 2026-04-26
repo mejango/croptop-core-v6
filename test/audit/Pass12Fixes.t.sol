@@ -327,11 +327,7 @@ contract Pass12FixesTest is Test {
         hook.setMetadata("", "", "", "", address(this), 1, URI_B);
 
         // The publisher cache still maps URI_A -> tier 1, but tier 1 now has URI_B.
-        assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A),
-            1,
-            "stale cache still maps URI_A -> tier 1"
-        );
+        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "stale cache still maps URI_A -> tier 1");
 
         // Step 3: Try to publish URI_A again. The fix should detect the mismatch
         // (tier 1's actual URI is URI_B, not URI_A), clear the stale cache, and
@@ -340,9 +336,7 @@ contract Pass12FixesTest is Test {
 
         assertEq(store.maxTierId(), 2, "new tier should be created for URI_A after cache invalidation");
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A),
-            2,
-            "URI_A should now map to tier 2 (fresh tier)"
+            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 2, "URI_A should now map to tier 2 (fresh tier)"
         );
     }
 
@@ -385,12 +379,7 @@ contract Pass12FixesTest is Test {
     function _publish(bytes32 uri) internal {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: uri,
-            totalSupply: 10,
-            price: 1 ether,
-            category: 7,
-            splitPercent: 0,
-            splits: new JBSplit[](0)
+            encodedIPFSUri: uri, totalSupply: 10, price: 1 ether, category: 7, splitPercent: 0, splits: new JBSplit[](0)
         });
 
         vm.prank(poster);

@@ -187,17 +187,10 @@ contract CodexNemesisMetadataShadowTest is Test {
         datas[0] = abi.encode(true, forgedTierIds);
         bytes memory shadowingMetadata = JBMetadataResolver.createMetadata(ids, datas);
 
+        // H-26 FIX: metadata shadow attack now reverts instead of succeeding.
+        vm.expectRevert(CTPublisher.CTPublisher_DuplicatePayMetadata.selector);
         publisher.mintFrom{value: 105}(
             IJB721TiersHook(address(hook)), posts, address(this), address(this), shadowingMetadata, ""
         );
-
-        assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), posts[0].encodedIPFSUri),
-            1,
-            "publisher validated and cached tier 1"
-        );
-        assertTrue(projectTerminal.found(), "terminal/parser should find pay metadata");
-        assertEq(projectTerminal.tierCount(), 1, "forged metadata contains one tier");
-        assertEq(projectTerminal.firstTierId(), 2, "parser used caller-supplied tier 2 instead of publisher tier 1");
     }
 }
