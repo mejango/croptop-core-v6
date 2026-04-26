@@ -135,9 +135,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
         CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
 
         (uint256 projectId, IJB721TiersHook hook) = _launchDirectProjectWithHook({
-            publisher: publisher,
-            owner: PROJECT_OWNER,
-            baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+            publisher: publisher, owner: PROJECT_OWNER, baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
         assertEq(projectId, 2, "expected the publish target to be project 2");
 
@@ -300,9 +298,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
                 tokenUriResolver: IJB721TokenUriResolver(address(0)),
                 contractUri: "ipfs://contract",
                 tiersConfig: JB721InitTiersConfig({
-                    tiers: new JB721TierConfig[](0),
-                    currency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
-                    decimals: 18
+                    tiers: new JB721TierConfig[](0), currency: uint32(uint160(JBConstants.NATIVE_TOKEN)), decimals: 18
                 }),
                 flags: JB721TiersHookFlags({
                     noNewTiersWithReserves: false,
@@ -329,9 +325,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
         jbPermissions.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(publisher),
-                projectId: uint64(projectId),
-                permissionIds: permissionIds
+                operator: address(publisher), projectId: uint64(projectId), permissionIds: permissionIds
             })
         });
 
@@ -351,9 +345,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
     function _ethTerminalConfig() internal view returns (JBTerminalConfig[] memory configs) {
         JBAccountingContext[] memory contexts = new JBAccountingContext[](1);
         contexts[0] = JBAccountingContext({
-            token: JBConstants.NATIVE_TOKEN,
-            decimals: 18,
-            currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+            token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
 
         configs = new JBTerminalConfig[](1);

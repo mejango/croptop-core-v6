@@ -157,12 +157,7 @@ contract CodexNemesisPolicyReuseTest is Test {
     function _singlePost() internal pure returns (CTPost[] memory posts) {
         posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: URI,
-            totalSupply: 10,
-            price: PRICE,
-            category: 7,
-            splitPercent: 0,
-            splits: new JBSplit[](0)
+            encodedIPFSUri: URI, totalSupply: 10, price: PRICE, category: 7, splitPercent: 0, splits: new JBSplit[](0)
         });
     }
 

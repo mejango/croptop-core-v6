@@ -40,7 +40,9 @@ contract CodexNemesisUriDriftTest is Test {
         directory = new MockDirectory(IJBTerminal(address(terminal)));
         store = new MockStore();
         hook = new MockHook(hookOwner, PROJECT_ID, store);
-        publisher = new CTPublisher(IJBDirectory(address(directory)), IJBPermissions(address(permissions)), FEE_PROJECT_ID, address(0));
+        publisher = new CTPublisher(
+            IJBDirectory(address(directory)), IJBPermissions(address(permissions)), FEE_PROJECT_ID, address(0)
+        );
 
         vm.deal(poster, 10 ether);
 
@@ -93,12 +95,7 @@ contract CodexNemesisUriDriftTest is Test {
     function _publish(bytes32 uri) internal {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: uri,
-            totalSupply: 10,
-            price: 1 ether,
-            category: 7,
-            splitPercent: 0,
-            splits: new JBSplit[](0)
+            encodedIPFSUri: uri, totalSupply: 10, price: 1 ether, category: 7, splitPercent: 0, splits: new JBSplit[](0)
         });
 
         vm.prank(poster);
@@ -185,8 +182,13 @@ contract MockStore {
 
     function addTier(JB721TierConfig calldata config) external returns (uint256 tierId) {
         tierId = ++_maxTierId;
-        _tiers[tierId] =
-            TierData({uri: config.encodedIPFSUri, price: config.price, category: config.category, supply: config.initialSupply, removed: false});
+        _tiers[tierId] = TierData({
+            uri: config.encodedIPFSUri,
+            price: config.price,
+            category: config.category,
+            supply: config.initialSupply,
+            removed: false
+        });
     }
 
     // forge-lint: disable-next-line(mixed-case-function)

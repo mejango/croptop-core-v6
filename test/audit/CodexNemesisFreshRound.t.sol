@@ -190,7 +190,12 @@ contract PermissionedMockSucker is JBPermissioned {
     uint256 internal immutable _projectId;
     uint256 internal immutable _peerChainId;
 
-    constructor(IJBPermissions permissions, MockProjects projects_, uint256 projectId_, uint256 peerChainId_)
+    constructor(
+        IJBPermissions permissions,
+        MockProjects projects_,
+        uint256 projectId_,
+        uint256 peerChainId_
+    )
         JBPermissioned(permissions)
     {
         _projects = projects_;
@@ -371,12 +376,9 @@ contract CodexNemesisFreshRoundTest is Test {
 
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
         JBTokenMapping[] memory mappings = new JBTokenMapping[](1);
-        mappings[0] = JBTokenMapping({
-            localToken: address(0xBEEF),
-            minGas: 200_000,
-            remoteToken: bytes32(uint256(1))
-        });
-        deployerConfigurations[0] = JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(suckerDeployer)), mappings: mappings});
+        mappings[0] = JBTokenMapping({localToken: address(0xBEEF), minGas: 200_000, remoteToken: bytes32(uint256(1))});
+        deployerConfigurations[0] =
+            JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(suckerDeployer)), mappings: mappings});
 
         vm.prank(owner);
         vm.expectRevert(
