@@ -481,10 +481,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     JB721Tier memory cachedTier =
                         store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false});
                     // slither-disable-next-line calls-loop
-                    if (
-                        store.isTierRemoved(address(hook), tierId)
-                            || cachedTier.encodedIPFSUri != post.encodedIPFSUri
-                    ) {
+                    if (store.isTierRemoved(address(hook), tierId) || cachedTier.encodedIPFSUri != post.encodedIPFSUri)
+                    {
                         delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
                     } else {
                         tierIdsToMint[i] = tierId;
