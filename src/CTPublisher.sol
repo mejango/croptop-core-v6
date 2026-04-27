@@ -241,6 +241,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // tier selection, allowing the caller to mint arbitrary tiers.
             {
                 bytes4 payId = JBMetadataResolver.getId({purpose: "pay", target: metadataIdTarget});
+                // slither-disable-next-line unused-return
                 (bool exists,) = JBMetadataResolver.getDataFor({id: payId, metadata: additionalPayMetadata});
                 if (exists) revert CTPublisher_DuplicatePayMetadata();
             }

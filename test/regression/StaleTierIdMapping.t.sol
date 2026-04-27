@@ -129,6 +129,16 @@ contract L52_StaleTierIdMapping is Test {
             abi.encode(true)
         );
 
+        // Mock tierOf for the removed tier — the M-42 fix calls tierOf before checking isTierRemoved.
+        JB721Tier memory removedTier;
+        removedTier.id = 1;
+        removedTier.encodedIPFSUri = TEST_URI;
+        vm.mockCall(
+            hookStoreAddr,
+            abi.encodeWithSelector(IJB721TiersHookStore.tierOf.selector, hookAddr, 1, false),
+            abi.encode(removedTier)
+        );
+
         // Update maxTierId to 1 so new tier gets ID 2.
         _setupMintMocks(1);
 
