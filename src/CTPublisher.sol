@@ -33,6 +33,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
+    error CTPublisher_DuplicatePayMetadata();
     error CTPublisher_FeePaymentFailed(uint256 feeAmount);
     error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
@@ -235,6 +236,15 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Keep a reference to the metadata ID target.
             address metadataIdTarget = hook.METADATA_ID_TARGET();
+
+            // Revert if the caller's additional metadata already contains a pay ID — this would shadow Croptop's
+            // tier selection, allowing the caller to mint arbitrary tiers.
+            {
+                bytes4 payId = JBMetadataResolver.getId({purpose: "pay", target: metadataIdTarget});
+                // slither-disable-next-line unused-return
+                (bool exists,) = JBMetadataResolver.getDataFor({id: payId, metadata: additionalPayMetadata});
+                if (exists) revert CTPublisher_DuplicatePayMetadata();
+            }
 
             // Create the metadata for the payment to specify the tier IDs that should be minted. We create manually the
             // original metadata, following
@@ -464,18 +474,23 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 uint256 tierId = tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
 
                 if (tierId != 0) {
-                    // If the tier was removed externally (via adjustTiers), clear the stale mapping
-                    // so the code falls through to create a new tier.
+                    // Validate the cached tier still exists and its URI still matches.
+                    // The cache can become stale if the tier was removed (via adjustTiers) or
+                    // its URI was changed (via setMetadata). In either case, clear the stale
+                    // mapping and fall through to create a new tier.
                     // slither-disable-next-line calls-loop
-                    if (store.isTierRemoved(address(hook), tierId)) {
+                    JB721Tier memory cachedTier =
+                        store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false});
+                    // slither-disable-next-line calls-loop
+                    if (store.isTierRemoved(address(hook), tierId) || cachedTier.encodedIPFSUri != post.encodedIPFSUri)
+                    {
                         delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
                     } else {
                         tierIdsToMint[i] = tierId;
 
                         // For existing tiers, use the actual tier price (not the user-supplied post.price)
                         // to prevent fee evasion by passing price=0 for an existing tier.
-                        // slither-disable-next-line calls-loop
-                        totalPrice += store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false}).price;
+                        totalPrice += cachedTier.price;
                     }
                 }
             }
