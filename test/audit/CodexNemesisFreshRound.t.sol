@@ -55,6 +55,12 @@ contract MockProjects {
         _ownerOf[projectId] = owner;
     }
 
+    function createFor(address owner) external returns (uint256 projectId) {
+        projectId = countValue + 1;
+        countValue = projectId;
+        _ownerOf[projectId] = owner;
+    }
+
     function transferFrom(address from, address to, uint256 tokenId) external {
         require(_ownerOf[tokenId] == from, "BAD_FROM");
         _ownerOf[tokenId] = to;
@@ -131,6 +137,22 @@ contract MockController {
         PROJECTS.mintFor(owner, nextProjectId);
         return nextProjectId;
     }
+
+    function launchRulesetsFor(
+        uint256 projectId,
+        JBRulesetConfig[] calldata,
+        JBTerminalConfig[] calldata,
+        string calldata
+    )
+        external
+        view
+        returns (uint256)
+    {
+        require(projectId == nextProjectId, "BAD_PROJECT_ID");
+        return 1;
+    }
+
+    function setUriOf(uint256, string calldata) external pure {}
 }
 
 contract MockHook {
@@ -189,18 +211,21 @@ contract PermissionedMockSucker is JBPermissioned {
     MockProjects internal immutable _projects;
     uint256 internal immutable _projectId;
     uint256 internal immutable _peerChainId;
+    address internal immutable _registry;
 
     constructor(
         IJBPermissions permissions,
         MockProjects projects_,
         uint256 projectId_,
-        uint256 peerChainId_
+        uint256 peerChainId_,
+        address registry_
     )
         JBPermissioned(permissions)
     {
         _projects = projects_;
         _projectId = projectId_;
         _peerChainId = peerChainId_;
+        _registry = registry_;
     }
 
     function peer() external pure returns (bytes32) {
@@ -220,11 +245,13 @@ contract PermissionedMockSucker is JBPermissioned {
     }
 
     function mapTokens(JBTokenMapping[] calldata) external payable {
-        _requirePermissionFrom({
-            account: _projects.ownerOf(_projectId),
-            projectId: _projectId,
-            permissionId: JBPermissionIds.MAP_SUCKER_TOKEN
-        });
+        if (msg.sender != _registry) {
+            _requirePermissionFrom({
+                account: _projects.ownerOf(_projectId),
+                projectId: _projectId,
+                permissionId: JBPermissionIds.MAP_SUCKER_TOKEN
+            });
+        }
     }
 
     function outboxOf(address) external pure returns (JBOutboxTree memory) {
@@ -292,15 +319,19 @@ contract MockSuckerDeployer {
     IJBPermissions internal immutable _permissions;
     MockProjects internal immutable _projects;
     uint256 internal immutable _peerChainId;
+    address internal immutable _registry;
 
-    constructor(IJBPermissions permissions_, MockProjects projects_, uint256 peerChainId_) {
+    constructor(IJBPermissions permissions_, MockProjects projects_, uint256 peerChainId_, address registry_) {
         _permissions = permissions_;
         _projects = projects_;
         _peerChainId = peerChainId_;
+        _registry = registry_;
     }
 
-    function createForSender(uint256 localProjectId, bytes32) external returns (IJBSucker sucker) {
-        sucker = IJBSucker(address(new PermissionedMockSucker(_permissions, _projects, localProjectId, _peerChainId)));
+    function createForSender(uint256 localProjectId, bytes32, bytes32) external returns (IJBSucker sucker) {
+        sucker = IJBSucker(
+            address(new PermissionedMockSucker(_permissions, _projects, localProjectId, _peerChainId, _registry))
+        );
     }
 }
 
@@ -319,7 +350,7 @@ contract CodexNemesisFreshRoundTest is Test {
         });
     }
 
-    function test_deployProjectFor_revertsInsteadOfFailingOpenWhenSuckerDeploymentFails() public {
+    function test_deployProjectFor_failsOpenWhenSuckerDeploymentFails() public {
         JBPermissions permissions = new JBPermissions(address(0));
         MockProjects projects = new MockProjects();
         MockHookDeployer hookDeployer = new MockHookDeployer();
@@ -340,11 +371,14 @@ contract CodexNemesisFreshRoundTest is Test {
         CTSuckerDeploymentConfig memory suckerConfig =
             CTSuckerDeploymentConfig({deployerConfigurations: new JBSuckerDeployerConfig[](0), salt: bytes32("salt")});
 
-        vm.expectRevert(RevertingSuckerRegistry.DeploymentUnavailable.selector);
-        deployer.deployProjectFor(owner, _emptyProjectConfig(), suckerConfig, IJBController(address(controller)));
+        (uint256 projectId,) =
+            deployer.deployProjectFor(owner, _emptyProjectConfig(), suckerConfig, IJBController(address(controller)));
+
+        assertEq(projectId, 1, "project should still launch");
+        assertEq(projects.ownerOf(1), owner, "project ownership should transfer despite sucker failure");
     }
 
-    function test_directRegistryDeploymentAfterOwnershipTransferStillLacksMapPermission() public {
+    function test_directRegistryDeploymentAfterOwnershipTransferCanMapThroughRegistry() public {
         JBPermissions permissions = new JBPermissions(address(0));
         MockProjects projects = new MockProjects();
         MockDirectory directory = new MockDirectory(IJBProjects(address(projects)));
@@ -364,7 +398,7 @@ contract CodexNemesisFreshRoundTest is Test {
         );
 
         address[] memory deployers = new address[](1);
-        MockSuckerDeployer suckerDeployer = new MockSuckerDeployer(permissions, projects, 10);
+        MockSuckerDeployer suckerDeployer = new MockSuckerDeployer(permissions, projects, 10, address(registry));
         deployers[0] = address(suckerDeployer);
         registry.allowSuckerDeployers(deployers);
 
@@ -377,19 +411,14 @@ contract CodexNemesisFreshRoundTest is Test {
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
         JBTokenMapping[] memory mappings = new JBTokenMapping[](1);
         mappings[0] = JBTokenMapping({localToken: address(0xBEEF), minGas: 200_000, remoteToken: bytes32(uint256(1))});
-        deployerConfigurations[0] =
-            JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(suckerDeployer)), mappings: mappings});
+        deployerConfigurations[0] = JBSuckerDeployerConfig({
+            deployer: IJBSuckerDeployer(address(suckerDeployer)), peer: bytes32(0), mappings: mappings
+        });
 
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector,
-                owner,
-                address(registry),
-                1,
-                JBPermissionIds.MAP_SUCKER_TOKEN
-            )
-        );
-        registry.deploySuckersFor(1, bytes32("later"), deployerConfigurations);
+        address[] memory suckers = registry.deploySuckersFor(1, bytes32("later"), deployerConfigurations);
+
+        assertEq(suckers.length, 1, "direct registry recovery should deploy one sucker");
+        assertTrue(registry.isSuckerOf(1, suckers[0]), "registry should track the recovered sucker");
     }
 }

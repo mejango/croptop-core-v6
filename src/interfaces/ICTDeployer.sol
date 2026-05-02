@@ -24,8 +24,8 @@ interface ICTDeployer {
     function PUBLISHER() external view returns (ICTPublisher);
 
     /// @notice Claim ownership of a tiered ERC-721 hook collection by transferring it to the project.
-    /// @dev After claiming, CTPublisher is atomically granted the ADJUST_721_TIERS permission so that mintFrom()
-    /// continues to work.
+    /// @dev After claiming, hook ownership resolves through the current project NFT owner. That owner must grant
+    /// CTPublisher the ADJUST_721_TIERS permission separately for mintFrom() to continue working.
     /// @param hook The hook to claim ownership of. The caller must own the project the hook belongs to.
     function claimCollectionOwnershipOf(IJB721TiersHook hook) external;
 
