@@ -36,6 +36,10 @@ import {CTDeployerAllowedPost} from "../src/structs/CTDeployerAllowedPost.sol";
 import {CTProjectConfig} from "../src/structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "../src/structs/CTSuckerDeploymentConfig.sol";
 
+interface IJBControllerProjectUriForTest {
+    function setUriOf(uint256 projectId, string calldata uri) external;
+}
+
 // =============================================================================
 // Mock data hook that returns successfully
 // =============================================================================
@@ -540,8 +544,12 @@ contract TestCTDeployer is Test {
         // Mock controller.PROJECTS() to return the same projects contract.
         vm.mockCall(address(controller), abi.encodeWithSelector(IJBController.PROJECTS.selector), abi.encode(projects));
 
-        // Mock projects.count() to return the current count.
-        vm.mockCall(address(projects), abi.encodeWithSelector(IJBProjects.count.selector), abi.encode(projectCount));
+        // Mock project reservation to return the expected project ID.
+        vm.mockCall(
+            address(projects),
+            abi.encodeWithSelector(IJBProjects.createFor.selector, address(deployer)),
+            abi.encode(deployedProjectId)
+        );
 
         // Mock hookDeployer.deployHookFor to return the hook address.
         vm.mockCall(
@@ -550,11 +558,16 @@ contract TestCTDeployer is Test {
             abi.encode(IJB721TiersHook(hookAddr))
         );
 
-        // Mock controller.launchProjectFor to return the expected project ID.
+        // Mock controller.launchRulesetsFor for the reserved project.
         vm.mockCall(
             address(controller),
-            abi.encodeWithSelector(IJBController.launchProjectFor.selector),
-            abi.encode(deployedProjectId)
+            abi.encodeWithSelector(IJBController.launchRulesetsFor.selector),
+            abi.encode(uint256(1))
+        );
+
+        // Mock project URI assignment after ruleset launch.
+        vm.mockCall(
+            address(controller), abi.encodeWithSelector(IJBControllerProjectUriForTest.setUriOf.selector), abi.encode()
         );
 
         // Mock projects.transferFrom (ERC721 transfer of project NFT to owner).

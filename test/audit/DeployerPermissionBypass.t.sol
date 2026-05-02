@@ -174,7 +174,7 @@ contract DeployerPermissionBypassTest is Test {
         controller = new MockController(projects, 6);
     }
 
-    function test_projectOwnerCanBypassCroptopAndCallHookDirectlyAfterDeployment() public {
+    function test_projectOwnerCannotBypassCroptopAndCallHookDirectlyBeforeClaim() public {
         CTDeployerAllowedPost[] memory allowedPosts = new CTDeployerAllowedPost[](1);
         allowedPosts[0] = CTDeployerAllowedPost({
             category: 1,
@@ -206,8 +206,17 @@ contract DeployerPermissionBypassTest is Test {
         uint256[] memory removals = new uint256[](0);
 
         vm.prank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector,
+                address(deployer),
+                owner,
+                6,
+                JBPermissionIds.ADJUST_721_TIERS
+            )
+        );
         PermissionedHook(address(hook)).adjustTiers(arbitraryTiers, removals);
 
-        assertTrue(hook.adjusted(), "project owner can mutate the hook without going through Croptop");
+        assertFalse(hook.adjusted(), "project owner must claim collection ownership before direct hook control");
     }
 }

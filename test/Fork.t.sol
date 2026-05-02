@@ -146,8 +146,9 @@ contract ForkTest is Test {
         });
 
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
-        deployerConfigurations[0] =
-            JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(opSuckerDeployer)), mappings: tokens});
+        deployerConfigurations[0] = JBSuckerDeployerConfig({
+            deployer: IJBSuckerDeployer(address(opSuckerDeployer)), peer: bytes32(0), mappings: tokens
+        });
 
         CTSuckerDeploymentConfig memory suckerConfig =
             CTSuckerDeploymentConfig({deployerConfigurations: deployerConfigurations, salt: suckerSalt});
