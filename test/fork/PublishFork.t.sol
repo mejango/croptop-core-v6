@@ -322,7 +322,7 @@ contract PublishForkTest is Test, DeployPermit2 {
     function _deploy721Hook() internal {
         JB721TiersHookStore store = new JB721TiersHookStore();
         JBAddressRegistry addressRegistry = new JBAddressRegistry();
-        JB721CheckpointsDeployer checkpointsDeployer = new JB721CheckpointsDeployer();
+        JB721CheckpointsDeployer checkpointsDeployer = new JB721CheckpointsDeployer(store);
 
         JB721TiersHook hookImpl = new JB721TiersHook(
             jbDirectory, jbPermissions, jbPrices, jbRulesets, store, jbSplits, checkpointsDeployer, trustedForwarder

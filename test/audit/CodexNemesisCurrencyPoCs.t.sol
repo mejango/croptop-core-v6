@@ -62,6 +62,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
     uint104 internal constant POST_PRICE = 0.1 ether;
     uint32 internal constant POST_SUPPLY = 100;
     uint24 internal constant POST_CATEGORY = 1;
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes32 internal constant TEST_URI = bytes32("nemesis-uri");
 
     JBPermissions internal jbPermissions;
@@ -212,7 +213,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
     function _deployHookInfra() internal {
         JB721TiersHookStore store = new JB721TiersHookStore();
         JBAddressRegistry addressRegistry = new JBAddressRegistry();
-        JB721CheckpointsDeployer checkpointsDeployer = new JB721CheckpointsDeployer();
+        JB721CheckpointsDeployer checkpointsDeployer = new JB721CheckpointsDeployer(store);
 
         JB721TiersHook hookImpl = new JB721TiersHook(
             jbDirectory, jbPermissions, jbPrices, jbRulesets, store, jbSplits, checkpointsDeployer, address(0)
@@ -325,7 +326,10 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
         jbPermissions.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(publisher), projectId: uint64(projectId), permissionIds: permissionIds
+                operator: address(publisher),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                projectId: uint64(projectId),
+                permissionIds: permissionIds
             })
         });
 

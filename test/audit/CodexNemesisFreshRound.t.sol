@@ -140,6 +140,7 @@ contract MockController {
 
     function launchRulesetsFor(
         uint256 projectId,
+        string calldata,
         JBRulesetConfig[] calldata,
         JBTerminalConfig[] calldata,
         string calldata
@@ -298,7 +299,7 @@ contract PermissionedMockSucker is JBPermissioned {
         revert("UNUSED");
     }
 
-    function exitThroughEmergencyHatch(address, uint256, address payable) external {
+    function exitThroughEmergencyHatch(address, uint256, address payable) external pure {
         revert("UNUSED");
     }
 
@@ -328,7 +329,7 @@ contract MockSuckerDeployer {
         _registry = registry_;
     }
 
-    function createForSender(uint256 localProjectId, bytes32, bytes32) external returns (IJBSucker sucker) {
+    function createForSender(uint256 localProjectId, bytes32) external returns (IJBSucker sucker) {
         sucker = IJBSucker(
             address(new PermissionedMockSucker(_permissions, _projects, localProjectId, _peerChainId, _registry))
         );
@@ -368,8 +369,11 @@ contract CodexNemesisFreshRoundTest is Test {
             address(0)
         );
 
-        CTSuckerDeploymentConfig memory suckerConfig =
-            CTSuckerDeploymentConfig({deployerConfigurations: new JBSuckerDeployerConfig[](0), salt: bytes32("salt")});
+        CTSuckerDeploymentConfig memory suckerConfig = CTSuckerDeploymentConfig({
+            deployerConfigurations: new JBSuckerDeployerConfig[](0),
+            // forge-lint: disable-next-line(unsafe-typecast)
+            salt: bytes32("salt")
+        });
 
         (uint256 projectId,) =
             deployer.deployProjectFor(owner, _emptyProjectConfig(), suckerConfig, IJBController(address(controller)));
@@ -411,11 +415,11 @@ contract CodexNemesisFreshRoundTest is Test {
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
         JBTokenMapping[] memory mappings = new JBTokenMapping[](1);
         mappings[0] = JBTokenMapping({localToken: address(0xBEEF), minGas: 200_000, remoteToken: bytes32(uint256(1))});
-        deployerConfigurations[0] = JBSuckerDeployerConfig({
-            deployer: IJBSuckerDeployer(address(suckerDeployer)), peer: bytes32(0), mappings: mappings
-        });
+        deployerConfigurations[0] =
+            JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(suckerDeployer)), mappings: mappings});
 
         vm.prank(owner);
+        // forge-lint: disable-next-line(unsafe-typecast)
         address[] memory suckers = registry.deploySuckersFor(1, bytes32("later"), deployerConfigurations);
 
         assertEq(suckers.length, 1, "direct registry recovery should deploy one sucker");

@@ -163,8 +163,9 @@ contract CodexNemesisPublishHookBoundaryTest is Test {
         directory.setTerminal(projectId, IJBTerminal(address(projectTerminal)));
         directory.setTerminal(feeProjectId, IJBTerminal(address(feeTerminal)));
 
-        CTPublisher publisher =
-            new CTPublisher(IJBDirectory(address(directory)), IJBPermissions(address(permissions)), feeProjectId, address(0));
+        CTPublisher publisher = new CTPublisher(
+            IJBDirectory(address(directory)), IJBPermissions(address(permissions)), feeProjectId, address(0)
+        );
 
         CTAllowedPost[] memory allowedPosts = new CTAllowedPost[](1);
         allowedPosts[0] = CTAllowedPost({

@@ -113,6 +113,7 @@ contract NemesisMockStore {
     function tierOf(address, uint256 tierId, bool) external view returns (JB721Tier memory tier) {
         StoredTier memory stored = tierData[tierId];
         tier = JB721Tier({
+            // forge-lint: disable-next-line(unsafe-typecast)
             id: uint32(tierId),
             price: stored.price,
             remainingSupply: stored.remainingSupply,

@@ -36,10 +36,6 @@ import {CTDeployerAllowedPost} from "./structs/CTDeployerAllowedPost.sol";
 import {CTProjectConfig} from "./structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "./structs/CTSuckerDeploymentConfig.sol";
 
-interface IJBControllerProjectUri {
-    function setUriOf(uint256 projectId, string calldata uri) external;
-}
-
 /// @notice A contract that facilitates deploying a simple Juicebox project to receive posts from Croptop templates.
 contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC721Receiver, ICTDeployer {
     //*********************************************************************//
@@ -217,13 +213,11 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         // slither-disable-next-line unused-return
         controller.launchRulesetsFor({
             projectId: projectId,
+            projectUri: projectConfig.projectUri,
             rulesetConfigurations: rulesetConfigurations,
             terminalConfigurations: projectConfig.terminalConfigurations,
             memo: "Deployed from Croptop"
         });
-        if (bytes(projectConfig.projectUri).length != 0) {
-            IJBControllerProjectUri(address(controller)).setUriOf({projectId: projectId, uri: projectConfig.projectUri});
-        }
 
         // Set the data hook for the project.
         dataHookOf[projectId] = IJBRulesetDataHook(hook);

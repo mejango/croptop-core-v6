@@ -146,9 +146,8 @@ contract ForkTest is Test {
         });
 
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
-        deployerConfigurations[0] = JBSuckerDeployerConfig({
-            deployer: IJBSuckerDeployer(address(opSuckerDeployer)), peer: bytes32(0), mappings: tokens
-        });
+        deployerConfigurations[0] =
+            JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(opSuckerDeployer)), mappings: tokens});
 
         CTSuckerDeploymentConfig memory suckerConfig =
             CTSuckerDeploymentConfig({deployerConfigurations: deployerConfigurations, salt: suckerSalt});
@@ -195,7 +194,7 @@ contract ForkTest is Test {
     function _deploy721Hook() internal {
         JB721TiersHookStore store = new JB721TiersHookStore();
         JBAddressRegistry addressRegistry = new JBAddressRegistry();
-        JB721CheckpointsDeployer checkpointsDeployer = new JB721CheckpointsDeployer();
+        JB721CheckpointsDeployer checkpointsDeployer = new JB721CheckpointsDeployer(store);
 
         JB721TiersHook hookImpl = new JB721TiersHook(
             jbDirectory, jbPermissions, jbPrices, jbRulesets, store, jbSplits, checkpointsDeployer, trustedForwarder

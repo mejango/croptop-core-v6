@@ -40,6 +40,11 @@ contract NemesisMockProjects {
         _ownerOf[projectId] = owner_;
     }
 
+    function createFor(address owner_) external returns (uint256 projectId) {
+        projectId = ++countValue;
+        _ownerOf[projectId] = owner_;
+    }
+
     function count() external view returns (uint256) {
         return countValue;
     }
@@ -63,18 +68,18 @@ contract NemesisMockController {
         nextProjectId = nextProjectId_;
     }
 
-    function launchProjectFor(
-        address owner,
+    function launchRulesetsFor(
+        uint256 projectId,
         string calldata,
         JBRulesetConfig[] calldata,
         JBTerminalConfig[] calldata,
         string calldata
     )
         external
-        returns (uint256)
+        pure
+        returns (uint256 rulesetId)
     {
-        PROJECTS.setOwner(nextProjectId, owner);
-        return nextProjectId;
+        return projectId;
     }
 }
 
@@ -220,7 +225,7 @@ contract CodexNemesisPoCs is Test {
         assertFalse(hook.adjusted(), "the previous owner should not retain CTDeployer-owned hook permissions");
     }
 
-    function test_deploySuckersHelperBreaksAfterOwnershipTransferBecauseRegistrySeesCtDeployerAsCaller() public {
+    function test_deploySuckersHelperRequiresOwnerToGrantCtDeployer() public {
         NemesisMockDirectory directory = new NemesisMockDirectory(IJBProjects(address(projects)));
         JBSuckerRegistry registry =
             new JBSuckerRegistry(IJBDirectory(address(directory)), permissions, address(this), address(0));
@@ -251,18 +256,15 @@ contract CodexNemesisPoCs is Test {
             CTSuckerDeploymentConfig({deployerConfigurations: new JBSuckerDeployerConfig[](0), salt: bytes32(0)});
         deployer.deployProjectFor(alice, config, emptySuckerConfig, IJBController(address(controller)));
 
-        CTSuckerDeploymentConfig memory laterSuckerConfig =
-            CTSuckerDeploymentConfig({deployerConfigurations: new JBSuckerDeployerConfig[](0), salt: bytes32("later")});
+        CTSuckerDeploymentConfig memory laterSuckerConfig = CTSuckerDeploymentConfig({
+            deployerConfigurations: new JBSuckerDeployerConfig[](0),
+            // forge-lint: disable-next-line(unsafe-typecast)
+            salt: bytes32("later")
+        });
 
         vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector,
-                alice,
-                address(deployer),
-                6,
-                JBPermissionIds.DEPLOY_SUCKERS
-            )
+            abi.encodeWithSelector(CTDeployer.CTDeployer_SuckerDeploymentPermissionRequired.selector, 6, alice)
         );
         deployer.deploySuckersFor(6, laterSuckerConfig);
     }
