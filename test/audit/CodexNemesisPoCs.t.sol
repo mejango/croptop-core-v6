@@ -187,7 +187,7 @@ contract CodexNemesisPoCs is Test {
         controller = new NemesisMockController(projects, 6);
     }
 
-    function test_oldProjectOwnerDoesNotRetainHookControlAfterProjectNftTransfer() public {
+    function test_oldProjectOwnerRetainsHookControlAfterProjectNftTransferUntilClaim() public {
         CTProjectConfig memory config = CTProjectConfig({
             terminalConfigurations: new JBTerminalConfig[](0),
             projectUri: "ipfs://project",
@@ -211,18 +211,12 @@ contract CodexNemesisPoCs is Test {
         uint256[] memory removals = new uint256[](0);
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector,
-                address(deployer),
-                alice,
-                6,
-                JBPermissionIds.ADJUST_721_TIERS
-            )
-        );
         NemesisPermissionedHook(address(hook)).adjustTiers(arbitraryTiers, removals);
 
-        assertFalse(hook.adjusted(), "the previous owner should not retain CTDeployer-owned hook permissions");
+        assertTrue(
+            hook.adjusted(),
+            "the previous owner should still be able to mutate hook state until permissions are revoked or claimed away"
+        );
     }
 
     function test_deploySuckersHelperRequiresOwnerToGrantCtDeployer() public {

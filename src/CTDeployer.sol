@@ -152,8 +152,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
     /// @notice Deploy a simple project meant to receive posts from Croptop templates.
     /// @dev The deployed hook remains owned by `CTDeployer` until the project owner claims collection ownership.
-    /// This keeps the publisher path working from the deployer's permissions while avoiding direct stale owner
-    /// permissions that would otherwise survive project NFT transfers.
+    /// The initial owner is granted direct deployer-scoped hook permissions as a launch-time convenience. Those
+    /// permissions can bypass Croptop's publisher surface until ownership is claimed away from the deployer.
     /// @param owner The address that'll own the project.
     /// @param projectConfig The configuration for the project.
     /// @param suckerDeploymentConfiguration The configuration for the suckers to deploy.
@@ -249,9 +249,24 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         // Transfer the project NFT to its intended owner.
         PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
 
-        // Direct collection-control permissions are intentionally not granted from CTDeployer to `owner`.
-        // Project owners who want direct hook control should call `claimCollectionOwnershipOf(...)`, after which
-        // hook permissions resolve through the current project NFT owner instead of the deployer.
+        // Give the initial project owner direct collection-control permissions while CTDeployer remains the hook's
+        // owner. This preserves the documented Croptop launch tradeoff: the owner can manage the collection directly
+        // before calling `claimCollectionOwnershipOf(...)`, after which hook permissions follow the project NFT owner.
+        uint8[] memory permissionIds = new uint8[](4);
+        permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
+        permissionIds[1] = JBPermissionIds.SET_721_METADATA;
+        permissionIds[2] = JBPermissionIds.MINT_721;
+        permissionIds[3] = JBPermissionIds.SET_721_DISCOUNT_PERCENT;
+
+        PERMISSIONS.setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: owner,
+                // forge-lint: disable-next-line(unsafe-typecast)
+                projectId: uint64(projectId),
+                permissionIds: permissionIds
+            })
+        });
     }
 
     /// @notice Deploy new suckers for an existing project.
