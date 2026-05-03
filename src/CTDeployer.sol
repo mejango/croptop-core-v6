@@ -55,11 +55,11 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
 
-    /// @notice Mints ERC-721s that represent Juicebox project ownership and transfers.
-    IJBProjects public immutable override PROJECTS;
-
     /// @notice The deployer to launch Croptop recorded collections from.
     IJB721TiersHookDeployer public immutable override DEPLOYER;
+
+    /// @notice Mints ERC-721s that represent Juicebox project ownership and transfers.
+    IJBProjects public immutable override PROJECTS;
 
     /// @notice The Croptop publisher.
     ICTPublisher public immutable override PUBLISHER;
@@ -102,11 +102,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PUBLISHER = publisher;
         SUCKER_REGISTRY = suckerRegistry;
 
-        // Give the sucker registry permission to map tokens for all revnets.
+        // Give the sucker registry permission to map tokens for all projects deployed by this contract.
         uint8[] memory permissionIds = new uint8[](1);
         permissionIds[0] = JBPermissionIds.MAP_SUCKER_TOKEN;
 
-        // Give the operator the permission.
         // Set up the permission data.
         JBPermissionsData memory permissionData =
             JBPermissionsData({operator: address(SUCKER_REGISTRY), projectId: 0, permissionIds: permissionIds});
@@ -144,7 +143,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
         // Make sure the caller is the owner of the project.
         if (PROJECTS.ownerOf(projectId) != _msgSender()) {
-            revert CTDeployer_NotOwnerOfProject(projectId, address(hook), _msgSender());
+            revert CTDeployer_NotOwnerOfProject({projectId: projectId, hook: address(hook), caller: _msgSender()});
         }
 
         // Transfer the hook's ownership to the project.
@@ -243,11 +242,11 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             // Intentionally ignore the return value. Suckers are discoverable from the registry.
             }
             catch (bytes memory reason) {
-                emit CTDeployer_SuckerDeploymentFailed(projectId, suckerSalt, reason);
+                emit CTDeployer_SuckerDeploymentFailed({projectId: projectId, salt: suckerSalt, reason: reason});
             }
         }
 
-        //transfer to _owner.
+        // Transfer the project NFT to its intended owner.
         PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
 
         // Direct collection-control permissions are intentionally not granted from CTDeployer to `owner`.
@@ -268,16 +267,19 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     {
         address owner = PROJECTS.ownerOf(projectId);
 
-        // Enforce permissions.
+        // First prove the external caller is allowed to request sucker deployment for the project owner.
         _requirePermissionFrom({account: owner, projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS});
 
+        // Then prove this forwarding helper also has the same permission from the project owner. The sucker registry
+        // receives this call from CTDeployer, not from the external caller, so this avoids launching a project and
+        // only discovering at the downstream registry boundary that CTDeployer itself cannot deploy the suckers.
         if (!_hasPermissionFrom({
                 operator: address(this),
                 account: owner,
                 projectId: projectId,
                 permissionId: JBPermissionIds.DEPLOY_SUCKERS
             })) {
-            revert CTDeployer_SuckerDeploymentPermissionRequired(projectId, owner);
+            revert CTDeployer_SuckerDeploymentPermissionRequired({projectId: projectId, owner: owner});
         }
 
         // Deploy the suckers.
