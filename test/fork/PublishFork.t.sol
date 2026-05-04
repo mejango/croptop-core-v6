@@ -340,9 +340,16 @@ contract PublishForkTest is Test, DeployPermit2 {
         vm.startPrank(multisig);
         opSuckerDeployer.setChainSpecificConstants(OP_L1_MESSENGER, OP_L1_BRIDGE);
 
-        JBOptimismSucker singleton = new JBOptimismSucker(
-            opSuckerDeployer, jbDirectory, jbPermissions, jbTokens, 1, suckerRegistry, trustedForwarder
-        );
+        JBOptimismSucker singleton = new JBOptimismSucker({
+            deployer: opSuckerDeployer,
+            directory: jbDirectory,
+            permissions: jbPermissions,
+            prices: address(jbPrices),
+            tokens: jbTokens,
+            feeProjectId: 1,
+            registry: suckerRegistry,
+            trustedForwarder: trustedForwarder
+        });
         opSuckerDeployer.configureSingleton(singleton);
 
         suckerRegistry.allowSuckerDeployer(address(opSuckerDeployer));

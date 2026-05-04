@@ -100,24 +100,13 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PUBLISHER = publisher;
         SUCKER_REGISTRY = suckerRegistry;
 
-        // Give the sucker registry permission to map tokens for all projects deployed by this contract.
+        // Set permission for the CTPublisher to adjust tiers while the deployer temporarily owns new hooks.
         uint8[] memory permissionIds = new uint8[](1);
-        permissionIds[0] = JBPermissionIds.MAP_SUCKER_TOKEN;
-
-        // Set up the permission data.
-        JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: address(SUCKER_REGISTRY), projectId: 0, permissionIds: permissionIds});
-
-        // Set the permissions.
-        PERMISSIONS.setPermissionsFor({account: address(this), permissionsData: permissionData});
-
-        // Set permission for the CTPublisher to adjust the tier.
         permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
 
-        // Set permission for the CTPublisher to mint the NFT.
-        permissionData = JBPermissionsData({operator: address(PUBLISHER), projectId: 0, permissionIds: permissionIds});
+        JBPermissionsData memory permissionData =
+            JBPermissionsData({operator: address(PUBLISHER), projectId: 0, permissionIds: permissionIds});
 
-        // Set permission for the CTPublisher to adjust the tier.
         PERMISSIONS.setPermissionsFor({account: address(this), permissionsData: permissionData});
     }
 

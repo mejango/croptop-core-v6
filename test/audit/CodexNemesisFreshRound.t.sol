@@ -329,7 +329,7 @@ contract MockSuckerDeployer {
         _registry = registry_;
     }
 
-    function createForSender(uint256 localProjectId, bytes32) external returns (IJBSucker sucker) {
+    function createForSender(uint256 localProjectId, bytes32, bytes32) external returns (IJBSucker sucker) {
         sucker = IJBSucker(
             address(new PermissionedMockSucker(_permissions, _projects, localProjectId, _peerChainId, _registry))
         );
@@ -415,8 +415,9 @@ contract CodexNemesisFreshRoundTest is Test {
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
         JBTokenMapping[] memory mappings = new JBTokenMapping[](1);
         mappings[0] = JBTokenMapping({localToken: address(0xBEEF), minGas: 200_000, remoteToken: bytes32(uint256(1))});
-        deployerConfigurations[0] =
-            JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(suckerDeployer)), mappings: mappings});
+        deployerConfigurations[0] = JBSuckerDeployerConfig({
+            deployer: IJBSuckerDeployer(address(suckerDeployer)), peer: bytes32(0), mappings: mappings
+        });
 
         vm.prank(owner);
         // forge-lint: disable-next-line(unsafe-typecast)

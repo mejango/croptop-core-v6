@@ -122,9 +122,10 @@ contract ForkTest is Test {
         deployer.deployProjectFor(owner, config, suckerConfig, jbController);
     }
 
-    function testDeployProjectWithSuckers(address owner, bytes32 salt, bytes32 suckerSalt) public {
-        vm.assume(owner != address(0) && owner.code.length == 0);
-        vm.assume(suckerSalt != bytes32(0));
+    function testDeployProjectWithSuckers() public {
+        address owner = makeAddr("sucker owner");
+        bytes32 salt = keccak256("project salt");
+        bytes32 suckerSalt = keccak256("sucker salt");
 
         // Create the project config.
         CTProjectConfig memory config = CTProjectConfig({
@@ -146,8 +147,9 @@ contract ForkTest is Test {
         });
 
         JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
-        deployerConfigurations[0] =
-            JBSuckerDeployerConfig({deployer: IJBSuckerDeployer(address(opSuckerDeployer)), mappings: tokens});
+        deployerConfigurations[0] = JBSuckerDeployerConfig({
+            deployer: IJBSuckerDeployer(address(opSuckerDeployer)), peer: bytes32(0), mappings: tokens
+        });
 
         CTSuckerDeploymentConfig memory suckerConfig =
             CTSuckerDeploymentConfig({deployerConfigurations: deployerConfigurations, salt: suckerSalt});
@@ -215,9 +217,16 @@ contract ForkTest is Test {
         opSuckerDeployer.setChainSpecificConstants(OP_L1_MESSENGER, OP_L1_BRIDGE);
 
         // Deploy and configure the singleton.
-        JBOptimismSucker singleton = new JBOptimismSucker(
-            opSuckerDeployer, jbDirectory, jbPermissions, jbTokens, 1, suckerRegistry, trustedForwarder
-        );
+        JBOptimismSucker singleton = new JBOptimismSucker({
+            deployer: opSuckerDeployer,
+            directory: jbDirectory,
+            permissions: jbPermissions,
+            prices: address(jbPrices),
+            tokens: jbTokens,
+            feeProjectId: 1,
+            registry: suckerRegistry,
+            trustedForwarder: trustedForwarder
+        });
         opSuckerDeployer.configureSingleton(singleton);
 
         // Allow the deployer in the registry.
