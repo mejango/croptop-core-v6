@@ -162,7 +162,12 @@ contract CodexNemesisSuckerWrapperTest is Test {
 
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(CTDeployer.CTDeployer_SuckerDeploymentPermissionRequired.selector, projectId, owner)
+            abi.encodeWithSelector(
+                NemesisPermissionCheckingSuckerRegistry.RegistryUnauthorized.selector,
+                address(deployer),
+                owner,
+                projectId
+            )
         );
         deployer.deploySuckersFor(projectId, config);
 

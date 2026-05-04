@@ -258,7 +258,13 @@ contract CodexNemesisPoCs is Test {
 
         vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(CTDeployer.CTDeployer_SuckerDeploymentPermissionRequired.selector, 6, alice)
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector,
+                alice,
+                address(deployer),
+                6,
+                JBPermissionIds.DEPLOY_SUCKERS
+            )
         );
         deployer.deploySuckersFor(6, laterSuckerConfig);
     }

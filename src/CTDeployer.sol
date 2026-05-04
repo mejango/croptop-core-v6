@@ -43,8 +43,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     //*********************************************************************//
 
     error CTDeployer_NotOwnerOfProject(uint256 projectId, address hook, address caller);
-    error CTDeployer_SuckerDeploymentPermissionRequired(uint256 projectId, address owner);
-
     //*********************************************************************//
     // ---------------------------- events -------------------------------- //
     //*********************************************************************//
@@ -285,19 +283,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         // First prove the external caller is allowed to request sucker deployment for the project owner.
         _requirePermissionFrom({account: owner, projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS});
 
-        // Then prove this forwarding helper also has the same permission from the project owner. The sucker registry
-        // receives this call from CTDeployer, not from the external caller, so this avoids launching a project and
-        // only discovering at the downstream registry boundary that CTDeployer itself cannot deploy the suckers.
-        if (!_hasPermissionFrom({
-                operator: address(this),
-                account: owner,
-                projectId: projectId,
-                permissionId: JBPermissionIds.DEPLOY_SUCKERS
-            })) {
-            revert CTDeployer_SuckerDeploymentPermissionRequired({projectId: projectId, owner: owner});
-        }
-
-        // Deploy the suckers.
+        // Deploy the suckers. The sucker registry performs its own permission check against this forwarding helper,
+        // so an unapproved CTDeployer fails at the downstream registry boundary without an extra preflight read here.
         // slither-disable-next-line unused-return
         suckers = SUCKER_REGISTRY.deploySuckersFor({
             projectId: projectId,
