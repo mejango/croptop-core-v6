@@ -219,6 +219,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         // allowing projects to launch on unsupported chains with manual sucker setup later.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             bytes32 suckerSalt = keccak256(abi.encode(suckerDeploymentConfiguration.salt, _msgSender()));
+
+            // Successful deployments are discoverable from the registry, and failures are reported without reverting
+            // the project launch.
+            // slither-disable-next-line unused-return
             try SUCKER_REGISTRY.deploySuckersFor({
                 projectId: projectId,
                 salt: suckerSalt,
@@ -226,9 +230,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             }) returns (
                 address[] memory
             ) {
-            // Intentionally ignore the return value. Suckers are discoverable from the registry.
+            // no-op
             }
             catch (bytes memory reason) {
+                // slither-disable-next-line reentrancy-events
                 emit CTDeployer_SuckerDeploymentFailed({projectId: projectId, salt: suckerSalt, reason: reason});
             }
         }
