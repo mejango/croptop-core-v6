@@ -301,14 +301,19 @@ contract ClaimCollectionOwnershipTest is Test {
         vm.mockCall(address(controller), abi.encodeWithSelector(IJBController.PROJECTS.selector), abi.encode(projects));
         vm.mockCall(address(projects), abi.encodeWithSelector(IJBProjects.count.selector), abi.encode(projectCount));
         vm.mockCall(
+            address(projects),
+            abi.encodeWithSelector(IJBProjects.createFor.selector, address(ctDeployer)),
+            abi.encode(deployedProjectId)
+        );
+        vm.mockCall(
             address(hookDeployer),
             abi.encodeWithSelector(IJB721TiersHookDeployer.deployHookFor.selector),
             abi.encode(IJB721TiersHook(hookAddr))
         );
         vm.mockCall(
             address(controller),
-            abi.encodeWithSelector(IJBController.launchProjectFor.selector),
-            abi.encode(deployedProjectId)
+            abi.encodeWithSelector(IJBController.launchRulesetsFor.selector),
+            abi.encode(uint256(1))
         );
         vm.mockCall(address(projects), abi.encodeWithSelector(IERC721.transferFrom.selector), abi.encode());
     }

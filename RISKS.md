@@ -76,3 +76,7 @@ This is a known race. The mitigation is application-layer ordering and the fact 
 ### 7.3 Project owners can bypass the publisher path while they still have direct hook permissions
 
 `CTDeployer.deployProjectFor` intentionally grants the initial owner enough hook permissions to manage the collection directly. That is part of the trust model until ownership is moved into a narrower surface.
+
+### 7.4 The 5% Croptop fee only applies to new tier creation via `CTPublisher.mintFrom`
+
+Croptop's core value is allowing anyone to **post new items** (create new 721 tiers) to a project's collection by minting the first copy. This posting action can only happen through `CTPublisher.mintFrom`, which collects the 5% fee. Once a tier exists, anyone can mint additional copies of that tier by paying the project's terminal directly — these direct terminal payments do not go through CTPublisher and do not incur the Croptop fee. This is by design: the fee gates content creation (posting new tiers), not minting from existing tiers. Direct terminal payments to mint existing tiers are a standard Juicebox feature and are not restricted.

@@ -43,16 +43,21 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     //*********************************************************************//
 
     error CTDeployer_NotOwnerOfProject(uint256 projectId, address hook, address caller);
+    //*********************************************************************//
+    // ---------------------------- events -------------------------------- //
+    //*********************************************************************//
+
+    event CTDeployer_SuckerDeploymentFailed(uint256 indexed projectId, bytes32 indexed salt, bytes reason);
 
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
 
-    /// @notice Mints ERC-721s that represent Juicebox project ownership and transfers.
-    IJBProjects public immutable override PROJECTS;
-
     /// @notice The deployer to launch Croptop recorded collections from.
     IJB721TiersHookDeployer public immutable override DEPLOYER;
+
+    /// @notice Mints ERC-721s that represent Juicebox project ownership and transfers.
+    IJBProjects public immutable override PROJECTS;
 
     /// @notice The Croptop publisher.
     ICTPublisher public immutable override PUBLISHER;
@@ -95,25 +100,13 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PUBLISHER = publisher;
         SUCKER_REGISTRY = suckerRegistry;
 
-        // Give the sucker registry permission to map tokens for all revnets.
+        // Set permission for the CTPublisher to adjust tiers while the deployer temporarily owns new hooks.
         uint8[] memory permissionIds = new uint8[](1);
-        permissionIds[0] = JBPermissionIds.MAP_SUCKER_TOKEN;
-
-        // Give the operator the permission.
-        // Set up the permission data.
-        JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: address(SUCKER_REGISTRY), projectId: 0, permissionIds: permissionIds});
-
-        // Set the permissions.
-        PERMISSIONS.setPermissionsFor({account: address(this), permissionsData: permissionData});
-
-        // Set permission for the CTPublisher to adjust the tier.
         permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
 
-        // Set permission for the CTPublisher to mint the NFT.
-        permissionData = JBPermissionsData({operator: address(PUBLISHER), projectId: 0, permissionIds: permissionIds});
+        JBPermissionsData memory permissionData =
+            JBPermissionsData({operator: address(PUBLISHER), projectId: 0, permissionIds: permissionIds});
 
-        // Set permission for the CTPublisher to adjust the tier.
         PERMISSIONS.setPermissionsFor({account: address(this), permissionsData: permissionData});
     }
 
@@ -137,7 +130,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
         // Make sure the caller is the owner of the project.
         if (PROJECTS.ownerOf(projectId) != _msgSender()) {
-            revert CTDeployer_NotOwnerOfProject(projectId, address(hook), _msgSender());
+            revert CTDeployer_NotOwnerOfProject({projectId: projectId, hook: address(hook), caller: _msgSender()});
         }
 
         // Transfer the hook's ownership to the project.
@@ -145,9 +138,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     }
 
     /// @notice Deploy a simple project meant to receive posts from Croptop templates.
-    /// @dev The initial project owner is intentionally granted direct hook-management permissions from
-    /// `CTDeployer`. This means the owner/operator can bypass the Croptop publisher path and interact
-    /// with the hook directly if they choose to. That is an explicit product tradeoff.
+    /// @dev The deployed hook remains owned by `CTDeployer` until the project owner claims collection ownership.
+    /// The initial owner is granted direct deployer-scoped hook permissions as a launch-time convenience. Those
+    /// permissions can bypass Croptop's publisher surface until ownership is claimed away from the deployer.
     /// @param owner The address that'll own the project.
     /// @param projectConfig The configuration for the project.
     /// @param suckerDeploymentConfiguration The configuration for the suckers to deploy.
@@ -170,8 +163,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         rulesetConfigurations[0].weight = 1_000_000 * (10 ** 18);
         rulesetConfigurations[0].metadata.baseCurrency = JBCurrencyIds.ETH;
 
-        // Get the next project ID.
-        projectId = PROJECTS.count() + 1;
+        // Reserve the project ID up front so permissionless project creations cannot invalidate hook deployment.
+        projectId = PROJECTS.createFor(address(this));
 
         // Deploy a blank project.
         // slither-disable-next-line reentrancy-benign
@@ -202,17 +195,15 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         rulesetConfigurations[0].metadata.useDataHookForPay = true;
         rulesetConfigurations[0].metadata.useDataHookForCashOut = true;
 
-        // Launch the project, and sanity check the project ID.
-        assert(
-            projectId
-                == controller.launchProjectFor({
-                    owner: address(this),
-                    projectUri: projectConfig.projectUri,
-                    rulesetConfigurations: rulesetConfigurations,
-                    terminalConfigurations: projectConfig.terminalConfigurations,
-                    memo: "Deployed from Croptop"
-                })
-        );
+        // Launch the rulesets for the reserved project.
+        // slither-disable-next-line unused-return
+        controller.launchRulesetsFor({
+            projectId: projectId,
+            projectUri: projectConfig.projectUri,
+            rulesetConfigurations: rulesetConfigurations,
+            terminalConfigurations: projectConfig.terminalConfigurations,
+            memo: "Deployed from Croptop"
+        });
 
         // Set the data hook for the project.
         dataHookOf[projectId] = IJBRulesetDataHook(hook);
@@ -227,23 +218,32 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         // intentionally ordered. If both deployers fail, the deployment proceeds without suckers rather than reverting,
         // allowing projects to launch on unsupported chains with manual sucker setup later.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
+            bytes32 suckerSalt = keccak256(abi.encode(suckerDeploymentConfiguration.salt, _msgSender()));
+
+            // Successful deployments are discoverable from the registry, and failures are reported without reverting
+            // the project launch.
             // slither-disable-next-line unused-return
-            SUCKER_REGISTRY.deploySuckersFor({
+            try SUCKER_REGISTRY.deploySuckersFor({
                 projectId: projectId,
-                salt: keccak256(abi.encode(suckerDeploymentConfiguration.salt, _msgSender())),
+                salt: suckerSalt,
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
-            });
+            }) returns (
+                address[] memory
+            ) {
+            // no-op
+            }
+            catch (bytes memory reason) {
+                // slither-disable-next-line reentrancy-events
+                emit CTDeployer_SuckerDeploymentFailed({projectId: projectId, salt: suckerSalt, reason: reason});
+            }
         }
 
-        //transfer to _owner.
+        // Transfer the project NFT to its intended owner.
         PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
 
-        // Set permission for the project's owner to do all the NFT things.
-        // These permissions are granted from CTDeployer (address(this)) to the initial owner.
-        // The hook checks permissions against hook.owner(), which after claimCollectionOwnershipOf() resolves
-        // dynamically via PROJECTS.ownerOf(projectId). Before claiming, CTDeployer is the static hook owner,
-        // so these permissions allow the project owner to manage tiers through CTDeployer. As a tradeoff,
-        // the owner can also bypass the Croptop publisher surface until ownership is claimed away.
+        // Give the initial project owner direct collection-control permissions while CTDeployer remains the hook's
+        // owner. This preserves the documented Croptop launch tradeoff: the owner can manage the collection directly
+        // before calling `claimCollectionOwnershipOf(...)`, after which hook permissions follow the project NFT owner.
         uint8[] memory permissionIds = new uint8[](4);
         permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
         permissionIds[1] = JBPermissionIds.SET_721_METADATA;
@@ -253,7 +253,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(owner),
+                operator: owner,
                 // forge-lint: disable-next-line(unsafe-typecast)
                 projectId: uint64(projectId),
                 permissionIds: permissionIds
@@ -272,12 +272,13 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         external
         returns (address[] memory suckers)
     {
-        // Enforce permissions.
-        _requirePermissionFrom({
-            account: PROJECTS.ownerOf(projectId), projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS
-        });
+        address owner = PROJECTS.ownerOf(projectId);
 
-        // Deploy the suckers.
+        // First prove the external caller is allowed to request sucker deployment for the project owner.
+        _requirePermissionFrom({account: owner, projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS});
+
+        // Deploy the suckers. The sucker registry performs its own permission check against this forwarding helper,
+        // so an unapproved CTDeployer fails at the downstream registry boundary without an extra preflight read here.
         // slither-disable-next-line unused-return
         suckers = SUCKER_REGISTRY.deploySuckersFor({
             projectId: projectId,

@@ -43,6 +43,11 @@ contract MockProjects {
         return countValue;
     }
 
+    function createFor(address owner_) external returns (uint256 projectId) {
+        projectId = ++countValue;
+        ownerOfProject = owner_;
+    }
+
     function ownerOf(uint256) external view returns (address) {
         return ownerOfProject;
     }
@@ -62,18 +67,18 @@ contract MockController {
         nextProjectId = nextProjectId_;
     }
 
-    function launchProjectFor(
-        address,
+    function launchRulesetsFor(
+        uint256 projectId,
         string calldata,
         JBRulesetConfig[] calldata,
         JBTerminalConfig[] calldata,
         string calldata
     )
         external
-        view
+        pure
         returns (uint256)
     {
-        return nextProjectId;
+        return projectId;
     }
 }
 
