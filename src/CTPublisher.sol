@@ -432,7 +432,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param posts An array of posts that should be published as NFTs to the specified project.
     /// @return tiersToAdd The tiers that will be created to represent the posts.
     /// @return tierIdsToMint The tier IDs of the posts that should be minted once published.
-    /// @return totalPrice The total price being paid.
+    /// @return totalPrice The total price to pay.
     function _setupPosts(
         IJB721TiersHook hook,
         CTPost[] memory posts
