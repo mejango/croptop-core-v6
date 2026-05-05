@@ -86,7 +86,7 @@ contract ForkTest is Test {
 
     function setUp() public {
         // Fork ETH mainnet.
-        vm.createSelectFork("ethereum");
+        vm.createSelectFork("ethereum", 22_400_000);
 
         // Deploy all JB core contracts fresh within the fork.
         _deployJBCore();
