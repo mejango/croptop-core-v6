@@ -36,7 +36,11 @@ import {CTDeployerAllowedPost} from "./structs/CTDeployerAllowedPost.sol";
 import {CTProjectConfig} from "./structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "./structs/CTSuckerDeploymentConfig.sol";
 
-/// @notice A contract that facilitates deploying a simple Juicebox project to receive posts from Croptop templates.
+/// @notice Deploys Juicebox projects pre-configured for Croptop — a permissionless NFT publishing system. Each
+/// deployed project gets a tiered 721 hook (for minting posted NFTs), an optional set of cross-chain suckers, and this
+/// contract set as the data hook so suckers get 0% cash-out tax and mint permission. The hook initially remains owned
+/// by this deployer (allowing the publisher to add tiers); the project owner can later claim full hook ownership via
+/// `claimCollectionOwnershipOf`.
 contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC721Receiver, ICTDeployer {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
@@ -291,8 +295,10 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
-    /// @notice Allow cash outs from suckers without a tax.
-    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a cash out.
+    /// @notice Called before a cash out is recorded. Grants suckers 0% tax so bridged tokens redeem at full value.
+    /// For non-sucker holders, delegates to the project's stored data hook (if any) or passes through the original
+    /// context values.
+    /// @dev Part of `IJBRulesetDataHook`.
     /// @param context Standard Juicebox cash out context. See `JBBeforeCashOutRecordedContext`.
     /// @return cashOutTaxRate The cash out tax rate, which influences the amount of terminal tokens which get cashed
     /// out.
@@ -332,8 +338,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         return hook.beforeCashOutRecordedWith(context);
     }
 
-    /// @notice Forward the call to the original data hook.
-    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a payment.
+    /// @notice Called before a payment is recorded. Delegates to the project's stored data hook (the 721 hook) so NFT
+    /// tier minting logic runs. If no hook is set, passes through the original weight.
+    /// @dev Part of `IJBRulesetDataHook`.
     /// @param context Standard Juicebox payment context. See `JBBeforePayRecordedContext`.
     /// @return weight The weight which project tokens are minted relative to. This can be used to customize how many
     /// tokens get minted by a payment.
@@ -355,8 +362,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         return hook.beforePayRecordedWith(context);
     }
 
-    /// @notice A flag indicating whether an address has permission to mint a project's tokens on-demand.
-    /// @dev A project's data hook can allow any address to mint its tokens.
+    /// @notice Returns whether an address may mint a project's tokens on-demand. Only suckers get this permission, so
+    /// bridged tokens can be minted on the destination chain.
+    /// @dev Part of `IJBRulesetDataHook`.
     /// @param projectId The ID of the project whose token can be minted.
     /// @param addr The address to check the token minting permission of.
     /// @return flag A flag indicating whether the address has permission to mint the project's tokens on-demand.

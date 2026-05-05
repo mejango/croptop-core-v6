@@ -10,10 +10,12 @@ import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.
 import {ICTProjectOwner} from "./interfaces/ICTProjectOwner.sol";
 import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
 
-/// @notice A contract that can be sent a project to be burned, while still allowing croptop posts.
-/// @dev This contract does not expose any function to reconfigure posting criteria. This is by design: posting
-/// criteria are set before transferring the project here, and become immutable once ownership is transferred.
-/// The project owner should configure all desired posting criteria before sending the project NFT to this contract.
+/// @notice A dead-end owner for Juicebox projects that locks ownership while preserving Croptop posting. When a project
+/// NFT is transferred to this contract via `safeTransferFrom`, it automatically grants the Croptop publisher
+/// `ADJUST_721_TIERS` permission so posts can continue. The project can never be transferred out again — effectively
+/// burning ownership while keeping the collection alive.
+/// @dev This contract does not expose any function to reconfigure posting criteria. Criteria are set before
+/// transferring the project here and become immutable once ownership is transferred.
 contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //

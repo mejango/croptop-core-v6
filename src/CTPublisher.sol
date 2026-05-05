@@ -21,7 +21,11 @@ import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
 import {CTAllowedPost} from "./structs/CTAllowedPost.sol";
 import {CTPost} from "./structs/CTPost.sol";
 
-/// @notice A contract that facilitates the permissioned publishing of NFT posts to a Juicebox project.
+/// @notice The Croptop publishing engine. Allows anyone to publish NFT posts to a Juicebox project's 721 hook, subject
+/// to per-category posting criteria set by the collection owner (minimum price, supply bounds, allowlist, max split
+/// percent). On each mint, the publisher creates new 721 tiers, routes a 5% fee to the fee project, and pays the
+/// remainder into the project's terminal. Duplicate IPFS URIs are tracked so subsequent mints of the same content reuse
+/// the existing tier rather than creating a new one.
 contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
@@ -109,7 +113,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // ---------------------- external transactions ---------------------- //
     //*********************************************************************//
 
-    /// @notice Collection owners can set the allowed criteria for publishing a new NFT to their project.
+    /// @notice Lets collection owners define the rules for what can be posted in each category — minimum price,
+    /// supply
+    /// bounds, maximum split percent, and an optional allowlist of addresses. Each call replaces the existing criteria
+    /// for the specified categories.
     /// @param allowedPosts An array of criteria for allowed posts.
     // Categories cannot be fully disabled after creation. This is by design — once a category is
     // created, removing posting would break expectations for existing posters. Projects can set restrictive
@@ -171,8 +178,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         }
     }
 
-    /// @notice Publish an NFT to become mintable, and mint a first copy.
-    /// @dev A fee is taken into the appropriate treasury.
+    /// @notice Publish one or more NFT posts to a project's 721 hook and mint a first copy of each. For each new post,
+    /// a tier is created on the hook. A 5% fee (1/FEE_DIVISOR) is taken from the total tier prices and routed to the
+    /// fee
+    /// project; the remainder is paid into the project's terminal, minting NFTs for the beneficiary.
+    /// @dev Reverts if any post violates the category's configured allowance (price, supply, split, allowlist).
     /// @param hook The hook to mint from.
     /// @param posts An array of posts that should be published as NFTs to the specified project.
     /// @param nftBeneficiary The beneficiary of the NFT mints.
