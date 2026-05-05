@@ -63,7 +63,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @notice Mints ERC-721s that represent Juicebox project ownership and transfers.
     IJBProjects public immutable override PROJECTS;
 
-    /// @notice The Croptop publisher.
+    /// @notice The Croptop publisher contract that manages post allowances and content rules.
     ICTPublisher public immutable override PUBLISHER;
 
     /// @notice Deploys and tracks suckers for projects.
