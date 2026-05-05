@@ -27,7 +27,7 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     /// @notice The contract from which project are minted.
     IJBProjects public immutable override PROJECTS;
 
-    /// @notice The Croptop publisher.
+    /// @notice The Croptop publisher contract that manages post allowances and content rules.
     ICTPublisher public immutable override PUBLISHER;
 
     //*********************************************************************//

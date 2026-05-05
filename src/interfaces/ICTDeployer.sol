@@ -19,7 +19,7 @@ interface ICTDeployer {
     /// @return The projects contract.
     function PROJECTS() external view returns (IJBProjects);
 
-    /// @notice The Croptop publisher that manages posting criteria and minting.
+    /// @notice The CTPublisher contract used to mint NFTs from submitted posts.
     /// @return The publisher contract.
     function PUBLISHER() external view returns (ICTPublisher);
 

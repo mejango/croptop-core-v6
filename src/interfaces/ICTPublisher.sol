@@ -57,7 +57,7 @@ interface ICTPublisher {
             address[] memory allowedAddresses
         );
 
-    /// @notice The directory that contains the projects being posted to.
+    /// @notice The directory that contains the projects to post to.
     /// @return The directory contract.
     function DIRECTORY() external view returns (IJBDirectory);
 
