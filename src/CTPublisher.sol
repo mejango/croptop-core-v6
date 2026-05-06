@@ -190,14 +190,12 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param additionalPayMetadata Metadata bytes that should be included in the pay function's metadata. This
     /// prepends the
     /// payload needed for NFT creation.
-    /// @param feeMetadata The metadata to send alongside the fee payment.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
         address nftBeneficiary,
         address feeBeneficiary,
-        bytes calldata additionalPayMetadata,
-        bytes calldata feeMetadata
+        bytes calldata additionalPayMetadata
     )
         external
         payable
@@ -322,7 +320,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 beneficiary: feeBeneficiary,
                 minReturnedTokens: 0,
                 memo: "",
-                metadata: feeMetadata
+                metadata: ""
             }) {}
             catch {
                 // slither-disable-next-line low-level-calls

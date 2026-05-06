@@ -93,14 +93,12 @@ interface ICTPublisher {
     /// @param nftBeneficiary The beneficiary of the NFT mints.
     /// @param feeBeneficiary The beneficiary of the fee project's tokens.
     /// @param additionalPayMetadata Extra metadata bytes to include in the payment.
-    /// @param feeMetadata Metadata to send alongside the fee payment.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
         address nftBeneficiary,
         address feeBeneficiary,
-        bytes calldata additionalPayMetadata,
-        bytes calldata feeMetadata
+        bytes calldata additionalPayMetadata
     )
         external
         payable;
