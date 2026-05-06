@@ -102,8 +102,8 @@ contract ForkTest is Test {
         deployer = new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, trustedForwarder);
     }
 
-    function testDeployProject(address owner) public {
-        vm.assume(owner != address(0) && owner.code.length == 0);
+    function testDeployProject() public {
+        address owner = makeAddr("project owner");
 
         // Create the project config.
         CTProjectConfig memory config = CTProjectConfig({
