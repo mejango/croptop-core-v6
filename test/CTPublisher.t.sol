@@ -428,7 +428,7 @@ contract TestCTPublisher is Test {
                 CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 600_000_000, 500_000_000
             )
         );
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     function test_mintFrom_splitPercentExactlyAtLimit_succeeds() public {
@@ -447,7 +447,7 @@ contract TestCTPublisher is Test {
 
         // Should pass validation. May revert downstream in mock, but NOT with split percent error.
         vm.prank(poster);
-        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -478,7 +478,7 @@ contract TestCTPublisher is Test {
 
         // splitPercent=0 should always be allowed (0 <= 0).
         vm.prank(poster);
-        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -507,7 +507,7 @@ contract TestCTPublisher is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 1, 0));
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     function test_mintFrom_splitPercentWithinLimit_passesValidation() public {
@@ -536,7 +536,7 @@ contract TestCTPublisher is Test {
 
         // Should pass split validation.
         vm.prank(poster);
-        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -577,10 +577,10 @@ contract TestCTPublisher is Test {
                     CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, postSplitPercent, maxSplitPercent
                 )
             );
-            publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+            publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
         } else {
             vm.prank(poster);
-            try publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+            try publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
             catch (bytes memory reason) {
                 assertTrue(
                     keccak256(reason)
@@ -664,7 +664,7 @@ contract TestCTPublisher is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether + fee, 0.04 ether)
         );
-        publisher.mintFrom{value: 0.04 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.04 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     function test_mintFrom_exactPriceNoFee_reverts() public {
@@ -685,7 +685,7 @@ contract TestCTPublisher is Test {
         // After fee deduction: payValue = 1 - 0.05 = 0.95, which is < totalPrice (1).
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether, 1 ether));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     function test_mintFrom_exactPricePlusFee_succeeds() public {
@@ -705,7 +705,7 @@ contract TestCTPublisher is Test {
         // Send exactly 1.05 ether (price + fee). Should not revert with InsufficientEthSent.
         uint256 fee = 1 ether / 20;
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+        try publisher.mintFrom{value: 1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
         catch (bytes memory reason) {
             assertTrue(
                 // forge-lint: disable-next-line(unsafe-typecast)
@@ -759,7 +759,7 @@ contract TestCTPublisher is Test {
 
         // Send exactly the price with no fee. Should not revert with InsufficientEthSent.
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(feeHook), posts, poster, poster, "", "") {}
+        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(feeHook), posts, poster, poster, "") {}
         catch (bytes memory reason) {
             assertTrue(
                 // forge-lint: disable-next-line(unsafe-typecast)
@@ -830,7 +830,7 @@ contract TestCTPublisher is Test {
 
         uint256 fee = 0.1 ether / 20;
         vm.prank(poster);
-        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     function test_mintFrom_multiplePostsDifferentSplits() public {
@@ -864,6 +864,6 @@ contract TestCTPublisher is Test {
                 CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 600_000_000, 500_000_000
             )
         );
-        publisher.mintFrom{value: 0.4 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.4 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 }

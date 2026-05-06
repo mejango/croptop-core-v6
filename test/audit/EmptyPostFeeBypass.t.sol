@@ -35,7 +35,7 @@ contract M24_EmptyPostFeeBypass is Test {
 
         vm.prank(poster);
         vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, "", "");
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, "");
     }
 
     /// @notice mintFrom with empty posts and crafted additionalPayMetadata should still revert.
@@ -48,6 +48,6 @@ contract M24_EmptyPostFeeBypass is Test {
 
         vm.prank(poster);
         vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, craftedMetadata, "");
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, craftedMetadata);
     }
 }

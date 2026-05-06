@@ -115,7 +115,7 @@ contract L52_StaleTierIdMapping is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
 
         // Verify tier ID 1 was stored in the mapping.
         assertEq(
@@ -145,7 +145,7 @@ contract L52_StaleTierIdMapping is Test {
         // Second mint with the same URI should succeed (creating a new tier),
         // because the fix detects the stale mapping and clears it.
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
 
         // Verify the mapping now points to the new tier ID (2).
         assertEq(
@@ -208,7 +208,7 @@ contract L52_StaleTierIdMapping is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
 
         assertEq(publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI), 1);
 
@@ -216,7 +216,7 @@ contract L52_StaleTierIdMapping is Test {
         _setupMintMocks(1);
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
 
         // Mapping should still point to tier 1.
         assertEq(

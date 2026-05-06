@@ -125,7 +125,7 @@ contract M6_DuplicateUriFeeEvasion is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, duplicateUri));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     // =========================================================================
@@ -167,7 +167,7 @@ contract M6_DuplicateUriFeeEvasion is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, duplicateUri));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     // =========================================================================
@@ -200,7 +200,7 @@ contract M6_DuplicateUriFeeEvasion is Test {
         // Should not revert with CTPublisher_DuplicatePost.
         // May succeed fully or revert downstream in mocks, but never with the duplicate error.
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
         catch (bytes memory reason) {
             // Ensure it did NOT revert with CTPublisher_DuplicatePost.
             assertTrue(
@@ -239,7 +239,7 @@ contract M6_DuplicateUriFeeEvasion is Test {
         });
 
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -289,12 +289,12 @@ contract M6_DuplicateUriFeeEvasion is Test {
             // Must revert with duplicate error.
             vm.prank(poster);
             vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, uri1));
-            publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "");
+            publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
         } else {
             // Must NOT revert with duplicate error. May still revert for other reasons
             // (e.g. mocked terminal behavior), but not CTPublisher_DuplicatePost.
             vm.prank(poster);
-            try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "", "") {}
+            try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
             catch (bytes memory reason) {
                 assertTrue(
                     keccak256(reason)

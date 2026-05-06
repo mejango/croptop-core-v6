@@ -253,9 +253,7 @@ contract Pass12FixesTest is Test {
 
         vm.prank(poster);
         vm.expectRevert(CTPublisher.CTPublisher_DuplicatePayMetadata.selector);
-        publisher.mintFrom{value: 1.05 ether}(
-            IJB721TiersHook(address(hook)), posts, poster, poster, shadowingMetadata, ""
-        );
+        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, shadowingMetadata);
     }
 
     /// @notice Empty additionalPayMetadata should NOT revert.
@@ -272,7 +270,7 @@ contract Pass12FixesTest is Test {
 
         // Empty metadata — should succeed.
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "");
 
         assertEq(
             publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "tier should be created with empty metadata"
@@ -299,9 +297,7 @@ contract Pass12FixesTest is Test {
         bytes memory unrelatedMetadata = JBMetadataResolver.createMetadata(ids, datas);
 
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(
-            IJB721TiersHook(address(hook)), posts, poster, poster, unrelatedMetadata, ""
-        );
+        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, unrelatedMetadata);
 
         assertEq(
             publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A),
@@ -383,6 +379,6 @@ contract Pass12FixesTest is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "", "");
+        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "");
     }
 }

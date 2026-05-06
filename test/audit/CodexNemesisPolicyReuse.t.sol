@@ -82,7 +82,7 @@ contract CodexNemesisPolicyReuseTest is Test {
         CTPost[] memory initialPosts = _singlePost();
 
         vm.prank(alice);
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "", "");
+        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "");
 
         assertEq(publisher.tierIdForEncodedIPFSUriOf(hookAddr, URI), 1, "initial publish should store tier id");
 
@@ -104,7 +104,7 @@ contract CodexNemesisPolicyReuseTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NotInAllowList.selector, alice, _asArray(bob)));
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), blockedNewUri, alice, alice, "", "");
+        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), blockedNewUri, alice, alice, "");
 
         JB721Tier memory existingTier = JB721Tier({
             id: 1,
@@ -135,7 +135,7 @@ contract CodexNemesisPolicyReuseTest is Test {
         );
 
         vm.prank(alice);
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "", "");
+        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "");
     }
 
     function _configureAllowlist(address allowedPoster) internal {

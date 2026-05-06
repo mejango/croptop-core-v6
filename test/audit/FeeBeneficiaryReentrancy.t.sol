@@ -177,7 +177,7 @@ contract ReentrantProjectTerminal {
                 splits: new JBSplit[](0)
             });
 
-            publisher.mintFrom{value: 21}(hook, posts, address(this), attackerFeeBeneficiary, bytes(""), bytes(""));
+            publisher.mintFrom{value: 21}(hook, posts, address(this), attackerFeeBeneficiary, bytes(""));
         }
 
         return 0;
@@ -234,7 +234,7 @@ contract FeeBeneficiaryReentrancyTest is Test {
         });
 
         publisher.mintFrom{value: 105}(
-            IJB721TiersHook(address(hook)), posts, address(this), victimFeeBeneficiary, bytes(""), bytes("")
+            IJB721TiersHook(address(hook)), posts, address(this), victimFeeBeneficiary, bytes("")
         );
 
         // With the fix, fee amounts are pinned before external calls, so both inner and outer fees

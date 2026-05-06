@@ -190,7 +190,7 @@ contract CodexNemesisMetadataShadowTest is Test {
         // H-26 FIX: metadata shadow attack now reverts instead of succeeding.
         vm.expectRevert(CTPublisher.CTPublisher_DuplicatePayMetadata.selector);
         publisher.mintFrom{value: 105}(
-            IJB721TiersHook(address(hook)), posts, address(this), address(this), shadowingMetadata, ""
+            IJB721TiersHook(address(hook)), posts, address(this), address(this), shadowingMetadata
         );
     }
 }

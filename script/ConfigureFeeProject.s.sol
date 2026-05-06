@@ -355,19 +355,22 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     function deploy() public sphinx {
         FeeProjectConfig memory feeProjectConfig = getCroptopRevnetConfig();
 
-        // Approve the basic deployer to configure the project and transfer it.
-        core.projects.approve({to: address(revnet.basic_deployer), tokenId: FEE_PROJECT_ID});
+        // Only deploy if the project hasn't already been configured (restart-safe).
+        if (address(core.directory.controllerOf(FEE_PROJECT_ID)) == address(0)) {
+            // Approve the basic deployer to configure the project and transfer it.
+            core.projects.approve({to: address(revnet.basic_deployer), tokenId: FEE_PROJECT_ID});
 
-        // Deploy the NANA fee project.
-        revnet.basic_deployer
-            .deployFor({
-                revnetId: FEE_PROJECT_ID,
-                configuration: feeProjectConfig.configuration,
-                terminalConfigurations: feeProjectConfig.terminalConfigurations,
-                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
-                tiered721HookConfiguration: feeProjectConfig.hookConfiguration,
-                allowedPosts: feeProjectConfig.allowedPosts
-            });
+            // Deploy the NANA fee project.
+            revnet.basic_deployer
+                .deployFor({
+                    revnetId: FEE_PROJECT_ID,
+                    configuration: feeProjectConfig.configuration,
+                    terminalConfigurations: feeProjectConfig.terminalConfigurations,
+                    suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
+                    tiered721HookConfiguration: feeProjectConfig.hookConfiguration,
+                    allowedPosts: feeProjectConfig.allowedPosts
+                });
+        }
     }
 
     function _isDeployed(

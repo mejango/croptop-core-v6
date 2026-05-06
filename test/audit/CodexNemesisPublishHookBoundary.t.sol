@@ -193,7 +193,7 @@ contract CodexNemesisPublishHookBoundaryTest is Test {
         });
 
         publisher.mintFrom{value: price + fee}(
-            IJB721TiersHook(address(hook)), posts, beneficiary, address(0xFEE), bytes(""), bytes("")
+            IJB721TiersHook(address(hook)), posts, beneficiary, address(0xFEE), bytes("")
         );
 
         assertEq(hook.adjustedTiers(), 1, "tier was created");

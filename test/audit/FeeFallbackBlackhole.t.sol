@@ -147,7 +147,7 @@ contract RejectingMintCaller {
         external
         payable
     {
-        publisher.mintFrom{value: msg.value}(hook, posts, nftBeneficiary, feeBeneficiary, bytes(""), bytes(""));
+        publisher.mintFrom{value: msg.value}(hook, posts, nftBeneficiary, feeBeneficiary, bytes(""));
     }
 
     receive() external payable {
@@ -166,7 +166,7 @@ contract AcceptingMintCaller {
         external
         payable
     {
-        publisher.mintFrom{value: msg.value}(hook, posts, nftBeneficiary, feeBeneficiary, bytes(""), bytes(""));
+        publisher.mintFrom{value: msg.value}(hook, posts, nftBeneficiary, feeBeneficiary, bytes(""));
     }
 
     receive() external payable {}

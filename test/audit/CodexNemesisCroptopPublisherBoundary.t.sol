@@ -223,7 +223,6 @@ contract CodexNemesisCroptopPublisherBoundaryTest is Test {
             _singlePost({uri: URI_A, price: 1 ether, category: 1}),
             unrestrictedPoster,
             unrestrictedPoster,
-            "",
             ""
         );
 
@@ -234,7 +233,7 @@ contract CodexNemesisCroptopPublisherBoundaryTest is Test {
 
         vm.prank(outsider);
         publisher.mintFrom{value: 2 ether}(
-            IJB721TiersHook(address(hook)), _singlePost({uri: URI_A, price: 0, category: 1}), outsider, outsider, "", ""
+            IJB721TiersHook(address(hook)), _singlePost({uri: URI_A, price: 0, category: 1}), outsider, outsider, ""
         );
 
         // The outsider's second call succeeds because existing-tier reuse skips the allowlist and price checks.
@@ -260,7 +259,6 @@ contract CodexNemesisCroptopPublisherBoundaryTest is Test {
             _singlePost({uri: URI_A, price: 1 ether, category: 1}),
             unrestrictedPoster,
             unrestrictedPoster,
-            "",
             ""
         );
 
@@ -284,7 +282,6 @@ contract CodexNemesisCroptopPublisherBoundaryTest is Test {
             _singlePost({uri: URI_B, price: 1 ether, category: 1}),
             unrestrictedPoster,
             unrestrictedPoster,
-            "",
             ""
         );
 

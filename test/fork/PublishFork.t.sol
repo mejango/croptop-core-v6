@@ -187,7 +187,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Mint.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "", "");
+        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
 
         // Verify NFT was minted to the beneficiary.
         uint256 balanceAfter = IERC721(address(testHook)).balanceOf(nftBeneficiary);
@@ -209,7 +209,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Mint.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "", "");
+        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
 
         // Verify fee project terminal balance increased by the fee amount.
         uint256 feeProjectBalanceAfter =
@@ -239,7 +239,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: insufficientValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "", "");
+        publisher.mintFrom{value: insufficientValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
     }
 
     /// @notice Verify that minting the same encodedIPFSUri twice reuses the existing tier ID.
@@ -251,7 +251,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // First mint.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "", "");
+        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
 
         // Record the tier ID assigned to this URI after the first mint.
         uint256 tierIdAfterFirst = publisher.tierIdForEncodedIPFSUriOf(address(testHook), TEST_URI);
@@ -259,7 +259,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Second mint with the same URI. The existing tier should be reused.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "", "");
+        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
 
         // Verify the tier ID is unchanged — no new tier was created.
         uint256 tierIdAfterSecond = publisher.tierIdForEncodedIPFSUriOf(address(testHook), TEST_URI);
