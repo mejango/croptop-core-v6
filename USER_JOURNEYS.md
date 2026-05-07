@@ -8,7 +8,7 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 - project owners creating a Croptop publishing surface
 - publishers minting posts into an existing Croptop project
-- reviewers reviewing fee routing, posting policy, and owner-lock semantics
+- auditors reviewing fee routing, posting policy, and owner-lock semantics
 
 ## Key Surfaces
 
@@ -37,7 +37,7 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 **Failure Modes**
 
 - category rules do not match the intended publishing product
-- teams assume Croptop replaces the need to review the underlying 721 hook
+- teams assume Croptop replaces the need to audit the underlying 721 hook
 
 **Postconditions**
 
