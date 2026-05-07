@@ -146,9 +146,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Make sure the minimum supply does not surpass the maximum supply.
             if (allowedPost.minimumTotalSupply > allowedPost.maximumTotalSupply) {
-                revert CTPublisher_MaxTotalSupplyLessThanMin(
-                    allowedPost.minimumTotalSupply, allowedPost.maximumTotalSupply
-                );
+                revert CTPublisher_MaxTotalSupplyLessThanMin({
+                    min: allowedPost.minimumTotalSupply, max: allowedPost.maximumTotalSupply
+                });
             }
 
             uint256 packed;
@@ -226,7 +226,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
                 // Make sure enough ETH was sent to cover the fee.
                 if (payValue < fee) {
-                    revert CTPublisher_InsufficientEthSent(totalPrice + fee, msg.value);
+                    revert CTPublisher_InsufficientEthSent({expected: totalPrice + fee, sent: msg.value});
                 }
 
                 payValue -= fee;
@@ -234,7 +234,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Make sure the amount sent to this function is at least the specified price of the tier plus the fee.
             if (totalPrice > payValue) {
-                revert CTPublisher_InsufficientEthSent(totalPrice, msg.value);
+                revert CTPublisher_InsufficientEthSent({expected: totalPrice, sent: msg.value});
             }
 
             // Add the new tiers.
@@ -456,13 +456,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // Make sure the post includes an encodedIPFSUri.
             // forge-lint: disable-next-line(unsafe-typecast)
             if (post.encodedIPFSUri == bytes32("")) {
-                revert CTPublisher_EmptyEncodedIPFSUri(i);
+                revert CTPublisher_EmptyEncodedIPFSUri({postIndex: i});
             }
 
             // Check for duplicate encodedIPFSUri within the same batch to prevent fee evasion.
             for (uint256 j; j < i;) {
                 if (posts[j].encodedIPFSUri == post.encodedIPFSUri) {
-                    revert CTPublisher_DuplicatePost(post.encodedIPFSUri);
+                    revert CTPublisher_DuplicatePost({encodedIPFSUri: post.encodedIPFSUri});
                 }
                 unchecked {
                     ++j;
@@ -514,29 +514,35 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
                     // Make sure the price being paid for the post is at least the allowed minimum price.
                     if (post.price < minimumPrice) {
-                        revert CTPublisher_PriceTooSmall(post.price, minimumPrice);
+                        revert CTPublisher_PriceTooSmall({price: post.price, minimumPrice: minimumPrice});
                     }
 
                     // Make sure the total supply being made available for the post is at least the allowed minimum
                     // total supply.
                     if (post.totalSupply < minimumTotalSupply) {
-                        revert CTPublisher_TotalSupplyTooSmall(post.totalSupply, minimumTotalSupply);
+                        revert CTPublisher_TotalSupplyTooSmall({
+                            totalSupply: post.totalSupply, minimumTotalSupply: minimumTotalSupply
+                        });
                     }
 
                     // Make sure the total supply being made available for the post is at most the allowed maximum total
                     // supply.
                     if (post.totalSupply > maximumTotalSupply) {
-                        revert CTPublisher_TotalSupplyTooBig(post.totalSupply, maximumTotalSupply);
+                        revert CTPublisher_TotalSupplyTooBig({
+                            totalSupply: post.totalSupply, maximumTotalSupply: maximumTotalSupply
+                        });
                     }
 
                     // Make sure the split percent is within the allowed maximum.
                     if (post.splitPercent > maximumSplitPercent) {
-                        revert CTPublisher_SplitPercentExceedsMaximum(post.splitPercent, maximumSplitPercent);
+                        revert CTPublisher_SplitPercentExceedsMaximum({
+                            splitPercent: post.splitPercent, maximumSplitPercent: maximumSplitPercent
+                        });
                     }
 
                     // Make sure the address is allowed to post.
                     if (addresses.length != 0 && !_isAllowed({addrs: _msgSender(), addresses: addresses})) {
-                        revert CTPublisher_NotInAllowList(_msgSender(), addresses);
+                        revert CTPublisher_NotInAllowList({addr: _msgSender(), allowedAddresses: addresses});
                     }
                 }
 
