@@ -16,7 +16,7 @@ import {CTDeployer} from "../../src/CTDeployer.sol";
 import {ICTPublisher} from "../../src/interfaces/ICTPublisher.sol";
 import {CTSuckerDeploymentConfig} from "../../src/structs/CTSuckerDeploymentConfig.sol";
 
-contract NemesisPermissions is IJBPermissions {
+contract RegressionPermissions is IJBPermissions {
     mapping(
         address operator
             => mapping(address account => mapping(uint256 projectId => mapping(uint256 permissionId => bool)))
@@ -89,7 +89,7 @@ contract NemesisPermissions is IJBPermissions {
     }
 }
 
-contract NemesisProjects {
+contract RegressionProjects {
     mapping(uint256 projectId => address owner) internal _ownerOf;
 
     function setOwner(uint256 projectId, address owner) external {
@@ -101,13 +101,13 @@ contract NemesisProjects {
     }
 }
 
-contract NemesisPermissionCheckingSuckerRegistry {
+contract RegressionPermissionCheckingSuckerRegistry {
     error RegistryUnauthorized(address operator, address account, uint256 projectId);
 
-    NemesisPermissions internal immutable _permissions;
-    NemesisProjects internal immutable _projects;
+    RegressionPermissions internal immutable _permissions;
+    RegressionProjects internal immutable _projects;
 
-    constructor(NemesisPermissions permissions, NemesisProjects projects) {
+    constructor(RegressionPermissions permissions, RegressionProjects projects) {
         _permissions = permissions;
         _projects = projects;
     }
@@ -133,17 +133,17 @@ contract NemesisPermissionCheckingSuckerRegistry {
     }
 }
 
-contract CodexNemesisSuckerWrapperTest is Test {
+contract RegressionSuckerWrapperTest is Test {
     function testProjectOwnerCannotUseCTDeployerDeploySuckersWithoutGrantingTheWrapper() external {
         uint256 projectId = 7;
         address owner = address(0xA11CE);
 
-        NemesisPermissions permissions = new NemesisPermissions();
-        NemesisProjects projects = new NemesisProjects();
+        RegressionPermissions permissions = new RegressionPermissions();
+        RegressionProjects projects = new RegressionProjects();
         projects.setOwner(projectId, owner);
 
-        NemesisPermissionCheckingSuckerRegistry registry =
-            new NemesisPermissionCheckingSuckerRegistry(permissions, projects);
+        RegressionPermissionCheckingSuckerRegistry registry =
+            new RegressionPermissionCheckingSuckerRegistry(permissions, projects);
 
         CTDeployer deployer = new CTDeployer({
             permissions: permissions,
@@ -163,7 +163,7 @@ contract CodexNemesisSuckerWrapperTest is Test {
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                NemesisPermissionCheckingSuckerRegistry.RegistryUnauthorized.selector,
+                RegressionPermissionCheckingSuckerRegistry.RegistryUnauthorized.selector,
                 address(deployer),
                 owner,
                 projectId

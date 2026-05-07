@@ -28,7 +28,7 @@ import {CTDeployerAllowedPost} from "../../src/structs/CTDeployerAllowedPost.sol
 import {CTProjectConfig} from "../../src/structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "../../src/structs/CTSuckerDeploymentConfig.sol";
 
-contract NemesisMockProjects {
+contract RegressionMockProjects {
     uint256 public countValue;
     mapping(uint256 => address) internal _ownerOf;
 
@@ -59,11 +59,11 @@ contract NemesisMockProjects {
     }
 }
 
-contract NemesisMockController {
-    NemesisMockProjects public immutable PROJECTS;
+contract RegressionMockController {
+    RegressionMockProjects public immutable PROJECTS;
     uint256 public immutable nextProjectId;
 
-    constructor(NemesisMockProjects projects_, uint256 nextProjectId_) {
+    constructor(RegressionMockProjects projects_, uint256 nextProjectId_) {
         PROJECTS = projects_;
         nextProjectId = nextProjectId_;
     }
@@ -83,7 +83,7 @@ contract NemesisMockController {
     }
 }
 
-contract NemesisPermissionedHook is JBPermissioned {
+contract RegressionPermissionedHook is JBPermissioned {
     address public immutable ownerAccount;
     uint256 public immutable projectId;
     bool public adjusted;
@@ -108,7 +108,7 @@ contract NemesisPermissionedHook is JBPermissioned {
     }
 }
 
-contract NemesisMockHookDeployer {
+contract RegressionMockHookDeployer {
     IJB721TiersHook public hook;
 
     function setHook(IJB721TiersHook hook_) external {
@@ -128,7 +128,7 @@ contract NemesisMockHookDeployer {
     }
 }
 
-contract NemesisNoopSuckerRegistry {
+contract RegressionNoopSuckerRegistry {
     function isSuckerOf(uint256, address) external pure returns (bool) {
         return false;
     }
@@ -146,7 +146,7 @@ contract NemesisNoopSuckerRegistry {
     }
 }
 
-contract NemesisMockDirectory {
+contract RegressionMockDirectory {
     IJBProjects public immutable PROJECTS;
 
     constructor(IJBProjects projects_) {
@@ -154,37 +154,37 @@ contract NemesisMockDirectory {
     }
 }
 
-contract CodexNemesisPoCs is Test {
+contract RegressionRegressions is Test {
     JBPermissions permissions;
-    NemesisMockProjects projects;
-    NemesisMockHookDeployer hookDeployer;
-    NemesisMockController controller;
+    RegressionMockProjects projects;
+    RegressionMockHookDeployer hookDeployer;
+    RegressionMockController controller;
     CTPublisher publisher;
     CTDeployer deployer;
-    NemesisPermissionedHook hook;
+    RegressionPermissionedHook hook;
 
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
 
     function setUp() public {
         permissions = new JBPermissions(address(0));
-        projects = new NemesisMockProjects();
+        projects = new RegressionMockProjects();
         projects.setCount(5);
 
-        hookDeployer = new NemesisMockHookDeployer();
+        hookDeployer = new RegressionMockHookDeployer();
         publisher = new CTPublisher(IJBDirectory(makeAddr("directory")), permissions, 1, address(0));
         deployer = new CTDeployer(
             permissions,
             IJBProjects(address(projects)),
             IJB721TiersHookDeployer(address(hookDeployer)),
             ICTPublisher(address(publisher)),
-            IJBSuckerRegistry(address(new NemesisNoopSuckerRegistry())),
+            IJBSuckerRegistry(address(new RegressionNoopSuckerRegistry())),
             address(0)
         );
 
-        hook = new NemesisPermissionedHook(permissions, address(deployer), 6);
+        hook = new RegressionPermissionedHook(permissions, address(deployer), 6);
         hookDeployer.setHook(IJB721TiersHook(address(hook)));
-        controller = new NemesisMockController(projects, 6);
+        controller = new RegressionMockController(projects, 6);
     }
 
     function test_oldProjectOwnerRetainsHookControlAfterProjectNftTransferUntilClaim() public {
@@ -211,7 +211,7 @@ contract CodexNemesisPoCs is Test {
         uint256[] memory removals = new uint256[](0);
 
         vm.prank(alice);
-        NemesisPermissionedHook(address(hook)).adjustTiers(arbitraryTiers, removals);
+        RegressionPermissionedHook(address(hook)).adjustTiers(arbitraryTiers, removals);
 
         assertTrue(
             hook.adjusted(),
@@ -220,7 +220,7 @@ contract CodexNemesisPoCs is Test {
     }
 
     function test_deploySuckersHelperRequiresOwnerToGrantCtDeployer() public {
-        NemesisMockDirectory directory = new NemesisMockDirectory(IJBProjects(address(projects)));
+        RegressionMockDirectory directory = new RegressionMockDirectory(IJBProjects(address(projects)));
         JBSuckerRegistry registry =
             new JBSuckerRegistry(IJBDirectory(address(directory)), permissions, address(this), address(0));
 
@@ -233,7 +233,7 @@ contract CodexNemesisPoCs is Test {
             address(0)
         );
 
-        hook = new NemesisPermissionedHook(permissions, address(deployer), 6);
+        hook = new RegressionPermissionedHook(permissions, address(deployer), 6);
         hookDeployer.setHook(IJB721TiersHook(address(hook)));
 
         CTProjectConfig memory config = CTProjectConfig({

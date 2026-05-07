@@ -52,7 +52,7 @@ import {CTProjectConfig} from "../../src/structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "../../src/structs/CTSuckerDeploymentConfig.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
 
-contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
+contract RegressionCurrencyRegressions is Test, DeployPermit2 {
     address internal constant MULTISIG = address(0xBEEF);
     address internal constant PROJECT_OWNER = address(0xA11CE);
     address internal constant POSTER = address(0xB0B);
@@ -63,7 +63,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
     uint32 internal constant POST_SUPPLY = 100;
     uint24 internal constant POST_CATEGORY = 1;
     // forge-lint: disable-next-line(unsafe-typecast)
-    bytes32 internal constant TEST_URI = bytes32("nemesis-uri");
+    bytes32 internal constant TEST_URI = bytes32("regression-uri");
 
     JBPermissions internal jbPermissions;
     JBProjects internal jbProjects;
@@ -244,7 +244,7 @@ contract CodexNemesisCurrencyPoCs is Test, DeployPermit2 {
             projectUri: "ipfs://project",
             rulesetConfigurations: rulesetConfigs,
             terminalConfigurations: _ethTerminalConfig(),
-            memo: "nemesis launch"
+            memo: "regression launch"
         });
     }
 

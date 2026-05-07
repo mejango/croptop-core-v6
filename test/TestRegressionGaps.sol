@@ -106,9 +106,9 @@ contract SuccessDataHook is IJBRulesetDataHook {
     }
 }
 
-/// @title TestAuditGaps
-/// @notice Tests for audit gaps: data hook proxy failures, sucker impersonation, and allowlist gas scaling.
-contract TestAuditGaps is Test {
+/// @title TestRegressionGaps
+/// @notice Tests for regression gaps: data hook proxy failures, sucker impersonation, and allowlist gas scaling.
+contract TestRegressionGaps is Test {
     CTDeployer deployer;
     CTPublisher publisher;
 

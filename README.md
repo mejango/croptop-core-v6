@@ -53,7 +53,7 @@ Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not g
 1. `test/CTPublisher.t.sol`
 2. `test/CTDeployer.t.sol`
 3. `test/ClaimCollectionOwnership.t.sol`
-4. `test/audit/FeeFallbackBlackhole.t.sol`
+4. `test/regression/FeeFallbackBlackhole.t.sol`
 5. `test/regression/DuplicateUriFeeEvasion.t.sol`
 
 ## Integration Traps
@@ -105,7 +105,7 @@ src/
   interfaces/
   structs/
 test/
-  publisher, deployer, fork, attack, audit, metadata, and regression coverage
+  publisher, deployer, fork, attack, review, metadata, and regression coverage
 script/
   Deploy.s.sol
   ConfigureFeeProject.s.sol

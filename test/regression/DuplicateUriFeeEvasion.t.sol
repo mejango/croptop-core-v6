@@ -16,14 +16,14 @@ import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
-/// @title M6_DuplicateUriFeeEvasion
+/// @title DuplicateUriFeeEvasionRegression
 /// @notice Duplicate encodedIPFSUri in a single mintFrom batch
 ///         enables fee evasion. Before the fix, a second post with the same URI would read
 ///         a stale tierIdForEncodedIPFSUriOf mapping (written by _setupPosts for the first
 ///         post but not yet committed to the store), causing store.tierOf() to return price=0,
 ///         so the fee was computed on 1x the price instead of 2x.
 ///         The fix reverts with CTPublisher_DuplicatePost when duplicate URIs appear in a batch.
-contract M6_DuplicateUriFeeEvasion is Test {
+contract DuplicateUriFeeEvasionRegression is Test {
     CTPublisher publisher;
 
     IJBPermissions permissions = IJBPermissions(makeAddr("permissions"));

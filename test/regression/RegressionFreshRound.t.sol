@@ -336,7 +336,7 @@ contract MockSuckerDeployer {
     }
 }
 
-contract CodexNemesisFreshRoundTest is Test {
+contract RegressionFreshRoundTest is Test {
     address internal owner = makeAddr("owner");
 
     function _emptyProjectConfig() internal pure returns (CTProjectConfig memory config) {

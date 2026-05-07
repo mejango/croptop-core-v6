@@ -91,4 +91,4 @@ Important nuance:
 - `src/CTProjectOwner.sol`
 - `script/Deploy.s.sol`
 - `script/helpers/CroptopDeploymentLib.sol`
-- `test/TestAuditGaps.sol`
+- `test/TestRegressionGaps.sol`

@@ -171,7 +171,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         projectId = PROJECTS.createFor(address(this));
 
         // Deploy a blank project.
-        // slither-disable-next-line reentrancy-benign
         hook = DEPLOYER.deployHookFor({
             projectId: projectId,
             deployTiersHookConfig: JBDeploy721TiersHookConfig({
@@ -200,7 +199,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         rulesetConfigurations[0].metadata.useDataHookForCashOut = true;
 
         // Launch the rulesets for the reserved project.
-        // slither-disable-next-line unused-return
         controller.launchRulesetsFor({
             projectId: projectId,
             projectUri: projectConfig.projectUri,
@@ -214,7 +212,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
         // Configure allowed posts.
         if (projectConfig.allowedPosts.length > 0) {
-            _configurePostingCriteriaFor(address(hook), projectConfig.allowedPosts);
+            _configurePostingCriteriaFor({hook: address(hook), allowedPosts: projectConfig.allowedPosts});
         }
 
         // Deploy the suckers (if applicable).
@@ -226,7 +224,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
             // Successful deployments are discoverable from the registry, and failures are reported without reverting
             // the project launch.
-            // slither-disable-next-line unused-return
             try SUCKER_REGISTRY.deploySuckersFor({
                 projectId: projectId,
                 salt: suckerSalt,
@@ -237,7 +234,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             // no-op
             }
             catch (bytes memory reason) {
-                // slither-disable-next-line reentrancy-events
                 emit CTDeployer_SuckerDeploymentFailed({projectId: projectId, salt: suckerSalt, reason: reason});
             }
         }
@@ -283,7 +279,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
         // Deploy the suckers. The sucker registry performs its own permission check against this forwarding helper,
         // so an unapproved CTDeployer fails at the downstream registry boundary without an extra preflight read here.
-        // slither-disable-next-line unused-return
         suckers = SUCKER_REGISTRY.deploySuckersFor({
             projectId: projectId,
             salt: keccak256(abi.encode(suckerDeploymentConfiguration.salt, _msgSender())),
@@ -334,7 +329,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
                 hookSpecifications
             );
         }
-        // slither-disable-next-line unused-return
         return hook.beforeCashOutRecordedWith(context);
     }
 
@@ -358,7 +352,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             return (context.weight, hookSpecifications);
         }
 
-        // slither-disable-next-line unused-return
         return hook.beforePayRecordedWith(context);
     }
 

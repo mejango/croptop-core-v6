@@ -11,10 +11,10 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
-/// @title M24_EmptyPostFeeBypass
+/// @title EmptyPostFeeBypassRegression
 /// @notice Verifies that calling mintFrom with an empty posts array reverts,
 ///         preventing fee-free metadata shadowing via additionalPayMetadata.
-contract M24_EmptyPostFeeBypass is Test {
+contract EmptyPostFeeBypassRegression is Test {
     CTPublisher publisher;
 
     IJBPermissions permissions = IJBPermissions(makeAddr("permissions"));
@@ -34,7 +34,7 @@ contract M24_EmptyPostFeeBypass is Test {
         CTPost[] memory emptyPosts = new CTPost[](0);
 
         vm.prank(poster);
-        vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
         publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, "");
     }
 
@@ -47,7 +47,7 @@ contract M24_EmptyPostFeeBypass is Test {
             abi.encodePacked(bytes32(uint256(1)), bytes4(0xdeadbeef), uint256(32), uint256(1));
 
         vm.prank(poster);
-        vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
         publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, craftedMetadata);
     }
 }

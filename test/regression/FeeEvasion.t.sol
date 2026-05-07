@@ -18,12 +18,12 @@ import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
-/// @title H19_FeeEvasion
+/// @title FeeEvasionRegression
 /// @notice Fee evasion for existing tier mints.
 ///         Before the fix, a user could set post.price = 0 for an existing tier
 ///         to evade the 5% Croptop fee entirely. The fix reads the actual tier price
 ///         from the store for existing tiers.
-contract H19_FeeEvasion is Test {
+contract FeeEvasionRegression is Test {
     CTPublisher publisher;
 
     IJBPermissions permissions = IJBPermissions(makeAddr("permissions"));

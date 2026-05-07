@@ -18,7 +18,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 
-contract CodexNemesisPolicyReuseTest is Test {
+contract RegressionPolicyReuseTest is Test {
     CTPublisher internal publisher;
 
     IJBPermissions internal permissions = IJBPermissions(makeAddr("permissions"));

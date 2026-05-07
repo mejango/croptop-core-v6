@@ -18,7 +18,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 
-contract NemesisMockPermissions is IJBPermissions {
+contract RegressionMockPermissions is IJBPermissions {
     function WILDCARD_PROJECT_ID() external pure returns (uint256) {
         return 0;
     }
@@ -38,7 +38,7 @@ contract NemesisMockPermissions is IJBPermissions {
     function setPermissionsFor(address, JBPermissionsData calldata) external {}
 }
 
-contract NemesisMockTerminal {
+contract RegressionMockTerminal {
     mapping(uint256 projectId => uint256 amount) public paidToProject;
 
     function pay(
@@ -59,7 +59,7 @@ contract NemesisMockTerminal {
     }
 }
 
-contract NemesisMockDirectory {
+contract RegressionMockDirectory {
     mapping(uint256 projectId => address terminal) public terminalOf;
 
     function setTerminal(uint256 projectId, address terminal) external {
@@ -71,7 +71,7 @@ contract NemesisMockDirectory {
     }
 }
 
-contract NemesisMockStore {
+contract RegressionMockStore {
     struct StoredTier {
         uint104 price;
         uint32 initialSupply;
@@ -137,7 +137,7 @@ contract NemesisMockStore {
     }
 }
 
-contract NemesisMutableHook {
+contract RegressionMutableHook {
     uint256 public immutable PROJECT_ID;
     IJB721TiersHookStore public immutable STORE;
     address public ownerAddress;
@@ -158,7 +158,7 @@ contract NemesisMutableHook {
 
     function adjustTiers(JB721TierConfig[] calldata tiersToAdd, uint256[] calldata) external {
         for (uint256 i; i < tiersToAdd.length; i++) {
-            NemesisMockStore(address(STORE)).addTier(tiersToAdd[i]);
+            RegressionMockStore(address(STORE)).addTier(tiersToAdd[i]);
         }
     }
 
@@ -173,11 +173,11 @@ contract NemesisMutableHook {
     )
         external
     {
-        NemesisMockStore(address(STORE)).setEncodedUri(encodedIPFSUriTierId, encodedIPFSUri);
+        RegressionMockStore(address(STORE)).setEncodedUri(encodedIPFSUriTierId, encodedIPFSUri);
     }
 }
 
-contract CodexNemesisCroptopPublisherBoundaryTest is Test {
+contract RegressionCroptopPublisherBoundaryTest is Test {
     uint256 internal constant FEE_PROJECT_ID = 1;
     uint256 internal constant PROJECT_ID = 2;
 
@@ -189,21 +189,21 @@ contract CodexNemesisCroptopPublisherBoundaryTest is Test {
     address internal restrictedPoster = makeAddr("restrictedPoster");
     address internal outsider = makeAddr("outsider");
 
-    NemesisMockPermissions internal permissions;
-    NemesisMockDirectory internal directory;
-    NemesisMockStore internal store;
-    NemesisMutableHook internal hook;
-    NemesisMockTerminal internal projectTerminal;
-    NemesisMockTerminal internal feeTerminal;
+    RegressionMockPermissions internal permissions;
+    RegressionMockDirectory internal directory;
+    RegressionMockStore internal store;
+    RegressionMutableHook internal hook;
+    RegressionMockTerminal internal projectTerminal;
+    RegressionMockTerminal internal feeTerminal;
     CTPublisher internal publisher;
 
     function setUp() public {
-        permissions = new NemesisMockPermissions();
-        directory = new NemesisMockDirectory();
-        store = new NemesisMockStore();
-        hook = new NemesisMutableHook(PROJECT_ID, IJB721TiersHookStore(address(store)), hookOwner);
-        projectTerminal = new NemesisMockTerminal();
-        feeTerminal = new NemesisMockTerminal();
+        permissions = new RegressionMockPermissions();
+        directory = new RegressionMockDirectory();
+        store = new RegressionMockStore();
+        hook = new RegressionMutableHook(PROJECT_ID, IJB721TiersHookStore(address(store)), hookOwner);
+        projectTerminal = new RegressionMockTerminal();
+        feeTerminal = new RegressionMockTerminal();
         publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, FEE_PROJECT_ID, address(0));
 
         directory.setTerminal(PROJECT_ID, address(projectTerminal));
