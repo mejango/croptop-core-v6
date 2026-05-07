@@ -177,10 +177,10 @@ contract P12MockHook {
 // Test contract
 // ---------------------------------------------------------------------------
 
-/// @notice Regression tests for Pass 12 audit fixes:
-///   H-26: Metadata shadow — additionalPayMetadata with duplicate pay ID
-///   M-42: URI cache desync — tier URI changed via setMetadata
-contract Pass12FixesTest is Test {
+/// @notice Regression tests for Croptop regression fixes:
+///   Metadata shadow — additionalPayMetadata with duplicate pay ID
+///   URI cache desync — tier URI changed via setMetadata
+contract CroptopRegressionFixesTest is Test {
     bytes32 internal constant URI_A = keccak256("uri-a");
     bytes32 internal constant URI_B = keccak256("uri-b");
 
@@ -225,12 +225,12 @@ contract Pass12FixesTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // H-26: Metadata shadow — duplicate pay ID in additionalPayMetadata
+    // Metadata shadow — duplicate pay ID in additionalPayMetadata
     // -----------------------------------------------------------------------
 
     /// @notice When additionalPayMetadata already contains an entry for the pay ID,
     ///         the fix should revert with CTPublisher_DuplicatePayMetadata.
-    function test_H26_fix_reverts_duplicate_metadata() public {
+    function test_duplicateMetadataReverts() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             encodedIPFSUri: URI_A,
@@ -257,7 +257,7 @@ contract Pass12FixesTest is Test {
     }
 
     /// @notice Empty additionalPayMetadata should NOT revert.
-    function test_H26_fix_allows_empty_metadata() public {
+    function test_emptyMetadataAllowed() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             encodedIPFSUri: URI_A,
@@ -278,7 +278,7 @@ contract Pass12FixesTest is Test {
     }
 
     /// @notice additionalPayMetadata with a DIFFERENT ID (not the pay ID) should NOT revert.
-    function test_H26_fix_allows_unrelated_metadata() public {
+    function test_unrelatedMetadataAllowed() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             encodedIPFSUri: URI_A,
@@ -307,7 +307,7 @@ contract Pass12FixesTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // M-42: URI cache desync — tier URI changed via setMetadata
+    // URI cache desync — tier URI changed via setMetadata
     // -----------------------------------------------------------------------
 
     /// @notice When a tier's URI is changed via setMetadata, the cache entry

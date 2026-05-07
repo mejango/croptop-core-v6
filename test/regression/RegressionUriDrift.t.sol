@@ -18,7 +18,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 
-contract CodexNemesisUriDriftTest is Test {
+contract RegressionUriDriftTest is Test {
     bytes32 internal constant URI_A = keccak256("uri-a");
     bytes32 internal constant URI_B = keccak256("uri-b");
 

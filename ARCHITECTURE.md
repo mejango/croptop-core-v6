@@ -82,7 +82,7 @@ This repo does not define treasury accounting. Its critical economic logic is pu
 - publish-path fee routing and policy enforcement:
   `test/CTPublisher.t.sol`
 - fee fallback and refund safety:
-  `test/audit/FeeFallbackBlackhole.t.sol`
+  `test/regression/FeeFallbackBlackhole.t.sol`
 - duplicate-content and batch-fee-evasion resistance:
   `test/regression/DuplicateUriFeeEvasion.t.sol`
 
@@ -92,5 +92,5 @@ This repo does not define treasury accounting. Its critical economic logic is pu
 - `src/CTDeployer.sol`
 - `src/CTProjectOwner.sol`
 - `test/CTPublisher.t.sol`
-- `test/audit/FeeFallbackBlackhole.t.sol`
+- `test/regression/FeeFallbackBlackhole.t.sol`
 - `test/regression/DuplicateUriFeeEvasion.t.sol`

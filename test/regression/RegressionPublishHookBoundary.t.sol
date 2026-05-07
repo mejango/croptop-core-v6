@@ -144,7 +144,7 @@ contract PublishBoundaryHook {
     }
 }
 
-contract CodexNemesisPublishHookBoundaryTest is Test {
+contract RegressionPublishHookBoundaryTest is Test {
     function testMintFromCanPayProjectAndFeeWithoutMintingWhenTerminalDoesNotInvokeHook() external {
         uint256 projectId = 2;
         uint256 feeProjectId = 1;

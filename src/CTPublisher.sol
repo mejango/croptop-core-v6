@@ -32,19 +32,19 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     //*********************************************************************//
 
     error CTPublisher_DuplicatePost(bytes32 encodedIPFSUri);
-    error CTPublisher_EmptyEncodedIPFSUri();
+    error CTPublisher_EmptyEncodedIPFSUri(uint256 postIndex);
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
-    error CTPublisher_DuplicatePayMetadata();
+    error CTPublisher_DuplicatePayMetadata(bytes4 payMetadataId);
     error CTPublisher_FeePaymentFailed(uint256 feeAmount);
     error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
     error CTPublisher_TotalSupplyTooSmall(uint256 totalSupply, uint256 minimumTotalSupply);
-    error CTPublisher_NoPosts();
-    error CTPublisher_UnauthorizedToPostInCategory();
-    error CTPublisher_ZeroTotalSupply();
+    error CTPublisher_NoPosts(address caller);
+    error CTPublisher_UnauthorizedToPostInCategory(address hook, uint24 category);
+    error CTPublisher_ZeroTotalSupply(address hook, uint24 category);
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -133,7 +133,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             emit ConfigurePostingCriteria({hook: allowedPost.hook, allowedPost: allowedPost, caller: _msgSender()});
 
             // Enforce permissions.
-            // slither-disable-next-line reentrancy-events,calls-loop
             _requirePermissionFrom({
                 account: JBOwnable(allowedPost.hook).owner(),
                 projectId: IJB721TiersHook(allowedPost.hook).PROJECT_ID(),
@@ -142,7 +141,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Make sure there is a minimum supply.
             if (allowedPost.minimumTotalSupply == 0) {
-                revert CTPublisher_ZeroTotalSupply();
+                revert CTPublisher_ZeroTotalSupply({hook: allowedPost.hook, category: allowedPost.category});
             }
 
             // Make sure the minimum supply does not surpass the maximum supply.
@@ -202,7 +201,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         override
     {
         // Reject empty posts to prevent fee-free metadata shadowing.
-        if (posts.length == 0) revert CTPublisher_NoPosts();
+        if (posts.length == 0) revert CTPublisher_NoPosts(_msgSender());
 
         // Keep a reference to the amount being paid, which is msg.value minus the fee.
         uint256 payValue = msg.value;
@@ -216,7 +215,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         {
             // Setup the posts.
             (JB721TierConfig[] memory tiersToAdd, uint256[] memory tierIdsToMint, uint256 totalPrice) =
-                _setupPosts(hook, posts);
+                _setupPosts({hook: hook, posts: posts});
 
             if (projectId != FEE_PROJECT_ID) {
                 // Keep a reference to the fee that will be paid.
@@ -239,7 +238,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             }
 
             // Add the new tiers.
-            // slither-disable-next-line reentrancy-events
             hook.adjustTiers({tiersToAdd: tiersToAdd, tierIdsToRemove: new uint256[](0)});
 
             // Keep a reference to the metadata ID target.
@@ -249,9 +247,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // tier selection, allowing the caller to mint arbitrary tiers.
             {
                 bytes4 payId = JBMetadataResolver.getId({purpose: "pay", target: metadataIdTarget});
-                // slither-disable-next-line unused-return
                 (bool exists,) = JBMetadataResolver.getDataFor({id: payId, metadata: additionalPayMetadata});
-                if (exists) revert CTPublisher_DuplicatePayMetadata();
+                if (exists) revert CTPublisher_DuplicatePayMetadata(payId);
             }
 
             // Create the metadata for the payment to specify the tier IDs that should be minted. We create manually the
@@ -288,7 +285,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 DIRECTORY.primaryTerminalOf({projectId: projectId, token: JBConstants.NATIVE_TOKEN});
 
             // Make the payment.
-            // slither-disable-next-line unused-return
             projectTerminal.pay{value: payValue}({
                 projectId: projectId,
                 token: JBConstants.NATIVE_TOKEN,
@@ -312,7 +308,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
             // rather than trapping or silently redirecting protocol funds.
-            // slither-disable-next-line unused-return
             try feeTerminal.pay{value: payValue}({
                 projectId: FEE_PROJECT_ID,
                 amount: payValue,
@@ -323,7 +318,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 metadata: ""
             }) {}
             catch {
-                // slither-disable-next-line low-level-calls
                 (bool success,) = _msgSender().call{value: payValue}("");
                 if (!success) revert CTPublisher_FeePaymentFailed(payValue);
             }
@@ -363,7 +357,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // If there's a tier ID stored, resolve it.
             if (tierId != 0) {
-                // slither-disable-next-line calls-loop
                 tiers[i] = IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
             }
 
@@ -463,7 +456,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // Make sure the post includes an encodedIPFSUri.
             // forge-lint: disable-next-line(unsafe-typecast)
             if (post.encodedIPFSUri == bytes32("")) {
-                revert CTPublisher_EmptyEncodedIPFSUri();
+                revert CTPublisher_EmptyEncodedIPFSUri(i);
             }
 
             // Check for duplicate encodedIPFSUri within the same batch to prevent fee evasion.
@@ -486,10 +479,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     // The cache can become stale if the tier was removed (via adjustTiers) or
                     // its URI was changed (via setMetadata). In either case, clear the stale
                     // mapping and fall through to create a new tier.
-                    // slither-disable-next-line calls-loop
                     JB721Tier memory cachedTier =
                         store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false});
-                    // slither-disable-next-line calls-loop
                     if (store.isTierRemoved(address(hook), tierId) || cachedTier.encodedIPFSUri != post.encodedIPFSUri)
                     {
                         delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
@@ -518,7 +509,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
                     // Make sure the category being posted to allows publishing.
                     if (minimumTotalSupply == 0) {
-                        revert CTPublisher_UnauthorizedToPostInCategory();
+                        revert CTPublisher_UnauthorizedToPostInCategory({hook: address(hook), category: post.category});
                     }
 
                     // Make sure the price being paid for the post is at least the allowed minimum price.

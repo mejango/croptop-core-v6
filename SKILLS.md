@@ -15,7 +15,7 @@
 | Ownership burn-lock behavior | [`src/CTProjectOwner.sol`](./src/CTProjectOwner.sol) |
 | Runtime and operational invariants | [`references/runtime.md`](./references/runtime.md), [`references/operations.md`](./references/operations.md) |
 | Publishing, metadata, and attack coverage | [`test/CTPublisher.t.sol`](./test/CTPublisher.t.sol), [`test/Test_MetadataGeneration.t.sol`](./test/Test_MetadataGeneration.t.sol), [`test/CroptopAttacks.t.sol`](./test/CroptopAttacks.t.sol) |
-| Deployment, ownership, and fork coverage | [`test/CTDeployer.t.sol`](./test/CTDeployer.t.sol), [`test/CTProjectOwner.t.sol`](./test/CTProjectOwner.t.sol), [`test/ClaimCollectionOwnership.t.sol`](./test/ClaimCollectionOwnership.t.sol), [`test/Fork.t.sol`](./test/Fork.t.sol), [`test/TestAuditGaps.sol`](./test/TestAuditGaps.sol) |
+| Deployment, ownership, and fork coverage | [`test/CTDeployer.t.sol`](./test/CTDeployer.t.sol), [`test/CTProjectOwner.t.sol`](./test/CTProjectOwner.t.sol), [`test/ClaimCollectionOwnership.t.sol`](./test/ClaimCollectionOwnership.t.sol), [`test/Fork.t.sol`](./test/Fork.t.sol), [`test/TestRegressionGaps.sol`](./test/TestRegressionGaps.sol) |
 
 ## Repo Map
 

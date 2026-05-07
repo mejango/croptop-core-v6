@@ -18,12 +18,12 @@ import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
-/// @title L52_StaleTierIdMapping
+/// @title StaleTierIdMappingRegression
 /// @notice Stale tierIdForEncodedIPFSUriOf mapping after external tier removal.
 ///         When a tier is removed externally via adjustTiers(), the publisher's mapping still pointed
 ///         to the removed tier ID, blocking re-creation. The fix clears the stale mapping and allows
 ///         the post to fall through to new-tier creation.
-contract L52_StaleTierIdMapping is Test {
+contract StaleTierIdMappingRegression is Test {
     CTPublisher publisher;
 
     IJBPermissions permissions = IJBPermissions(makeAddr("permissions"));
@@ -129,7 +129,7 @@ contract L52_StaleTierIdMapping is Test {
             abi.encode(true)
         );
 
-        // Mock tierOf for the removed tier — the M-42 fix calls tierOf before checking isTierRemoved.
+        // Mock tierOf for the removed tier — the fix calls tierOf before checking isTierRemoved.
         JB721Tier memory removedTier;
         removedTier.id = 1;
         removedTier.encodedIPFSUri = TEST_URI;

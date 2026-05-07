@@ -1,8 +1,8 @@
-# Audit Instructions
+# Review Guide
 
-Croptop is a publishing layer on top of Juicebox projects and the tiered 721 stack. Audit it as a permissions, fee-routing, and project-launch system.
+Croptop is a publishing layer on top of Juicebox projects and the tiered 721 stack. Review it as a permissions, fee-routing, and project-launch system.
 
-## Audit Objective
+## Review Objective
 
 Find issues that:
 

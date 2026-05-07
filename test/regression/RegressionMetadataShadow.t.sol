@@ -143,7 +143,7 @@ contract MetadataShadowDirectory {
     }
 }
 
-contract CodexNemesisMetadataShadowTest is Test {
+contract RegressionMetadataShadowTest is Test {
     function test_additionalPayMetadataCanShadowPublisherMintMetadata() public {
         address metadataIdTarget = address(0xBEEF);
         MetadataShadowPermissions permissions = new MetadataShadowPermissions();
@@ -187,7 +187,7 @@ contract CodexNemesisMetadataShadowTest is Test {
         datas[0] = abi.encode(true, forgedTierIds);
         bytes memory shadowingMetadata = JBMetadataResolver.createMetadata(ids, datas);
 
-        // H-26 FIX: metadata shadow attack now reverts instead of succeeding.
+        // FIX: metadata shadow attack now reverts instead of succeeding.
         vm.expectRevert(CTPublisher.CTPublisher_DuplicatePayMetadata.selector);
         publisher.mintFrom{value: 105}(
             IJB721TiersHook(address(hook)), posts, address(this), address(this), shadowingMetadata

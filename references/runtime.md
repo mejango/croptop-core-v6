@@ -24,4 +24,4 @@
 
 - [`test/CTPublisher.t.sol`](../test/CTPublisher.t.sol) and [`test/Test_MetadataGeneration.t.sol`](../test/Test_MetadataGeneration.t.sol) for content and metadata behavior.
 - [`test/CTDeployer.t.sol`](../test/CTDeployer.t.sol) and [`test/Fork.t.sol`](../test/Fork.t.sol) for live deployment assumptions.
-- [`test/CroptopAttacks.t.sol`](../test/CroptopAttacks.t.sol) and [`test/TestAuditGaps.sol`](../test/TestAuditGaps.sol) when the issue could be in publisher or deployer behavior rather than one isolated function.
+- [`test/CroptopAttacks.t.sol`](../test/CroptopAttacks.t.sol) and [`test/TestRegressionGaps.sol`](../test/TestRegressionGaps.sol) when the issue could be in publisher or deployer behavior rather than one isolated function.

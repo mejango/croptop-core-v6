@@ -11,10 +11,10 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
-/// @title M24_EmptyPostFeeBypass
+/// @title EmptyPostFeeBypassRegression
 /// @notice Verifies that calling mintFrom with an empty posts array reverts,
 ///         preventing fee-free metadata shadowing via additionalPayMetadata.
-contract M24_EmptyPostFeeBypass is Test {
+contract EmptyPostFeeBypassRegression is Test {
     CTPublisher publisher;
 
     IJBPermissions permissions = IJBPermissions(makeAddr("permissions"));
