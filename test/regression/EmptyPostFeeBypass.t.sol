@@ -34,7 +34,7 @@ contract EmptyPostFeeBypassRegression is Test {
         CTPost[] memory emptyPosts = new CTPost[](0);
 
         vm.prank(poster);
-        vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
         publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, "");
     }
 
@@ -47,7 +47,7 @@ contract EmptyPostFeeBypassRegression is Test {
             abi.encodePacked(bytes32(uint256(1)), bytes4(0xdeadbeef), uint256(32), uint256(1));
 
         vm.prank(poster);
-        vm.expectRevert(CTPublisher.CTPublisher_NoPosts.selector);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
         publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, craftedMetadata);
     }
 }
