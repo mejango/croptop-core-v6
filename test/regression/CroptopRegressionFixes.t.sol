@@ -252,7 +252,7 @@ contract CroptopRegressionFixesTest is Test {
         bytes memory shadowingMetadata = JBMetadataResolver.createMetadata(ids, datas);
 
         vm.prank(poster);
-        vm.expectRevert(CTPublisher.CTPublisher_DuplicatePayMetadata.selector);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePayMetadata.selector, ids[0]));
         publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, shadowingMetadata);
     }
 
