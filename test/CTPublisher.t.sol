@@ -211,7 +211,7 @@ contract TestCTPublisher is Test {
         });
 
         vm.prank(hookOwner);
-        vm.expectRevert(CTPublisher.CTPublisher_ZeroTotalSupply.selector);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_ZeroTotalSupply.selector, hookAddr, 1));
         publisher.configurePostingCriteriaFor(posts);
     }
 
