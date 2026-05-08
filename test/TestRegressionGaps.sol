@@ -194,7 +194,7 @@ contract TestRegressionGaps is Test {
             cashOutCount: cashOutCount,
             totalSupply: totalSupply,
             surplus: JBTokenAmount({token: address(0), decimals: 18, currency: 0, value: 1 ether}),
-            useTotalSurplus: false,
+            scopeCashOutsToLocalBalances: false,
             cashOutTaxRate: 10_000,
             beneficiaryIsFeeless: false,
             metadata: ""
