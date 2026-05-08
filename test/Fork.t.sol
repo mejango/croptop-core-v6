@@ -221,7 +221,7 @@ contract ForkTest is Test {
             deployer: opSuckerDeployer,
             directory: jbDirectory,
             permissions: jbPermissions,
-            prices: address(jbPrices),
+            prices: jbPrices,
             tokens: jbTokens,
             feeProjectId: 1,
             registry: suckerRegistry,

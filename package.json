@@ -1,6 +1,6 @@
 {
   "name": "@croptop/core-v6",
-  "version": "0.0.42",
+  "version": "0.0.43",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -29,17 +29,17 @@
     "artifacts": "source ./.env && npx sphinx artifacts --org-id 'ea165b21-7cdc-4d7b-be59-ecdd4c26bee4' --project-name 'croptop-core-v6'"
   },
   "dependencies": {
-    "@bananapus/721-hook-v6": "0.0.43",
-    "@bananapus/core-v6": "0.0.39",
-    "@bananapus/ownable-v6": "0.0.24",
-    "@bananapus/permission-ids-v6": "0.0.22",
-    "@bananapus/router-terminal-v6": "0.0.36",
-    "@bananapus/suckers-v6": "0.0.33",
+    "@bananapus/721-hook-v6": "^0.0.47",
+    "@bananapus/core-v6": "^0.0.44",
+    "@bananapus/ownable-v6": "^0.0.24",
+    "@bananapus/permission-ids-v6": "^0.0.23",
+    "@bananapus/router-terminal-v6": "^0.0.37",
+    "@bananapus/suckers-v6": "^0.0.37",
     "@openzeppelin/contracts": "5.6.1",
-    "@rev-net/core-v6": "0.0.37"
+    "@rev-net/core-v6": "^0.0.45"
   },
   "devDependencies": {
-    "@bananapus/address-registry-v6": "0.0.25",
+    "@bananapus/address-registry-v6": "^0.0.25",
     "@sphinx-labs/plugins": "0.33.3"
   }
 }
