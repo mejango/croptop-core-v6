@@ -43,6 +43,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
     error CTPublisher_TotalSupplyTooSmall(uint256 totalSupply, uint256 minimumTotalSupply);
     error CTPublisher_NoPosts(address caller);
+    error CTPublisher_InvalidFeeBeneficiary();
     error CTPublisher_UnauthorizedToPostInCategory(address hook, uint24 category);
     error CTPublisher_ZeroTotalSupply(address hook, uint24 category);
 
@@ -202,6 +203,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     {
         // Reject empty posts to prevent fee-free metadata shadowing.
         if (posts.length == 0) revert CTPublisher_NoPosts(_msgSender());
+
+        // Reject address(0) as fee beneficiary to prevent burning fee project tokens.
+        if (feeBeneficiary == address(0)) revert CTPublisher_InvalidFeeBeneficiary();
 
         // Keep a reference to the amount being paid, which is msg.value minus the fee.
         uint256 payValue = msg.value;

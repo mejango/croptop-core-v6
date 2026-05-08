@@ -22,6 +22,7 @@ import {JBBeforePayRecordedContext} from "@bananapus/core-v6/src/structs/JBBefor
 import {JBCashOutHookSpecification} from "@bananapus/core-v6/src/structs/JBCashOutHookSpecification.sol";
 import {JBPayHookSpecification} from "@bananapus/core-v6/src/structs/JBPayHookSpecification.sol";
 import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
+import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBRuleset} from "@bananapus/core-v6/src/structs/JBRuleset.sol";
 import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
 import {JBTokenAmount} from "@bananapus/core-v6/src/structs/JBTokenAmount.sol";
@@ -346,6 +347,38 @@ contract TestCTDeployer is Test {
                 CTDeployer.CTDeployer_NotOwnerOfProject.selector, deployedProjectId, hookAddr, unauthorized
             )
         );
+        deployer.claimCollectionOwnershipOf(IJB721TiersHook(hookAddr));
+    }
+
+    /// @notice claimCollectionOwnershipOf revokes deployer-scoped permissions before transferring ownership.
+    function test_claimCollectionOwnershipOf_revokesPermissions() public {
+        // Mock hook.PROJECT_ID() to return deployedProjectId.
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+
+        // Mock PROJECTS.ownerOf(deployedProjectId) to return owner.
+        vm.mockCall(
+            address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId), abi.encode(owner)
+        );
+
+        // Mock JBOwnable.transferOwnershipToProject(projectId).
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.transferOwnershipToProject.selector), abi.encode());
+
+        // Expect setPermissionsFor to be called with empty permissionIds (revocation) for the owner.
+        vm.expectCall(
+            address(permissions),
+            abi.encodeWithSelector(
+                IJBPermissions.setPermissionsFor.selector,
+                address(deployer),
+                JBPermissionsData({
+                    operator: owner,
+                    // forge-lint: disable-next-line(unsafe-typecast)
+                    projectId: uint64(deployedProjectId),
+                    permissionIds: new uint8[](0)
+                })
+            )
+        );
+
+        vm.prank(owner);
         deployer.claimCollectionOwnershipOf(IJB721TiersHook(hookAddr));
     }
 

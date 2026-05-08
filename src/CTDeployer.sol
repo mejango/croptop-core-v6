@@ -120,7 +120,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
     /// @notice Claim ownership of the collection.
     /// @dev Two-step ownership transfer process:
-    ///   Step 1 (this function): Transfers hook ownership to the project via `transferOwnershipToProject()`.
+    ///   Step 1 (this function): Revokes the deployer-scoped permissions granted at launch, then transfers hook
+    ///     ownership to the project via `transferOwnershipToProject()`.
     ///     After this call, `hook.owner()` resolves dynamically through `PROJECTS.ownerOf(projectId)`.
     ///   Step 2 (caller must do separately): The project owner grants CTPublisher the `ADJUST_721_TIERS` permission
     ///     for the project so that `mintFrom()` continues to work.
@@ -132,10 +133,28 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         // Get the project ID of the hook.
         uint256 projectId = hook.PROJECT_ID();
 
+        // Keep a reference to the caller.
+        address caller = _msgSender();
+
         // Make sure the caller is the owner of the project.
-        if (PROJECTS.ownerOf(projectId) != _msgSender()) {
-            revert CTDeployer_NotOwnerOfProject({projectId: projectId, hook: address(hook), caller: _msgSender()});
+        if (PROJECTS.ownerOf(projectId) != caller) {
+            revert CTDeployer_NotOwnerOfProject({projectId: projectId, hook: address(hook), caller: caller});
         }
+
+        // Revoke the deployer-scoped permissions that were granted to the caller during deployment.
+        // These permissions (ADJUST_721_TIERS, SET_721_METADATA, MINT_721, SET_721_DISCOUNT_PERCENT) allowed the
+        // project owner to manage the hook while the deployer owned it. After transferring hook ownership to the
+        // project, these deployer-scoped grants are no longer needed and should be cleaned up to prevent stale
+        // permission leakage.
+        PERMISSIONS.setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: caller,
+                // forge-lint: disable-next-line(unsafe-typecast)
+                projectId: uint64(projectId),
+                permissionIds: new uint8[](0)
+            })
+        });
 
         // Transfer the hook's ownership to the project.
         JBOwnable(address(hook)).transferOwnershipToProject(projectId);
