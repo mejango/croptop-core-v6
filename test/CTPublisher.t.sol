@@ -866,4 +866,54 @@ contract TestCTPublisher is Test {
         );
         publisher.mintFrom{value: 0.4 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
+
+    //*********************************************************************//
+    // --- Fee Beneficiary Validation (Fix AO) --------------------------- //
+    //*********************************************************************//
+
+    function test_mintFrom_zeroFeeBeneficiary_reverts() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("fee-beneficiary-zero"),
+            totalSupply: 10,
+            price: 0.1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        vm.prank(poster);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InvalidFeeBeneficiary.selector));
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, address(0), "");
+    }
+
+    function test_mintFrom_nonzeroFeeBeneficiary_passesValidation() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIPFSUri: keccak256("fee-beneficiary-valid"),
+            totalSupply: 10,
+            price: 0.1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        // Should pass the feeBeneficiary check. May revert downstream in mocks, but NOT with
+        // InvalidFeeBeneficiary.
+        vm.prank(poster);
+        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        catch (bytes memory reason) {
+            assertTrue(
+                // forge-lint: disable-next-line(unsafe-typecast)
+                bytes4(reason) != CTPublisher.CTPublisher_InvalidFeeBeneficiary.selector,
+                "should not revert with InvalidFeeBeneficiary"
+            );
+        }
+    }
 }
