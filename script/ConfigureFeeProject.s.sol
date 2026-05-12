@@ -230,6 +230,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             description: REVDescription({name: NAME, ticker: SYMBOL, uri: PROJECT_URI, salt: ERC20_SALT}),
             baseCurrency: ETH_CURRENCY,
             splitOperator: OPERATOR,
+            scopeCashOutsToLocalBalances: false,
             stageConfigurations: stageConfigurations
         });
 
