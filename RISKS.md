@@ -84,3 +84,20 @@ Croptop's core value is allowing anyone to **post new items** (create new 721 ti
 ### 7.5 EIP-7702 delegated EOAs can bypass allowlist restrictions
 
 `_setupPosts` authorizes restricted categories using `_msgSender()`, which identifies the allowlisted EOA. EIP-7702 allows an EOA to delegate code execution to a contract, so an allowlisted EOA that signs a 7702 delegation can have arbitrary code run under its identity. This enables attacker-chosen code to publish to restricted categories while `_msgSender()` still returns the legitimate allowlisted address. This is accepted: EIP-7702 delegation requires the allowlisted EOA's explicit signature — if an allowlisted party delegates execution, they are responsible for the code they delegate to. This is equivalent to an allowlisted EOA voluntarily sharing their private key. The allowlist is a trust boundary, and 7702 delegation is within the allowlisted party's control.
+
+### 7.6 Direct collection-control permissions are tied to the deploy-time recipient until claim
+
+`CTDeployer.deployProjectFor` grants the initial `owner` argument four collection-control permissions (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`) on `account = address(this)` (the deployer). These grants are operator-specific — they are keyed on the deploy-time recipient's address, not on "whoever currently owns the project NFT."
+
+Two parts of the design make this safe by claim:
+
+1. **The hook owner is static-then-dynamic.** Before `claimCollectionOwnershipOf`, `hook.owner() == address(CTDeployer)`. After claim, `JBOwnable.transferOwnershipToProject` makes `hook.owner()` resolve dynamically through `PROJECTS.ownerOf(projectId)`. Permission checks on the hook are gated by `_requirePermissionFrom({account: hook.owner(), ...})`, so post-claim they consult the current project NFT holder's permission table — the deploy-time recipient's grants on `account = deployer` become inert.
+2. **The current project NFT holder can always claim.** `claimCollectionOwnershipOf` only requires the caller to be the current project NFT owner. There is no time lock and no deploy-time-recipient requirement, so a buyer of a pre-claim project NFT can close the window themselves.
+
+**Window of concern:** between (a) a project NFT transfer from the deploy-time recipient to a new owner and (b) the new owner calling `claimCollectionOwnershipOf`, the deploy-time recipient retains those four permissions and can still call hook-gated functions even though they no longer own the project NFT. The deploy-time recipient can in principle add a tier with owner-mint enabled, mint NFTs to themselves, corrupt metadata, or set discounts during this window.
+
+**Operator runbook for sellers:** call `claimCollectionOwnershipOf` *before* transferring the project NFT. After claim, hook permissions automatically follow the NFT.
+
+**Operator runbook for buyers of pre-claim project NFTs:** call `claimCollectionOwnershipOf` immediately after receiving the NFT. The call is permissionless against the current NFT owner check, so the buyer can close the window without cooperation from the prior owner.
+
+Frontends and marketplaces listing Croptop-launched project NFTs should surface whether claim has been performed and prompt the buyer to claim immediately on transfer if it has not.
