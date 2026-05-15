@@ -229,7 +229,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         REVConfig memory revnetConfiguration = REVConfig({
             description: REVDescription({name: NAME, ticker: SYMBOL, uri: PROJECT_URI, salt: ERC20_SALT}),
             baseCurrency: ETH_CURRENCY,
-            splitOperator: OPERATOR,
+            operator: OPERATOR,
             scopeCashOutsToLocalBalances: false,
             stageConfigurations: stageConfigurations
         });
@@ -344,10 +344,10 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
                     })
                 }),
                 salt: HOOK_SALT,
-                preventSplitOperatorAdjustingTiers: false,
-                preventSplitOperatorUpdatingMetadata: false,
-                preventSplitOperatorMinting: false,
-                preventSplitOperatorIncreasingDiscountPercent: false
+                preventOperatorAdjustingTiers: false,
+                preventOperatorUpdatingMetadata: false,
+                preventOperatorMinting: false,
+                preventOperatorIncreasingDiscountPercent: false
             }),
             allowedPosts: allowedPosts
         });
