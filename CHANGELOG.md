@@ -13,6 +13,13 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 - `CTDeployerAllowedPost`
 - `CTPost`
 
+## 0.0.47 — Bump v6 deps to nana-core-v6 0.0.53 cohort
+
+- `@bananapus/core-v6`: `^0.0.49 → ^0.0.53` ([PR #145](https://github.com/Bananapus/nana-core-v6/pull/145)).
+- `@bananapus/721-hook-v6`: `^0.0.49 → ^0.0.50`.
+- `@bananapus/suckers-v6`: `^0.0.43 → ^0.0.46`.
+- All `JBRulesetMetadata` test literals patched to include `pauseCrossProjectFeeFreeInflows: false`.
+
 ## Summary
 
 - `CTPost` and the related allowlist structs now carry split-routing data, so a post can route part of its payment through `JBSplit[]` recipients.
