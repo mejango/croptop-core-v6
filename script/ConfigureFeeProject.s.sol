@@ -8,18 +8,18 @@ import {
     RouterTerminalDeployment,
     RouterTerminalDeploymentLib
 } from "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
-import {
-    RevnetCoreDeployment,
-    RevnetCoreDeploymentLib
-} from "@rev-net/core-v6/script/helpers/RevnetCoreDeploymentLib.sol";
 import {CroptopDeployment, CroptopDeploymentLib} from "./helpers/CroptopDeploymentLib.sol";
 
+import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/contracts/foundry/SphinxConstants.sol";
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
-import {Script} from "forge-std/Script.sol";
+import {Script, stdJson} from "forge-std/Script.sol";
+import {Vm} from "forge-std/Vm.sol";
 
+import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
 import {JB721InitTiersConfig} from "@bananapus/721-hook-v6/src/structs/JB721InitTiersConfig.sol";
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
@@ -45,6 +45,74 @@ struct FeeProjectConfig {
     REVSuckerDeploymentConfig suckerDeploymentConfiguration;
     REVDeploy721TiersHookConfig hookConfiguration;
     REVCroptopAllowedPost[] allowedPosts;
+}
+
+interface IREVDeployerForCroptopFeeProject {
+    function DIRECTORY() external view returns (IJBDirectory);
+
+    function deployFor(
+        uint256 revnetId,
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig memory tiered721HookConfiguration,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        external
+        returns (uint256, IJB721TiersHook hook);
+}
+
+struct RevnetCoreDeployment {
+    IREVDeployerForCroptopFeeProject basicDeployer;
+}
+
+library RevnetCoreDeploymentLib {
+    address internal constant VM_ADDRESS = address(uint160(uint256(keccak256("hevm cheat code"))));
+    // forge-lint: disable-next-line(screaming-snake-case-const)
+    Vm internal constant vm = Vm(VM_ADDRESS);
+
+    function getDeployment(string memory path) internal returns (RevnetCoreDeployment memory deployment) {
+        uint256 chainId = block.chainid;
+        SphinxConstants sphinxConstants = new SphinxConstants();
+        NetworkInfo[] memory networks = sphinxConstants.getNetworkInfoArray();
+
+        for (uint256 i; i < networks.length; i++) {
+            if (networks[i].chainId == chainId) return getDeployment({path: path, networkName: networks[i].name});
+        }
+
+        revert("ChainID is not (currently) supported by Sphinx.");
+    }
+
+    function getDeployment(
+        string memory path,
+        string memory networkName
+    )
+        internal
+        view
+        returns (RevnetCoreDeployment memory deployment)
+    {
+        deployment.basicDeployer = IREVDeployerForCroptopFeeProject(
+            _getDeploymentAddress({
+                path: path, projectName: "revnet-core-v6", networkName: networkName, contractName: "REVDeployer"
+            })
+        );
+    }
+
+    function _getDeploymentAddress(
+        string memory path,
+        string memory projectName,
+        string memory networkName,
+        string memory contractName
+    )
+        private
+        view
+        returns (address)
+    {
+        string memory deploymentJson =
+        // forge-lint: disable-next-line(unsafe-cheatcode)
+        vm.readFile(string.concat(path, projectName, "/", networkName, "/", contractName, ".json"));
+        return stdJson.readAddress({json: deploymentJson, key: ".address"});
+    }
 }
 
 contract ConfigureFeeProjectScript is Script, Sphinx {
