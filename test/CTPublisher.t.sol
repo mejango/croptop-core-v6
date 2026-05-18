@@ -43,8 +43,8 @@ contract TestCTPublisher is Test {
         // Mock hook.owner() for permission checks.
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
 
-        // Mock hook.PROJECT_ID() for permission checks.
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(hookProjectId));
+        // Mock hook.projectId() for permission checks.
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
 
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
@@ -720,7 +720,7 @@ contract TestCTPublisher is Test {
         address feeHook = makeAddr("feeHook");
         address feeHookStore = makeAddr("feeHookStore");
         vm.mockCall(feeHook, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
-        vm.mockCall(feeHook, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(feeProjectId));
+        vm.mockCall(feeHook, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(feeProjectId));
         vm.mockCall(feeHook, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(feeHookStore));
         vm.mockCall(
             feeHookStore, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(uint256(0))
@@ -807,7 +807,7 @@ contract TestCTPublisher is Test {
             votingUnits: 0,
             reserveFrequency: 0,
             reserveBeneficiary: address(0),
-            encodedIPFSUri: keccak256("split-beneficiary-test"),
+            encodedIpfsUri: keccak256("split-beneficiary-test"),
             category: 5,
             discountPercent: 0,
             flags: JB721TierConfigFlags({

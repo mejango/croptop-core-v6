@@ -68,8 +68,12 @@ contract PermMockHook {
     uint256 public immutable PROJECT_ID;
     bool public ownershipTransferred;
 
-    constructor(uint256 projectId) {
-        PROJECT_ID = projectId;
+    constructor(uint256 projectId_) {
+        PROJECT_ID = projectId_;
+    }
+
+    function projectId() external view returns (uint256) {
+        return PROJECT_ID;
     }
 
     /// @dev Simulates JBOwnable.transferOwnershipToProject

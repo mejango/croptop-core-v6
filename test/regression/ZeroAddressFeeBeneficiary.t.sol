@@ -60,10 +60,14 @@ contract ZBMockHook {
     IJB721TiersHookStore public immutable STORE;
     address public immutable OWNER;
 
-    constructor(uint256 projectId, IJB721TiersHookStore store_, address owner_) {
-        PROJECT_ID = projectId;
+    constructor(uint256 projectId_, IJB721TiersHookStore store_, address owner_) {
+        PROJECT_ID = projectId_;
         STORE = store_;
         OWNER = owner_;
+    }
+
+    function projectId() external view returns (uint256) {
+        return PROJECT_ID;
     }
 
     function adjustTiers(JB721TierConfig[] calldata, uint256[] calldata) external {}

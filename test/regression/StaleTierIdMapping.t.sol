@@ -45,8 +45,8 @@ contract StaleTierIdMappingRegression is Test {
 
         // Mock hook.owner().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
-        // Mock hook.PROJECT_ID().
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(hookProjectId));
+        // Mock hook.projectId().
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
 
@@ -90,7 +90,7 @@ contract StaleTierIdMappingRegression is Test {
     }
 
     /// @notice After a tier is removed externally, the stale mapping should be cleared
-    ///         so that the same encodedIPFSUri can be re-posted as a new tier.
+    ///         so that the same encodedIpfsUri can be re-posted as a new tier.
     function test_staleMappingClearedWhenTierRemoved() public {
         _configureCategory();
 
@@ -132,7 +132,7 @@ contract StaleTierIdMappingRegression is Test {
         // Mock tierOf for the removed tier — the fix calls tierOf before checking isTierRemoved.
         JB721Tier memory removedTier;
         removedTier.id = 1;
-        removedTier.encodedIPFSUri = TEST_URI;
+        removedTier.encodedIpfsUri = TEST_URI;
         vm.mockCall(
             hookStoreAddr,
             abi.encodeWithSelector(IJB721TiersHookStore.tierOf.selector, hookAddr, 1, false),
@@ -178,7 +178,7 @@ contract StaleTierIdMappingRegression is Test {
             votingUnits: 0,
             reserveFrequency: 0,
             reserveBeneficiary: address(0),
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             category: 5,
             discountPercent: 0,
             flags: JB721TierFlags({

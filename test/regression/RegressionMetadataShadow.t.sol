@@ -65,6 +65,10 @@ contract MetadataShadowHook {
         METADATA_ID_TARGET = metadataIdTarget_;
     }
 
+    function projectId() external pure returns (uint256) {
+        return PROJECT_ID;
+    }
+
     function adjustTiers(JB721TierConfig[] calldata, uint256[] calldata) external {}
 
     function owner() external view returns (address) {

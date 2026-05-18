@@ -76,7 +76,7 @@ contract RegressionMockStore {
         uint104 price;
         uint32 initialSupply;
         uint32 remainingSupply;
-        bytes32 encodedIPFSUri;
+        bytes32 encodedIpfsUri;
         bool removed;
     }
 
@@ -84,7 +84,7 @@ contract RegressionMockStore {
     mapping(uint256 tierId => StoredTier) public tierData;
 
     function encodedUriOf(uint256 tierId) external view returns (bytes32) {
-        return tierData[tierId].encodedIPFSUri;
+        return tierData[tierId].encodedIpfsUri;
     }
 
     function addTier(JB721TierConfig memory config) external returns (uint256 tierId) {
@@ -93,13 +93,13 @@ contract RegressionMockStore {
             price: config.price,
             initialSupply: config.initialSupply,
             remainingSupply: config.initialSupply,
-            encodedIPFSUri: config.encodedIPFSUri,
+            encodedIpfsUri: config.encodedIpfsUri,
             removed: false
         });
     }
 
-    function setEncodedUri(uint256 tierId, bytes32 encodedIPFSUri) external {
-        tierData[tierId].encodedIPFSUri = encodedIPFSUri;
+    function setEncodedUri(uint256 tierId, bytes32 encodedIpfsUri) external {
+        tierData[tierId].encodedIpfsUri = encodedIpfsUri;
     }
 
     function maxTierIdOf(address) external view returns (uint256) {
@@ -121,7 +121,7 @@ contract RegressionMockStore {
             votingUnits: 0,
             reserveFrequency: 0,
             reserveBeneficiary: address(0),
-            encodedIPFSUri: stored.encodedIPFSUri,
+            encodedIpfsUri: stored.encodedIpfsUri,
             category: 0,
             discountPercent: 0,
             flags: JB721TierFlags({
@@ -142,10 +142,14 @@ contract RegressionMutableHook {
     IJB721TiersHookStore public immutable STORE;
     address public ownerAddress;
 
-    constructor(uint256 projectId, IJB721TiersHookStore store_, address owner_) {
-        PROJECT_ID = projectId;
+    constructor(uint256 projectId_, IJB721TiersHookStore store_, address owner_) {
+        PROJECT_ID = projectId_;
         STORE = store_;
         ownerAddress = owner_;
+    }
+
+    function projectId() external view returns (uint256) {
+        return PROJECT_ID;
     }
 
     function owner() external view returns (address) {
@@ -168,12 +172,12 @@ contract RegressionMutableHook {
         string calldata,
         string calldata,
         address,
-        uint256 encodedIPFSUriTierId,
-        bytes32 encodedIPFSUri
+        uint256 encodedIpfsUriTierId,
+        bytes32 encodedIpfsUri
     )
         external
     {
-        RegressionMockStore(address(STORE)).setEncodedUri(encodedIPFSUriTierId, encodedIPFSUri);
+        RegressionMockStore(address(STORE)).setEncodedUri(encodedIpfsUriTierId, encodedIpfsUri);
     }
 }
 

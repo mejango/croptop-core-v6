@@ -186,10 +186,10 @@ contract TestCTDeployer is Test {
         });
         CTSuckerDeploymentConfig memory suckerConfig = _emptySuckerConfig();
 
-        // Mock the hook's owner() and PROJECT_ID() so the publisher's permission check passes.
+        // Mock the hook's owner() and projectId() so the publisher's permission check passes.
         // The CTDeployer is the hook's owner (it deployed the hook).
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(address(deployer)));
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
 
         (uint256 projectId,) = deployer.deployProjectFor(owner, config, suckerConfig, controller);
         assertEq(projectId, deployedProjectId, "project ID should match");
@@ -316,8 +316,8 @@ contract TestCTDeployer is Test {
 
     /// @notice claimCollectionOwnershipOf transfers hook ownership to the project.
     function test_claimCollectionOwnershipOf_transfersOwnership() public {
-        // Mock hook.PROJECT_ID() to return deployedProjectId.
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        // Mock hook.projectId() to return deployedProjectId.
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
 
         // Mock PROJECTS.ownerOf(deployedProjectId) to return owner.
         vm.mockCall(
@@ -333,8 +333,8 @@ contract TestCTDeployer is Test {
 
     /// @notice claimCollectionOwnershipOf reverts when called by a non-owner.
     function test_claimCollectionOwnershipOf_nonOwner_reverts() public {
-        // Mock hook.PROJECT_ID() to return deployedProjectId.
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        // Mock hook.projectId() to return deployedProjectId.
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
 
         // Mock PROJECTS.ownerOf(deployedProjectId) to return owner (not unauthorized).
         vm.mockCall(
@@ -352,8 +352,8 @@ contract TestCTDeployer is Test {
 
     /// @notice claimCollectionOwnershipOf revokes deployer-scoped permissions before transferring ownership.
     function test_claimCollectionOwnershipOf_revokesPermissions() public {
-        // Mock hook.PROJECT_ID() to return deployedProjectId.
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        // Mock hook.projectId() to return deployedProjectId.
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
 
         // Mock PROJECTS.ownerOf(deployedProjectId) to return owner.
         vm.mockCall(
