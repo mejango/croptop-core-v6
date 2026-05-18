@@ -145,7 +145,7 @@ contract FeeEvasionRegression is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             totalSupply: 10,
             price: TIER_PRICE,
             category: 5,
@@ -158,7 +158,7 @@ contract FeeEvasionRegression is Test {
         publisher.mintFrom{value: 2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
 
         // Verify the mapping was set.
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored");
 
         // Now the attack: existing tier, but attacker sets post.price = 0.
         // Update mocks for the second mint (maxTierId is now 1).
@@ -166,7 +166,7 @@ contract FeeEvasionRegression is Test {
 
         CTPost[] memory attackPosts = new CTPost[](1);
         attackPosts[0] = CTPost({
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             totalSupply: 10,
             price: 0, // Attacker tries to evade fee by setting price = 0.
             category: 5,
@@ -243,7 +243,7 @@ contract FeeEvasionRegression is Test {
         // First mint to create the tier.
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             totalSupply: 10,
             price: TIER_PRICE,
             category: 5,
@@ -260,7 +260,7 @@ contract FeeEvasionRegression is Test {
 
         CTPost[] memory existingPosts = new CTPost[](1);
         existingPosts[0] = CTPost({
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             totalSupply: 10,
             price: 0, // Attacker sets price to 0.
             category: 5,

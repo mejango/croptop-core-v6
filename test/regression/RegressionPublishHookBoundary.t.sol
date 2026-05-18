@@ -183,7 +183,7 @@ contract RegressionPublishHookBoundaryTest is Test {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             // forge-lint: disable-next-line(unsafe-typecast)
-            encodedIPFSUri: bytes32("post"),
+            encodedIpfsUri: bytes32("post"),
             totalSupply: 1,
             // forge-lint: disable-next-line(unsafe-typecast)
             price: uint104(price),

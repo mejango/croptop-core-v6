@@ -13,8 +13,7 @@ import {CTProjectOwner} from "../../src/CTProjectOwner.sol";
 struct CroptopDeployment {
     CTPublisher publisher;
     CTDeployer deployer;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    CTProjectOwner project_owner;
+    CTProjectOwner projectOwner;
 }
 
 library CroptopDeploymentLib {
@@ -24,17 +23,16 @@ library CroptopDeploymentLib {
     Vm internal constant vm = Vm(VM_ADDRESS);
 
     function getDeployment(string memory path) internal returns (CroptopDeployment memory deployment) {
-        // get chainId for which we need to get the deployment.
+        // Match the current chain ID to the Sphinx network name used in deployment artifacts.
         uint256 chainId = block.chainid;
 
-        // Deploy to get the constants.
-        // TODO: get constants without deploy.
+        // `SphinxConstants` exposes Sphinx's supported chain ID to network name mapping.
         SphinxConstants sphinxConstants = new SphinxConstants();
         NetworkInfo[] memory networks = sphinxConstants.getNetworkInfoArray();
 
         for (uint256 _i; _i < networks.length; _i++) {
             if (networks[_i].chainId == chainId) {
-                return getDeployment(path, networks[_i].name);
+                return getDeployment({path: path, networkName: networks[_i].name});
             }
         }
 
@@ -43,8 +41,7 @@ library CroptopDeploymentLib {
 
     function getDeployment(
         string memory path,
-        // forge-lint: disable-next-line(mixed-case-variable)
-        string memory network_name
+        string memory networkName
     )
         internal
         view
@@ -52,17 +49,17 @@ library CroptopDeploymentLib {
     {
         deployment.publisher = CTPublisher(
             _getDeploymentAddress({
-                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTPublisher"
+                path: path, projectName: "croptop-core-v6", networkName: networkName, contractName: "CTPublisher"
             })
         );
         deployment.deployer = CTDeployer(
             _getDeploymentAddress({
-                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTDeployer"
+                path: path, projectName: "croptop-core-v6", networkName: networkName, contractName: "CTDeployer"
             })
         );
-        deployment.project_owner = CTProjectOwner(
+        deployment.projectOwner = CTProjectOwner(
             _getDeploymentAddress({
-                path: path, project_name: "croptop-core-v6", network_name: network_name, contractName: "CTProjectOwner"
+                path: path, projectName: "croptop-core-v6", networkName: networkName, contractName: "CTProjectOwner"
             })
         );
     }
@@ -74,10 +71,8 @@ library CroptopDeploymentLib {
     /// @return The address of the contract.
     function _getDeploymentAddress(
         string memory path,
-        // forge-lint: disable-next-line(mixed-case-variable)
-        string memory project_name,
-        // forge-lint: disable-next-line(mixed-case-variable)
-        string memory network_name,
+        string memory projectName,
+        string memory networkName,
         string memory contractName
     )
         internal
@@ -86,7 +81,7 @@ library CroptopDeploymentLib {
     {
         string memory deploymentJson =
         // forge-lint: disable-next-line(unsafe-cheatcode)
-        vm.readFile(string.concat(path, project_name, "/", network_name, "/", contractName, ".json"));
+        vm.readFile(string.concat(path, projectName, "/", networkName, "/", contractName, ".json"));
         return stdJson.readAddress({json: deploymentJson, key: ".address"});
     }
 }

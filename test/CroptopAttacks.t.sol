@@ -140,7 +140,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("test-content"),
+            encodedIpfsUri: keccak256("test-content"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 999,
@@ -162,7 +162,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("cheap-content"),
+            encodedIpfsUri: keccak256("cheap-content"),
             totalSupply: 10,
             price: 0.01 ether,
             category: 5,
@@ -184,7 +184,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("big-supply"),
+            encodedIpfsUri: keccak256("big-supply"),
             totalSupply: 100,
             price: 0.01 ether,
             category: 5,
@@ -206,7 +206,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("small-supply"),
+            encodedIpfsUri: keccak256("small-supply"),
             totalSupply: 5,
             price: 0.01 ether,
             category: 5,
@@ -231,7 +231,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("sneaky-content"),
+            encodedIpfsUri: keccak256("sneaky-content"),
             totalSupply: 10,
             price: 0.01 ether,
             category: 7,
@@ -253,7 +253,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: bytes32(0),
+            encodedIpfsUri: bytes32(0),
             totalSupply: 10,
             price: 0.01 ether,
             category: 5,
@@ -319,7 +319,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("greedy-split"),
+            encodedIpfsUri: keccak256("greedy-split"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -355,7 +355,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("sneaky-split"),
+            encodedIpfsUri: keccak256("sneaky-split"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -410,7 +410,7 @@ contract CroptopAttacks is Test {
 
         CTPost[] memory posts = new CTPost[](2);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("post-ok"),
+            encodedIpfsUri: keccak256("post-ok"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -418,7 +418,7 @@ contract CroptopAttacks is Test {
             splits: new JBSplit[](0)
         });
         posts[1] = CTPost({
-            encodedIPFSUri: keccak256("post-bad"),
+            encodedIpfsUri: keccak256("post-bad"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,

@@ -84,13 +84,13 @@ contract RegressionPolicyReuseTest is Test {
         vm.prank(alice);
         publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "");
 
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(hookAddr, URI), 1, "initial publish should store tier id");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, URI), 1, "initial publish should store tier id");
 
         _configureAllowlist(bob);
 
         CTPost[] memory blockedNewUri = new CTPost[](1);
         blockedNewUri[0] = CTPost({
-            encodedIPFSUri: keccak256("new-uri"),
+            encodedIpfsUri: keccak256("new-uri"),
             totalSupply: 10,
             price: PRICE,
             category: 7,
@@ -157,7 +157,7 @@ contract RegressionPolicyReuseTest is Test {
     function _singlePost() internal pure returns (CTPost[] memory posts) {
         posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: URI, totalSupply: 10, price: PRICE, category: 7, splitPercent: 0, splits: new JBSplit[](0)
+            encodedIpfsUri: URI, totalSupply: 10, price: PRICE, category: 7, splitPercent: 0, splits: new JBSplit[](0)
         });
     }
 

@@ -101,3 +101,11 @@ Two parts of the design make this safe by claim:
 **Operator runbook for buyers of pre-claim project NFTs:** call `claimCollectionOwnershipOf` immediately after receiving the NFT. The call is permissionless against the current NFT owner check, so the buyer can close the window without cooperation from the prior owner.
 
 Frontends and marketplaces listing Croptop-launched project NFTs should surface whether claim has been performed and prompt the buyer to claim immediately on transfer if it has not.
+
+### 7.7 `CTProjectOwner.onERC721Received` accepts any project NFT and grants `ADJUST_721_TIERS` on its ID
+
+`CTProjectOwner.onERC721Received` (line 52) checks `msg.sender == address(PROJECTS)` but explicitly discards the `from` argument (`from;` at line 63). It then calls `PERMISSIONS.setPermissionsFor` to grant `ADJUST_721_TIERS` to the `PUBLISHER` for the received `tokenId`, regardless of whether the transfer was a mint or a stray transfer of an existing project NFT.
+
+Anyone holding any project NFT can `safeTransferFrom` it to this contract and trigger a real on-chain permission grant: the PUBLISHER address gains `ADJUST_721_TIERS` authority on whatever projectId was transferred. The grant is dormant in current code because `CTPublisher` only invokes `ADJUST_721_TIERS` against project NFTs that the publisher actually administers via the Croptop deployer flow, and stray transfers do not bring the publisher's deployer state along. But the on-chain grant is real and would activate if any future publisher code path acts on caller-supplied project IDs. The same shape exists in `DefifaProjectOwner` for the `SET_SPLIT_GROUPS` permission and was previously fixed for `JBOmnichainDeployer.onERC721Received` (ecosystem AUDIT_REPORT finding 72).
+
+Accepted because the grants are dormant against the current publisher surface and the contract is not the recipient of hostile transfers in canonical flows. Anyone integrating `CTProjectOwner` into a publisher / deployer pair that operates on arbitrary projectIds must add the `require(from == address(0))` guard before relying on it.

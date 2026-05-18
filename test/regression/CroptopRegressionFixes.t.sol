@@ -233,7 +233,7 @@ contract CroptopRegressionFixesTest is Test {
     function test_duplicateMetadataReverts() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: URI_A,
+            encodedIpfsUri: URI_A,
             totalSupply: 10,
             price: 1 ether,
             category: 7,
@@ -260,7 +260,7 @@ contract CroptopRegressionFixesTest is Test {
     function test_emptyMetadataAllowed() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: URI_A,
+            encodedIpfsUri: URI_A,
             totalSupply: 10,
             price: 1 ether,
             category: 7,
@@ -273,7 +273,7 @@ contract CroptopRegressionFixesTest is Test {
         publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "");
 
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "tier should be created with empty metadata"
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "tier should be created with empty metadata"
         );
     }
 
@@ -281,7 +281,7 @@ contract CroptopRegressionFixesTest is Test {
     function test_unrelatedMetadataAllowed() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: URI_A,
+            encodedIpfsUri: URI_A,
             totalSupply: 10,
             price: 1 ether,
             category: 7,
@@ -300,7 +300,7 @@ contract CroptopRegressionFixesTest is Test {
         publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, unrelatedMetadata);
 
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A),
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A),
             1,
             "tier should be created with unrelated metadata"
         );
@@ -316,14 +316,14 @@ contract CroptopRegressionFixesTest is Test {
     function test_M42_fix_clears_stale_cache() public {
         // Step 1: Publish URI_A — creates tier 1.
         _publish(URI_A);
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "URI_A cached as tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "URI_A cached as tier 1");
 
         // Step 2: Owner changes tier 1's URI from URI_A to URI_B via setMetadata.
         vm.prank(hookOwner);
         hook.setMetadata("", "", "", "", address(this), 1, URI_B);
 
         // The publisher cache still maps URI_A -> tier 1, but tier 1 now has URI_B.
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "stale cache still maps URI_A -> tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "stale cache still maps URI_A -> tier 1");
 
         // Step 3: Try to publish URI_A again. The fix should detect the mismatch
         // (tier 1's actual URI is URI_B, not URI_A), clear the stale cache, and
@@ -332,7 +332,7 @@ contract CroptopRegressionFixesTest is Test {
 
         assertEq(store.maxTierId(), 2, "new tier should be created for URI_A after cache invalidation");
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 2, "URI_A should now map to tier 2 (fresh tier)"
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 2, "URI_A should now map to tier 2 (fresh tier)"
         );
     }
 
@@ -340,7 +340,7 @@ contract CroptopRegressionFixesTest is Test {
     function test_M42_fix_still_handles_removed_tiers() public {
         // Use vm.mockCall to simulate isTierRemoved returning true for tier 1.
         _publish(URI_A);
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "URI_A cached as tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "URI_A cached as tier 1");
 
         // Mock isTierRemoved to return true for tier 1.
         vm.mockCall(
@@ -353,19 +353,19 @@ contract CroptopRegressionFixesTest is Test {
         _publish(URI_A);
 
         assertEq(store.maxTierId(), 2, "new tier should be created after tier removal");
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 2, "URI_A should map to new tier 2");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 2, "URI_A should map to new tier 2");
     }
 
     /// @notice When a cached tier's URI still matches, it should be reused (no regression).
     function test_M42_fix_reuses_valid_cache() public {
         // Publish URI_A — creates tier 1.
         _publish(URI_A);
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "URI_A cached as tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "URI_A cached as tier 1");
 
         // Publish URI_A again — URI still matches, should reuse tier 1 (no new tier created).
         _publish(URI_A);
         assertEq(store.maxTierId(), 1, "no new tier should be created for matching URI");
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "URI_A still maps to tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "URI_A still maps to tier 1");
     }
 
     // -----------------------------------------------------------------------
@@ -375,7 +375,7 @@ contract CroptopRegressionFixesTest is Test {
     function _publish(bytes32 uri) internal {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: uri, totalSupply: 10, price: 1 ether, category: 7, splitPercent: 0, splits: new JBSplit[](0)
+            encodedIpfsUri: uri, totalSupply: 10, price: 1 ether, category: 7, splitPercent: 0, splits: new JBSplit[](0)
         });
 
         vm.prank(poster);

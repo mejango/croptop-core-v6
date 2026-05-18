@@ -254,7 +254,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
 
         // Record the tier ID assigned to this URI after the first mint.
-        uint256 tierIdAfterFirst = publisher.tierIdForEncodedIPFSUriOf(address(testHook), TEST_URI);
+        uint256 tierIdAfterFirst = publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI);
         assertGt(tierIdAfterFirst, 0, "Tier ID should be non-zero after first mint");
 
         // Second mint with the same URI. The existing tier should be reused.
@@ -262,7 +262,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
 
         // Verify the tier ID is unchanged — no new tier was created.
-        uint256 tierIdAfterSecond = publisher.tierIdForEncodedIPFSUriOf(address(testHook), TEST_URI);
+        uint256 tierIdAfterSecond = publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI);
         assertEq(tierIdAfterFirst, tierIdAfterSecond, "Tier ID should be reused for duplicate encodedIPFSUri");
 
         // Verify two NFTs were minted total.
@@ -436,7 +436,7 @@ contract PublishForkTest is Test, DeployPermit2 {
     {
         posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: encodedIPFSUri,
+            encodedIpfsUri: encodedIPFSUri,
             price: price,
             totalSupply: totalSupply,
             category: category,

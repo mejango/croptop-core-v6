@@ -20,20 +20,14 @@ contract DeployScript is Script, Sphinx {
     /// @notice tracks the deployment of the sucker contracts for the chain we are deploying to.
     SuckerDeployment suckers;
 
-    // @notice set this to a non-zero value to re-use an existing projectID. Having it set to 0 will deploy a new
-    // fee_project.
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint256 FEE_PROJECT_ID = 0;
+    /// @notice Set this to a non-zero value to reuse an existing fee project. Leaving it as 0 deploys a new one.
+    uint256 private feeProjectId = 0;
 
     /// @notice the salts that are used to deploy the contracts.
-    // forge-lint: disable-next-line(mixed-case-variable)
-    bytes32 PUBLISHER_SALT = "_PUBLISHER_SALTV6_";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    bytes32 DEPLOYER_SALT = "_DEPLOYER_SALTV6_";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    bytes32 PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALTV6_";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    address TRUSTED_FORWARDER;
+    bytes32 private constant _PUBLISHER_SALT = "_PUBLISHER_SALTV6_";
+    bytes32 private constant _DEPLOYER_SALT = "_DEPLOYER_SALTV6_";
+    bytes32 private constant _PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALTV6_";
+    address private trustedForwarder;
 
     function configureSphinx() public override {
         sphinxConfig.projectName = "croptop-core-v6";
@@ -57,7 +51,7 @@ contract DeployScript is Script, Sphinx {
         );
 
         // We use the same trusted forwarder as the core deployment.
-        TRUSTED_FORWARDER = core.controller.trustedForwarder();
+        trustedForwarder = core.controller.trustedForwarder();
 
         // Perform the deployment transactions.
         deploy();
@@ -67,24 +61,24 @@ contract DeployScript is Script, Sphinx {
         // Canonical Croptop deployments must bind fees to an explicit fee project. Autodiscovering the first
         // matching publisher by scanning project IDs is unsafe because a preexisting publisher can pin fees to
         // the wrong project forever.
-        require(FEE_PROJECT_ID != 0, "explicit fee project id required");
+        require(feeProjectId != 0, "explicit fee project id required");
 
         CTPublisher publisher;
         {
             // Perform the check for the publisher.
             (address _publisher, bool _publisherIsDeployed) = _isDeployed({
-                salt: PUBLISHER_SALT,
+                salt: _PUBLISHER_SALT,
                 creationCode: type(CTPublisher).creationCode,
-                arguments: abi.encode(core.directory, core.permissions, FEE_PROJECT_ID, TRUSTED_FORWARDER)
+                arguments: abi.encode(core.directory, core.permissions, feeProjectId, trustedForwarder)
             });
 
             // Deploy it if it has not been deployed yet.
             publisher = !_publisherIsDeployed
-                ? new CTPublisher{salt: PUBLISHER_SALT}({
+                ? new CTPublisher{salt: _PUBLISHER_SALT}({
                     directory: core.directory,
                     permissions: core.permissions,
-                    feeProjectId: FEE_PROJECT_ID,
-                    trustedForwarder: TRUSTED_FORWARDER
+                    feeProjectId: feeProjectId,
+                    trustedForwarder: trustedForwarder
                 })
                 : CTPublisher(_publisher);
         }
@@ -93,22 +87,22 @@ contract DeployScript is Script, Sphinx {
         {
             // Perform the check for the publisher.
             (address _deployer, bool _deployerIsDeployed) = _isDeployed({
-                salt: DEPLOYER_SALT,
+                salt: _DEPLOYER_SALT,
                 creationCode: type(CTDeployer).creationCode,
                 arguments: abi.encode(
-                    core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, TRUSTED_FORWARDER
+                    core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, trustedForwarder
                 )
             });
 
             // Deploy it if it has not been deployed yet.
             deployer = !_deployerIsDeployed
-                ? new CTDeployer{salt: DEPLOYER_SALT}({
+                ? new CTDeployer{salt: _DEPLOYER_SALT}({
                     permissions: core.permissions,
                     projects: core.projects,
                     deployer: hook.hook_deployer,
                     publisher: publisher,
                     suckerRegistry: suckers.registry,
-                    trustedForwarder: TRUSTED_FORWARDER
+                    trustedForwarder: trustedForwarder
                 })
                 : CTDeployer(_deployer);
         }
@@ -117,14 +111,14 @@ contract DeployScript is Script, Sphinx {
         {
             // Perform the check for the publisher.
             (address _owner, bool _ownerIsDeployed) = _isDeployed({
-                salt: PROJECT_OWNER_SALT,
+                salt: _PROJECT_OWNER_SALT,
                 creationCode: type(CTProjectOwner).creationCode,
                 arguments: abi.encode(core.permissions, core.projects, publisher)
             });
 
             // Deploy it if it has not been deployed yet.
             owner = !_ownerIsDeployed
-                ? new CTProjectOwner{salt: PROJECT_OWNER_SALT}({
+                ? new CTProjectOwner{salt: _PROJECT_OWNER_SALT}({
                     permissions: core.permissions, projects: core.projects, publisher: publisher
                 })
                 : CTProjectOwner(_owner);

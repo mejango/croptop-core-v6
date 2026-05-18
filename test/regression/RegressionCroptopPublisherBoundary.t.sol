@@ -226,7 +226,7 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
             ""
         );
 
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "initial publish should cache tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "initial publish should cache tier 1");
 
         // Tighten the policy so only `restrictedPoster` can publish, and only at >= 5 ether.
         _configureCategory(1, 5 ether, _singletonArray(restrictedPoster));
@@ -262,7 +262,7 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
             ""
         );
 
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "publisher cache should point at tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "publisher cache should point at tier 1");
         assertEq(store.encodedUriOf(1), URI_A, "canonical hook metadata should start at uri A");
 
         // The hook owner changes the canonical tier URI through the underlying 721 hook.
@@ -271,7 +271,7 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
 
         assertEq(store.encodedUriOf(1), URI_B, "hook metadata now says tier 1 is uri B");
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A),
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A),
             1,
             "publisher cache is stale and still thinks uri A owns tier 1"
         );
@@ -289,7 +289,7 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         assertEq(store.maxTierId(), 2, "publisher should have created a duplicate tier after the metadata drift");
         assertEq(store.encodedUriOf(1), URI_B, "tier 1 still resolves to uri B");
         assertEq(store.encodedUriOf(2), URI_B, "tier 2 now also resolves to uri B");
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_B), 2, "cache now points uri B at tier 2");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_B), 2, "cache now points uri B at tier 2");
     }
 
     function _configureCategory(uint24 category, uint104 minimumPrice, address[] memory allowedAddresses) internal {
@@ -311,7 +311,7 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
     function _singlePost(bytes32 uri, uint104 price, uint24 category) internal pure returns (CTPost[] memory posts) {
         posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: uri,
+            encodedIpfsUri: uri,
             totalSupply: 10,
             price: price,
             category: category,

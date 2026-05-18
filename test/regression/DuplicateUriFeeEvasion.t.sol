@@ -19,7 +19,7 @@ import {CTPost} from "../../src/structs/CTPost.sol";
 /// @title DuplicateUriFeeEvasionRegression
 /// @notice Duplicate encodedIPFSUri in a single mintFrom batch
 ///         enables fee evasion. Before the fix, a second post with the same URI would read
-///         a stale tierIdForEncodedIPFSUriOf mapping (written by _setupPosts for the first
+///         a stale tierIdForEncodedIpfsUriOf mapping (written by _setupPosts for the first
 ///         post but not yet committed to the store), causing store.tierOf() to return price=0,
 ///         so the fee was computed on 1x the price instead of 2x.
 ///         The fix reverts with CTPublisher_DuplicatePost when duplicate URIs appear in a batch.
@@ -107,7 +107,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         CTPost[] memory posts = new CTPost[](2);
         posts[0] = CTPost({
-            encodedIPFSUri: duplicateUri,
+            encodedIpfsUri: duplicateUri,
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -115,7 +115,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
             splits: new JBSplit[](0)
         });
         posts[1] = CTPost({
-            encodedIPFSUri: duplicateUri, // Same URI as posts[0].
+            encodedIpfsUri: duplicateUri, // Same URI as posts[0].
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -141,7 +141,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         CTPost[] memory posts = new CTPost[](3);
         posts[0] = CTPost({
-            encodedIPFSUri: duplicateUri,
+            encodedIpfsUri: duplicateUri,
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -149,7 +149,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
             splits: new JBSplit[](0)
         });
         posts[1] = CTPost({
-            encodedIPFSUri: uniqueUri, // Different URI.
+            encodedIpfsUri: uniqueUri, // Different URI.
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -157,7 +157,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
             splits: new JBSplit[](0)
         });
         posts[2] = CTPost({
-            encodedIPFSUri: duplicateUri, // Same as posts[0].
+            encodedIpfsUri: duplicateUri, // Same as posts[0].
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -181,7 +181,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         CTPost[] memory posts = new CTPost[](2);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("content-1"),
+            encodedIpfsUri: keccak256("content-1"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -189,7 +189,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
             splits: new JBSplit[](0)
         });
         posts[1] = CTPost({
-            encodedIPFSUri: keccak256("content-2"),
+            encodedIpfsUri: keccak256("content-2"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -230,7 +230,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("sole-content"),
+            encodedIpfsUri: keccak256("sole-content"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -269,7 +269,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         CTPost[] memory posts = new CTPost[](2);
         posts[0] = CTPost({
-            encodedIPFSUri: uri1,
+            encodedIpfsUri: uri1,
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -277,7 +277,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
             splits: new JBSplit[](0)
         });
         posts[1] = CTPost({
-            encodedIPFSUri: uri2,
+            encodedIpfsUri: uri2,
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,

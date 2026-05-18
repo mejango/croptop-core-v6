@@ -169,7 +169,7 @@ contract ReentrantProjectTerminal {
 
             CTPost[] memory posts = new CTPost[](1);
             posts[0] = CTPost({
-                encodedIPFSUri: keccak256("inner"),
+                encodedIpfsUri: keccak256("inner"),
                 totalSupply: 1,
                 price: 20,
                 category: 1,
@@ -225,7 +225,7 @@ contract FeeBeneficiaryReentrancyTest is Test {
     function test_reentrantInnerCallCannotStealOuterFee() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("outer"),
+            encodedIpfsUri: keccak256("outer"),
             totalSupply: 1,
             price: 100,
             category: 1,

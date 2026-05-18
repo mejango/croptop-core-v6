@@ -19,7 +19,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
 /// @title StaleTierIdMappingRegression
-/// @notice Stale tierIdForEncodedIPFSUriOf mapping after external tier removal.
+/// @notice Stale tierIdForEncodedIpfsUriOf mapping after external tier removal.
 ///         When a tier is removed externally via adjustTiers(), the publisher's mapping still pointed
 ///         to the removed tier ID, blocking re-creation. The fix clears the stale mapping and allows
 ///         the post to fall through to new-tier creation.
@@ -106,7 +106,7 @@ contract StaleTierIdMappingRegression is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -119,7 +119,7 @@ contract StaleTierIdMappingRegression is Test {
 
         // Verify tier ID 1 was stored in the mapping.
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored after first mint"
+            publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored after first mint"
         );
 
         // Now simulate external tier removal: isTierRemoved returns true for tier 1.
@@ -149,7 +149,7 @@ contract StaleTierIdMappingRegression is Test {
 
         // Verify the mapping now points to the new tier ID (2).
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI),
+            publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI),
             2,
             "tier ID should be updated to new tier after re-post"
         );
@@ -199,7 +199,7 @@ contract StaleTierIdMappingRegression is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -210,7 +210,7 @@ contract StaleTierIdMappingRegression is Test {
         vm.prank(poster);
         publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
 
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI), 1);
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1);
 
         // Second mint with existing tier (not removed) — should reuse tier ID 1.
         _setupMintMocks(1);
@@ -220,7 +220,7 @@ contract StaleTierIdMappingRegression is Test {
 
         // Mapping should still point to tier 1.
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(hookAddr, TEST_URI),
+            publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI),
             1,
             "tier ID should remain unchanged when tier is not removed"
         );

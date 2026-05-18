@@ -217,7 +217,7 @@ contract FeeFallbackBlackholeTest is Test {
     function test_feePaymentFailure_refundsMsgSenderAndPreservesMint() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("post"),
+            encodedIpfsUri: keccak256("post"),
             totalSupply: 1,
             price: 100,
             category: 1,
@@ -240,7 +240,7 @@ contract FeeFallbackBlackholeTest is Test {
     function test_feePaymentFailure_revertsIfMsgSenderRejectsRefund() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("post"),
+            encodedIpfsUri: keccak256("post"),
             totalSupply: 1,
             price: 100,
             category: 1,
