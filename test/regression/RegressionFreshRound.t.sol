@@ -163,7 +163,7 @@ contract MockHook {
         _projectId = projectId_;
     }
 
-    function PROJECT_ID() external view returns (uint256) {
+    function projectId() external view returns (uint256) {
         return _projectId;
     }
 }

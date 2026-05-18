@@ -91,7 +91,7 @@ contract PublishBoundaryStore {
             votingUnits: 0,
             reserveFrequency: 0,
             reserveBeneficiary: address(0),
-            encodedIPFSUri: config.encodedIPFSUri,
+            encodedIpfsUri: config.encodedIpfsUri,
             category: config.category,
             discountPercent: 0,
             flags: JB721TierFlags({
@@ -126,10 +126,14 @@ contract PublishBoundaryHook {
     uint256 public adjustedTiers;
     uint256 public mintedNfts;
 
-    constructor(uint256 projectId, IJB721TiersHookStore store, address owner_) {
-        PROJECT_ID = projectId;
+    constructor(uint256 projectId_, IJB721TiersHookStore store, address owner_) {
+        PROJECT_ID = projectId_;
         STORE = store;
         owner = owner_;
+    }
+
+    function projectId() external view returns (uint256) {
+        return PROJECT_ID;
     }
 
     function METADATA_ID_TARGET() external view returns (address) {

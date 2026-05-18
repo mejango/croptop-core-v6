@@ -90,7 +90,7 @@ contract DeployScript is Script, Sphinx {
                 salt: _DEPLOYER_SALT,
                 creationCode: type(CTDeployer).creationCode,
                 arguments: abi.encode(
-                    core.permissions, core.projects, hook.hook_deployer, publisher, suckers.registry, trustedForwarder
+                    core.permissions, core.projects, hook.hookDeployer, publisher, suckers.registry, trustedForwarder
                 )
             });
 
@@ -99,7 +99,7 @@ contract DeployScript is Script, Sphinx {
                 ? new CTDeployer{salt: _DEPLOYER_SALT}({
                     permissions: core.permissions,
                     projects: core.projects,
-                    deployer: hook.hook_deployer,
+                    deployer: hook.hookDeployer,
                     publisher: publisher,
                     suckerRegistry: suckers.registry,
                     trustedForwarder: trustedForwarder

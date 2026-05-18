@@ -165,7 +165,7 @@ contract MockStore {
             votingUnits: 0,
             reserveFrequency: 0,
             reserveBeneficiary: address(0),
-            encodedIPFSUri: tier.uri,
+            encodedIpfsUri: tier.uri,
             category: tier.category,
             discountPercent: 0,
             flags: JB721TierFlags({
@@ -183,7 +183,7 @@ contract MockStore {
     function addTier(JB721TierConfig calldata config) external returns (uint256 tierId) {
         tierId = ++_maxTierId;
         _tiers[tierId] = TierData({
-            uri: config.encodedIPFSUri,
+            uri: config.encodedIpfsUri,
             price: config.price,
             category: config.category,
             supply: config.initialSupply,
@@ -211,10 +211,14 @@ contract MockHook {
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
     MockStore internal immutable _store;
 
-    constructor(address owner_, uint256 projectId, MockStore store_) {
+    constructor(address owner_, uint256 projectId_, MockStore store_) {
         _owner = owner_;
-        PROJECT_ID = projectId;
+        PROJECT_ID = projectId_;
         _store = store_;
+    }
+
+    function projectId() external view returns (uint256) {
+        return PROJECT_ID;
     }
 
     function owner() external view returns (address) {
@@ -241,12 +245,12 @@ contract MockHook {
         string calldata,
         string calldata,
         address,
-        uint256 encodedIPFSUriTierId,
-        bytes32 encodedIPFSUri
+        uint256 encodedIpfsUriTierId,
+        bytes32 encodedIpfsUri
     )
         external
     {
         require(msg.sender == _owner, "not owner");
-        _store.setEncodedIPFSUriOf(encodedIPFSUriTierId, encodedIPFSUri);
+        _store.setEncodedIPFSUriOf(encodedIpfsUriTierId, encodedIpfsUri);
     }
 }

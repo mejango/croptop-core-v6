@@ -17,7 +17,7 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
 /// @title DuplicateUriFeeEvasionRegression
-/// @notice Duplicate encodedIPFSUri in a single mintFrom batch
+/// @notice Duplicate encodedIpfsUri in a single mintFrom batch
 ///         enables fee evasion. Before the fix, a second post with the same URI would read
 ///         a stale tierIdForEncodedIpfsUriOf mapping (written by _setupPosts for the first
 ///         post but not yet committed to the store), causing store.tierOf() to return price=0,
@@ -44,8 +44,8 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         // Mock hook.owner().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
-        // Mock hook.PROJECT_ID().
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(hookProjectId));
+        // Mock hook.projectId().
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
 
@@ -97,7 +97,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
     // =========================================================================
     // Test 1: Duplicate URI in batch reverts with CTPublisher_DuplicatePost
     // =========================================================================
-    /// @notice Sending two posts with the same encodedIPFSUri in a single mintFrom batch
+    /// @notice Sending two posts with the same encodedIpfsUri in a single mintFrom batch
     ///         must revert with CTPublisher_DuplicatePost.
     function test_duplicateUriInBatch_reverts() public {
         _configureCategory();
@@ -173,7 +173,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
     // =========================================================================
     // Test 3: Two posts with different URIs succeed
     // =========================================================================
-    /// @notice Two posts with distinct encodedIPFSUri values should not revert
+    /// @notice Two posts with distinct encodedIpfsUri values should not revert
     ///         (at least not with the duplicate error).
     function test_distinctUrisInBatch_succeeds() public {
         _configureCategory();

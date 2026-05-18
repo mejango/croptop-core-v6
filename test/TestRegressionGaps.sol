@@ -163,7 +163,7 @@ contract TestRegressionGaps is Test {
 
         // Mock hook basics.
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(hookProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
 
         // Fund test accounts.

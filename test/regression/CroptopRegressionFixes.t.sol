@@ -85,7 +85,7 @@ contract P12MockStore {
             votingUnits: 0,
             reserveFrequency: 0,
             reserveBeneficiary: address(0),
-            encodedIPFSUri: tier.uri,
+            encodedIpfsUri: tier.uri,
             category: tier.category,
             discountPercent: 0,
             flags: JB721TierFlags({
@@ -103,7 +103,7 @@ contract P12MockStore {
     function addTier(JB721TierConfig calldata config) external returns (uint256 tierId) {
         tierId = ++_maxTierId;
         _tiers[tierId] = TierData({
-            uri: config.encodedIPFSUri,
+            uri: config.encodedIpfsUri,
             price: config.price,
             category: config.category,
             supply: config.initialSupply,
@@ -137,6 +137,10 @@ contract P12MockHook {
         _store = store_;
     }
 
+    function projectId() external view returns (uint256) {
+        return PROJECT_ID;
+    }
+
     function owner() external view returns (address) {
         return _owner;
     }
@@ -163,13 +167,13 @@ contract P12MockHook {
         string calldata,
         string calldata,
         address,
-        uint256 encodedIPFSUriTierId,
-        bytes32 encodedIPFSUri
+        uint256 encodedIpfsUriTierId,
+        bytes32 encodedIpfsUri
     )
         external
     {
         require(msg.sender == _owner, "not owner");
-        _store.setEncodedIPFSUriOf(encodedIPFSUriTierId, encodedIPFSUri);
+        _store.setEncodedIPFSUriOf(encodedIpfsUriTierId, encodedIpfsUri);
     }
 }
 

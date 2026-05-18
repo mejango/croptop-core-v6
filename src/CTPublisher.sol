@@ -136,7 +136,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // Enforce permissions.
             _requirePermissionFrom({
                 account: JBOwnable(allowedPost.hook).owner(),
-                projectId: IJB721TiersHook(allowedPost.hook).PROJECT_ID(),
+                projectId: IJB721TiersHook(allowedPost.hook).projectId(),
                 permissionId: JBPermissionIds.ADJUST_721_TIERS
             });
 
@@ -214,7 +214,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         bytes memory mintMetadata;
 
         // Keep a reference to the project's ID.
-        uint256 projectId = hook.PROJECT_ID();
+        uint256 projectId = hook.projectId();
 
         {
             // Setup the posts.
@@ -487,7 +487,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                         store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false});
                     if (
                         store.isTierRemoved({hook: address(hook), tierId: tierId})
-                            || cachedTier.encodedIPFSUri != post.encodedIpfsUri
+                            || cachedTier.encodedIpfsUri != post.encodedIpfsUri
                     ) {
                         delete tierIdForEncodedIpfsUriOf[address(hook)][post.encodedIpfsUri];
                     } else {
@@ -559,7 +559,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     votingUnits: 0,
                     reserveFrequency: 0,
                     reserveBeneficiary: address(0),
-                    encodedIPFSUri: post.encodedIpfsUri,
+                    encodedIpfsUri: post.encodedIpfsUri,
                     category: post.category,
                     discountPercent: 0,
                     flags: JB721TierConfigFlags({

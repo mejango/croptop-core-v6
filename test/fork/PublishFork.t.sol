@@ -242,7 +242,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         publisher.mintFrom{value: insufficientValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
     }
 
-    /// @notice Verify that minting the same encodedIPFSUri twice reuses the existing tier ID.
+    /// @notice Verify that minting the same encodedIpfsUri twice reuses the existing tier ID.
     function testFork_MintFromDuplicatePostReusesExistingTier() public {
         CTPost[] memory posts = _singlePost(TEST_URI, POST_PRICE, POST_SUPPLY, POST_CATEGORY);
 
@@ -263,7 +263,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Verify the tier ID is unchanged — no new tier was created.
         uint256 tierIdAfterSecond = publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI);
-        assertEq(tierIdAfterFirst, tierIdAfterSecond, "Tier ID should be reused for duplicate encodedIPFSUri");
+        assertEq(tierIdAfterFirst, tierIdAfterSecond, "Tier ID should be reused for duplicate encodedIpfsUri");
 
         // Verify two NFTs were minted total.
         assertEq(IERC721(address(testHook)).balanceOf(nftBeneficiary), 2, "Two NFTs should be minted across both calls");
@@ -425,7 +425,7 @@ contract PublishForkTest is Test, DeployPermit2 {
     /// @notice Build a single-element CTPost array.
     function _singlePost(
         // forge-lint: disable-next-line(mixed-case-variable)
-        bytes32 encodedIPFSUri,
+        bytes32 encodedIpfsUri,
         uint104 price,
         uint32 totalSupply,
         uint24 category
@@ -436,7 +436,7 @@ contract PublishForkTest is Test, DeployPermit2 {
     {
         posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIpfsUri: encodedIPFSUri,
+            encodedIpfsUri: encodedIpfsUri,
             price: price,
             totalSupply: totalSupply,
             category: category,

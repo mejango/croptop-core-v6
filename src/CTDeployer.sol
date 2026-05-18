@@ -131,7 +131,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @param hook The hook to claim ownership of.
     function claimCollectionOwnershipOf(IJB721TiersHook hook) external override {
         // Get the project ID of the hook.
-        uint256 projectId = hook.PROJECT_ID();
+        uint256 projectId = hook.projectId();
 
         // Keep a reference to the caller.
         address caller = _msgSender();

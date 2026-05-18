@@ -110,8 +110,8 @@ contract ClaimCollectionOwnershipTest is Test {
 
         // Step 2: After deployment, the CTDeployer is the hook's owner.
         // (The deployer owns the hook because it deployed it.)
-        // Mock hook.PROJECT_ID() to return deployedProjectId.
-        vm.mockCall(address(hook), abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(projectId));
+        // Mock hook.projectId() to return deployedProjectId.
+        vm.mockCall(address(hook), abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(projectId));
 
         // Mock PROJECTS.ownerOf(projectId) to return owner.
         vm.mockCall(address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, projectId), abi.encode(owner));
@@ -131,8 +131,8 @@ contract ClaimCollectionOwnershipTest is Test {
     /// @notice After claiming ownership, the hook's owner is resolved via PROJECTS.ownerOf(projectId).
     ///         If the project NFT is transferred to a new owner, the new owner becomes the hook's owner.
     function test_postClaim_projectTransfer_newOwnerControlsHook() public {
-        // Mock hook.PROJECT_ID().
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        // Mock hook.projectId().
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
 
         // Initially, 'owner' owns the project.
         vm.mockCall(
@@ -173,7 +173,7 @@ contract ClaimCollectionOwnershipTest is Test {
     function test_postClaim_publisherNeedsNewPermissions() public {
         // After claiming, hook.owner() resolves to PROJECTS.ownerOf(projectId) = owner.
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(owner));
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
 
         // The publisher's configurePostingCriteriaFor calls _requirePermissionFrom(hook.owner(), ...).
         // After claiming, hook.owner() is the project owner, not the deployer.
@@ -214,7 +214,7 @@ contract ClaimCollectionOwnershipTest is Test {
     function test_postClaim_publisherWorksAfterPermissionGrant() public {
         // After claiming, hook.owner() = owner.
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(owner));
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
 
         // The project owner grants CTPublisher the ADJUST_721_TIERS permission.
         // Simulate: hasPermission returns true for publisher calling from owner's context.
@@ -246,7 +246,7 @@ contract ClaimCollectionOwnershipTest is Test {
     /// @notice Claiming twice for the same hook should succeed (idempotent — just calls
     ///         transferOwnershipToProject again, which the hook handles internally).
     function test_claim_calledTwice_succeeds() public {
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
         vm.mockCall(
             address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId), abi.encode(owner)
         );
@@ -263,7 +263,7 @@ contract ClaimCollectionOwnershipTest is Test {
 
     /// @notice Non-owner cannot claim even after project ownership changes.
     function test_claim_revertsForNonProjectOwner() public {
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(deployedProjectId));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
         vm.mockCall(
             address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector, deployedProjectId), abi.encode(owner)
         );

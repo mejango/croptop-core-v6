@@ -41,7 +41,7 @@ contract RegressionPolicyReuseTest is Test {
         publisher = new CTPublisher(directory, permissions, FEE_PROJECT_ID, address(0));
 
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
-        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.PROJECT_ID.selector), abi.encode(PROJECT_ID));
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(PROJECT_ID));
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
 
         vm.mockCall(
@@ -114,7 +114,7 @@ contract RegressionPolicyReuseTest is Test {
             votingUnits: 0,
             reserveFrequency: 0,
             reserveBeneficiary: address(0),
-            encodedIPFSUri: URI,
+            encodedIpfsUri: URI,
             category: 7,
             discountPercent: 0,
             flags: JB721TierFlags({

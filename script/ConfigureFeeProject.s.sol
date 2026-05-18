@@ -118,7 +118,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         );
 
         // We do a quick sanity check to make sure revnet and croptop use the same juicebox core contracts.
-        require(revnet.basic_deployer.DIRECTORY() == croptop.publisher.DIRECTORY());
+        require(revnet.basicDeployer.DIRECTORY() == croptop.publisher.DIRECTORY());
 
         // Set the operator address to be the multisig.
         operator = safeAddress();
@@ -338,10 +338,10 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         // Only deploy if the project hasn't already been configured (restart-safe).
         if (address(core.directory.controllerOf(feeProjectId)) == address(0)) {
             // Approve the basic deployer to configure the project and transfer it.
-            core.projects.approve({to: address(revnet.basic_deployer), tokenId: feeProjectId});
+            core.projects.approve({to: address(revnet.basicDeployer), tokenId: feeProjectId});
 
             // Deploy the NANA fee project.
-            revnet.basic_deployer
+            revnet.basicDeployer
                 .deployFor({
                     revnetId: feeProjectId,
                     configuration: feeProjectConfig.configuration,

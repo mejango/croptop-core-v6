@@ -112,11 +112,6 @@ contract PermissionedHook is JBPermissioned {
         projectId = projectId_;
     }
 
-    // forge-lint: disable-next-line(mixed-case-function)
-    function PROJECT_ID() external view returns (uint256) {
-        return projectId;
-    }
-
     function owner() external view returns (address) {
         return ownerAccount;
     }
