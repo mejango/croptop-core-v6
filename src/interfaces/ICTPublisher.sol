@@ -71,17 +71,17 @@ interface ICTPublisher {
 
     /// @notice The tier ID that an IPFS metadata URI has been saved to for a given hook.
     /// @param hook The hook for which the tier ID applies.
-    /// @param encodedIPFSUri The encoded IPFS URI to look up.
+    /// @param encodedIpfsUri The encoded IPFS URI to look up.
     /// @return The tier ID, or 0 if the URI has not been published.
     // forge-lint: disable-next-line(mixed-case-function)
-    function tierIdForEncodedIPFSUriOf(address hook, bytes32 encodedIPFSUri) external view returns (uint256);
+    function tierIdForEncodedIpfsUriOf(address hook, bytes32 encodedIpfsUri) external view returns (uint256);
 
     /// @notice Get the tiers for the provided encoded IPFS URIs.
     /// @param hook The hook from which to get tiers.
-    /// @param encodedIPFSUris The URIs to get tiers of.
+    /// @param encodedIpfsUris The URIs to get tiers of.
     /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. Empty tiers are returned for URIs
     /// without a tier.
-    function tiersFor(address hook, bytes32[] memory encodedIPFSUris) external view returns (JB721Tier[] memory tiers);
+    function tiersFor(address hook, bytes32[] memory encodedIpfsUris) external view returns (JB721Tier[] memory tiers);
 
     /// @notice Configure the allowed criteria for publishing new NFTs to a hook.
     /// @param allowedPosts An array of criteria for allowed posts.

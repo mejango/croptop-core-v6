@@ -171,7 +171,7 @@ contract RegressionMetadataShadowTest is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("publisher-validated-post"),
+            encodedIpfsUri: keccak256("publisher-validated-post"),
             totalSupply: 1,
             price: 100,
             category: 1,

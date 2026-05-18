@@ -31,8 +31,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error CTPublisher_DuplicatePost(bytes32 encodedIPFSUri);
-    error CTPublisher_EmptyEncodedIPFSUri(uint256 postIndex);
+    error CTPublisher_DuplicatePost(bytes32 encodedIpfsUri);
+    error CTPublisher_EmptyEncodedIpfsUri(uint256 postIndex);
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
@@ -71,8 +71,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
     /// @notice The ID of the tier that an IPFS metadata has been saved to.
     /// @custom:param hook The hook for which the tier ID applies.
-    /// @custom:param encodedIPFSUri The IPFS URI.
-    mapping(address hook => mapping(bytes32 encodedIPFSUri => uint256)) public override tierIdForEncodedIPFSUriOf;
+    /// @custom:param encodedIpfsUri The IPFS URI.
+    mapping(address hook => mapping(bytes32 encodedIpfsUri => uint256)) public override tierIdForEncodedIpfsUriOf;
 
     //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
@@ -337,27 +337,27 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// In that case, the store's tierOf call will return a tier with default/empty values. Callers should check
     /// the returned tier's initialSupply or other fields to confirm the tier still exists.
     /// @param hook The hook from which to get tiers.
-    /// @param encodedIPFSUris The URIs to get tiers of.
+    /// @param encodedIpfsUris The URIs to get tiers of.
     /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. If there's no tier yet, an empty tier
     /// is returned.
     function tiersFor(
         address hook,
-        bytes32[] memory encodedIPFSUris
+        bytes32[] memory encodedIpfsUris
     )
         external
         view
         override
         returns (JB721Tier[] memory tiers)
     {
-        uint256 numberOfEncodedIPFSUris = encodedIPFSUris.length;
+        uint256 numberOfEncodedIpfsUris = encodedIpfsUris.length;
 
         // Initialize the tier array being returned.
-        tiers = new JB721Tier[](numberOfEncodedIPFSUris);
+        tiers = new JB721Tier[](numberOfEncodedIpfsUris);
 
         // Get the tier for each provided encoded IPFS URI.
-        for (uint256 i; i < numberOfEncodedIPFSUris;) {
+        for (uint256 i; i < numberOfEncodedIpfsUris;) {
             // Check if there's a tier ID stored for the encoded IPFS URI.
-            uint256 tierId = tierIdForEncodedIPFSUriOf[hook][encodedIPFSUris[i]];
+            uint256 tierId = tierIdForEncodedIpfsUriOf[hook][encodedIpfsUris[i]];
 
             // If there's a tier ID stored, resolve it.
             if (tierId != 0) {
@@ -457,16 +457,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // Get the current post being iterated on.
             CTPost memory post = posts[i];
 
-            // Make sure the post includes an encodedIPFSUri.
+            // Make sure the post includes an encodedIpfsUri.
             // forge-lint: disable-next-line(unsafe-typecast)
-            if (post.encodedIPFSUri == bytes32("")) {
-                revert CTPublisher_EmptyEncodedIPFSUri({postIndex: i});
+            if (post.encodedIpfsUri == bytes32("")) {
+                revert CTPublisher_EmptyEncodedIpfsUri({postIndex: i});
             }
 
-            // Check for duplicate encodedIPFSUri within the same batch to prevent fee evasion.
+            // Check for duplicate encodedIpfsUri within the same batch to prevent fee evasion.
             for (uint256 j; j < i;) {
-                if (posts[j].encodedIPFSUri == post.encodedIPFSUri) {
-                    revert CTPublisher_DuplicatePost({encodedIPFSUri: post.encodedIPFSUri});
+                if (posts[j].encodedIpfsUri == post.encodedIpfsUri) {
+                    revert CTPublisher_DuplicatePost({encodedIpfsUri: post.encodedIpfsUri});
                 }
                 unchecked {
                     ++j;
@@ -475,8 +475,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Scoped section to prevent stack too deep.
             {
-                // Check if there's an ID of a tier already minted for this encodedIPFSUri.
-                uint256 tierId = tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
+                // Check if there's an ID of a tier already minted for this encodedIpfsUri.
+                uint256 tierId = tierIdForEncodedIpfsUriOf[address(hook)][post.encodedIpfsUri];
 
                 if (tierId != 0) {
                     // Validate the cached tier still exists and its URI still matches.
@@ -485,9 +485,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     // mapping and fall through to create a new tier.
                     JB721Tier memory cachedTier =
                         store.tierOf({hook: address(hook), id: tierId, includeResolvedUri: false});
-                    if (store.isTierRemoved(address(hook), tierId) || cachedTier.encodedIPFSUri != post.encodedIPFSUri)
-                    {
-                        delete tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri];
+                    if (
+                        store.isTierRemoved({hook: address(hook), tierId: tierId})
+                            || cachedTier.encodedIPFSUri != post.encodedIpfsUri
+                    ) {
+                        delete tierIdForEncodedIpfsUriOf[address(hook)][post.encodedIpfsUri];
                     } else {
                         tierIdsToMint[i] = tierId;
 
@@ -557,7 +559,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     votingUnits: 0,
                     reserveFrequency: 0,
                     reserveBeneficiary: address(0),
-                    encodedIPFSUri: post.encodedIPFSUri,
+                    encodedIPFSUri: post.encodedIpfsUri,
                     category: post.category,
                     discountPercent: 0,
                     flags: JB721TierConfigFlags({
@@ -576,8 +578,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 // Set the ID of the tier to mint.
                 tierIdsToMint[i] = startingTierId + numberOfTiersBeingAdded++;
 
-                // Save the encodedIPFSUri as minted.
-                tierIdForEncodedIPFSUriOf[address(hook)][post.encodedIPFSUri] = tierIdsToMint[i];
+                // Save the encodedIpfsUri as minted.
+                tierIdForEncodedIpfsUriOf[address(hook)][post.encodedIpfsUri] = tierIdsToMint[i];
 
                 // For new tiers, use the post's price for totalPrice accumulation.
                 totalPrice += post.price;

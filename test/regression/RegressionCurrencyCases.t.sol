@@ -360,7 +360,7 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
     function _singlePost() internal pure returns (CTPost[] memory posts) {
         posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: TEST_URI,
+            encodedIpfsUri: TEST_URI,
             price: POST_PRICE,
             totalSupply: POST_SUPPLY,
             category: POST_CATEGORY,

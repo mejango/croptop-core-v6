@@ -64,7 +64,7 @@ contract RegressionUriDriftTest is Test {
     function test_uriMutationDesyncAllowsDuplicateContentPublication() public {
         _publish(URI_A);
 
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A), 1, "publisher should index URI_A -> tier 1");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "publisher should index URI_A -> tier 1");
         assertEq(store.tierUri(1), URI_A, "store should record tier 1 as URI_A");
 
         vm.prank(hookOwner);
@@ -72,12 +72,12 @@ contract RegressionUriDriftTest is Test {
 
         assertEq(store.tierUri(1), URI_B, "owner metadata update should move tier 1 to URI_B");
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_A),
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A),
             1,
             "publisher mapping remains stale at URI_A -> tier 1"
         );
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_B), 0, "publisher has no entry for the new URI yet"
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_B), 0, "publisher has no entry for the new URI yet"
         );
 
         _publish(URI_B);
@@ -86,7 +86,7 @@ contract RegressionUriDriftTest is Test {
         assertEq(store.tierUri(1), URI_B, "tier 1 still points at URI_B after mutation");
         assertEq(store.tierUri(2), URI_B, "tier 2 now also points at URI_B");
         assertEq(
-            publisher.tierIdForEncodedIPFSUriOf(address(hook), URI_B),
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_B),
             2,
             "publisher now tracks URI_B as a second tier instead of rejecting the duplicate"
         );
@@ -95,7 +95,7 @@ contract RegressionUriDriftTest is Test {
     function _publish(bytes32 uri) internal {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: uri, totalSupply: 10, price: 1 ether, category: 7, splitPercent: 0, splits: new JBSplit[](0)
+            encodedIpfsUri: uri, totalSupply: 10, price: 1 ether, category: 7, splitPercent: 0, splits: new JBSplit[](0)
         });
 
         vm.prank(poster);

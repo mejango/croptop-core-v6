@@ -312,12 +312,12 @@ contract TestCTPublisher is Test {
     }
 
     //*********************************************************************//
-    // --- tierIdForEncodedIPFSUriOf ------------------------------------- //
+    // --- tierIdForEncodedIpfsUriOf ------------------------------------- //
     //*********************************************************************//
 
-    function test_tierIdForEncodedIPFSUriOf_returnsZeroByDefault() public {
+    function test_tierIdForEncodedIpfsUriOf_returnsZeroByDefault() public {
         bytes32 uri = keccak256("test");
-        assertEq(publisher.tierIdForEncodedIPFSUriOf(hookAddr, uri), 0);
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, uri), 0);
     }
 
     //*********************************************************************//
@@ -414,7 +414,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("greedy-split"),
+            encodedIpfsUri: keccak256("greedy-split"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -437,7 +437,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("exact-split"),
+            encodedIpfsUri: keccak256("exact-split"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -468,7 +468,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("no-split"),
+            encodedIpfsUri: keccak256("no-split"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -497,7 +497,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("sneaky-split"),
+            encodedIpfsUri: keccak256("sneaky-split"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -526,7 +526,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("split-content"),
+            encodedIpfsUri: keccak256("split-content"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -562,7 +562,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256(abi.encode("fuzz", postSplitPercent)),
+            encodedIpfsUri: keccak256(abi.encode("fuzz", postSplitPercent)),
             totalSupply: 10,
             price: 0.01 ether,
             category: 5,
@@ -649,7 +649,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("fee-test"),
+            encodedIpfsUri: keccak256("fee-test"),
             totalSupply: 10,
             price: 1 ether,
             category: 5,
@@ -673,7 +673,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("exact-price"),
+            encodedIpfsUri: keccak256("exact-price"),
             totalSupply: 10,
             price: 1 ether,
             category: 5,
@@ -694,7 +694,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("exact-fee"),
+            encodedIpfsUri: keccak256("exact-fee"),
             totalSupply: 10,
             price: 1 ether,
             category: 5,
@@ -749,7 +749,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("fee-project-post"),
+            encodedIpfsUri: keccak256("fee-project-post"),
             totalSupply: 10,
             price: 1 ether,
             category: 5,
@@ -791,7 +791,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("split-beneficiary-test"),
+            encodedIpfsUri: keccak256("split-beneficiary-test"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -841,7 +841,7 @@ contract TestCTPublisher is Test {
         CTPost[] memory posts = new CTPost[](2);
         // First post: 25% split (within limit).
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("post-1"),
+            encodedIpfsUri: keccak256("post-1"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -850,7 +850,7 @@ contract TestCTPublisher is Test {
         });
         // Second post: 60% split (exceeds limit).
         posts[1] = CTPost({
-            encodedIPFSUri: keccak256("post-2"),
+            encodedIpfsUri: keccak256("post-2"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -877,7 +877,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("fee-beneficiary-zero"),
+            encodedIpfsUri: keccak256("fee-beneficiary-zero"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,
@@ -896,7 +896,7 @@ contract TestCTPublisher is Test {
 
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
-            encodedIPFSUri: keccak256("fee-beneficiary-valid"),
+            encodedIpfsUri: keccak256("fee-beneficiary-valid"),
             totalSupply: 10,
             price: 0.1 ether,
             category: 5,

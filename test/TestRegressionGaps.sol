@@ -497,7 +497,7 @@ contract TestRegressionGaps is Test {
 
             CTPost[] memory mintPosts = new CTPost[](1);
             mintPosts[0] = CTPost({
-                encodedIPFSUri: uri,
+                encodedIpfsUri: uri,
                 totalSupply: 10,
                 price: 0.01 ether,
                 // forge-lint: disable-next-line(unsafe-typecast)
@@ -546,7 +546,7 @@ contract TestRegressionGaps is Test {
 
         CTPost[] memory mintPosts = new CTPost[](1);
         mintPosts[0] = CTPost({
-            encodedIPFSUri: keccak256("anyone-can-post"),
+            encodedIpfsUri: keccak256("anyone-can-post"),
             totalSupply: 10,
             price: 0.01 ether,
             category: 50,
@@ -593,7 +593,7 @@ contract TestRegressionGaps is Test {
 
         CTPost[] memory mintPosts = new CTPost[](1);
         mintPosts[0] = CTPost({
-            encodedIPFSUri: keccak256("restricted-post"),
+            encodedIpfsUri: keccak256("restricted-post"),
             totalSupply: 10,
             price: 0.01 ether,
             category: 51,

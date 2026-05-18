@@ -61,50 +61,29 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     /// @notice tracks the deployment of the router terminal.
     RouterTerminalDeployment routerTerminal;
 
-    // @notice set this to a non-zero value to re-use an existing projectID. Having it set to 0 will deploy a new
-    // fee_project.
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint256 FEE_PROJECT_ID;
-
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint32 PREMINT_CHAIN_ID = 1;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    string NAME = "Croptop Publishing Network";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    string SYMBOL = "CPN";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    string PROJECT_URI = "ipfs://QmUAFevoMn1iqSEQR8LogQYRxm39TNxQTPYnuLuq5BmfEi";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint32 NATIVE_CURRENCY = uint32(uint160(JBConstants.NATIVE_TOKEN));
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint32 ETH_CURRENCY = JBCurrencyIds.ETH;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint8 DECIMALS = 18;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint256 DECIMAL_MULTIPLIER = 10 ** DECIMALS;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    bytes32 SUCKER_SALT = "_CPN_SUCKERV6__";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    bytes32 ERC20_SALT = "_CPN_ERC20_SALTV6__";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    bytes32 HOOK_SALT = "_CPN_HOOK_SALTV6__";
-    // forge-lint: disable-next-line(mixed-case-variable)
-    address OPERATOR;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    address TRUSTED_FORWARDER;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint48 CPN_START_TIME = 1_740_089_444;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint104 CPN_MAINNET_AUTO_ISSUANCE_ = 250_003_875_000_000_000_000_000;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint104 CPN_OP_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint104 CPN_BASE_AUTO_ISSUANCE_ = 844_894_881_600_000_000_000;
-    // forge-lint: disable-next-line(mixed-case-variable)
-    uint104 CPN_ARB_AUTO_ISSUANCE_ = 3_844_000_000_000_000_000;
+    /// @notice The fee project ID configured by the Croptop publisher.
+    uint256 private feeProjectId;
+    uint32 private constant _PREMINT_CHAIN_ID = 1;
+    string private constant _NAME = "Croptop Publishing Network";
+    string private constant _SYMBOL = "CPN";
+    string private constant _PROJECT_URI = "ipfs://QmUAFevoMn1iqSEQR8LogQYRxm39TNxQTPYnuLuq5BmfEi";
+    uint32 private constant _NATIVE_CURRENCY = uint32(uint160(JBConstants.NATIVE_TOKEN));
+    uint32 private constant _ETH_CURRENCY = JBCurrencyIds.ETH;
+    uint8 private constant _DECIMALS = 18;
+    uint256 private constant _DECIMAL_MULTIPLIER = 10 ** _DECIMALS;
+    bytes32 private constant _SUCKER_SALT = "_CPN_SUCKERV6__";
+    bytes32 private constant _ERC20_SALT = "_CPN_ERC20_SALTV6__";
+    bytes32 private constant _HOOK_SALT = "_CPN_HOOK_SALTV6__";
+    address private operator;
+    address private trustedForwarder;
+    uint48 private constant _CPN_START_TIME = 1_740_089_444;
+    uint104 private constant _CPN_MAINNET_AUTO_ISSUANCE = 250_003_875_000_000_000_000_000;
+    uint104 private constant _CPN_OP_AUTO_ISSUANCE = 844_894_881_600_000_000_000;
+    uint104 private constant _CPN_BASE_AUTO_ISSUANCE = 844_894_881_600_000_000_000;
+    uint104 private constant _CPN_ARB_AUTO_ISSUANCE = 3_844_000_000_000_000_000;
 
     function configureSphinx() public override {
-        // TODO: Update to contain croptop devs.
+        // Safe owners and threshold are resolved by the Sphinx project config.
         sphinxConfig.projectName = "croptop-core-v6";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
@@ -142,11 +121,11 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         require(revnet.basic_deployer.DIRECTORY() == croptop.publisher.DIRECTORY());
 
         // Set the operator address to be the multisig.
-        OPERATOR = safeAddress();
-        TRUSTED_FORWARDER = core.controller.trustedForwarder();
+        operator = safeAddress();
+        trustedForwarder = core.controller.trustedForwarder();
 
         // Get the fee project id from the croptop deployment.
-        FEE_PROJECT_ID = croptop.publisher.FEE_PROJECT_ID();
+        feeProjectId = croptop.publisher.FEE_PROJECT_ID();
 
         // Check if there should be a new fee project created.
         // Perform the deployment transactions.
@@ -159,7 +138,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
 
         // Accept the chain's native currency through the multi terminal.
         accountingContextsToAccept[0] =
-            JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: DECIMALS, currency: NATIVE_CURRENCY});
+            JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: _DECIMALS, currency: _NATIVE_CURRENCY});
 
         // The terminals that the project will accept funds through.
         JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](2);
@@ -171,16 +150,16 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         });
 
         REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](4);
-        issuanceConfs[0] = REVAutoIssuance({chainId: 1, count: CPN_MAINNET_AUTO_ISSUANCE_, beneficiary: OPERATOR});
-        issuanceConfs[1] = REVAutoIssuance({chainId: 10, count: CPN_OP_AUTO_ISSUANCE_, beneficiary: OPERATOR});
-        issuanceConfs[2] = REVAutoIssuance({chainId: 8453, count: CPN_BASE_AUTO_ISSUANCE_, beneficiary: OPERATOR});
-        issuanceConfs[3] = REVAutoIssuance({chainId: 42_161, count: CPN_ARB_AUTO_ISSUANCE_, beneficiary: OPERATOR});
+        issuanceConfs[0] = REVAutoIssuance({chainId: 1, count: _CPN_MAINNET_AUTO_ISSUANCE, beneficiary: operator});
+        issuanceConfs[1] = REVAutoIssuance({chainId: 10, count: _CPN_OP_AUTO_ISSUANCE, beneficiary: operator});
+        issuanceConfs[2] = REVAutoIssuance({chainId: 8453, count: _CPN_BASE_AUTO_ISSUANCE, beneficiary: operator});
+        issuanceConfs[3] = REVAutoIssuance({chainId: 42_161, count: _CPN_ARB_AUTO_ISSUANCE, beneficiary: operator});
 
         JBSplit[] memory splits = new JBSplit[](1);
         splits[0] = JBSplit({
             percent: JBConstants.SPLITS_TOTAL_PERCENT,
             projectId: 0,
-            beneficiary: payable(OPERATOR),
+            beneficiary: payable(operator),
             preferAddToBalance: false,
             lockedUntil: 0,
             hook: IJBSplitHook(address(0))
@@ -189,12 +168,12 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         // The project's revnet stage configurations.
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
         stageConfigurations[0] = REVStageConfig({
-            startsAtOrAfter: CPN_START_TIME,
+            startsAtOrAfter: _CPN_START_TIME,
             autoIssuances: issuanceConfs,
             splitPercent: 3800, // 38%
             splits: splits,
             // forge-lint: disable-next-line(unsafe-typecast)
-            initialIssuance: uint112(10_000 * DECIMAL_MULTIPLIER),
+            initialIssuance: uint112(10_000 * _DECIMAL_MULTIPLIER),
             issuanceCutFrequency: 120 days,
             issuanceCutPercent: 380_000_000, // 38%
             cashOutTaxRate: 1000, // 0.1
@@ -227,9 +206,9 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
 
         // The project's revnet configuration
         REVConfig memory revnetConfiguration = REVConfig({
-            description: REVDescription({name: NAME, ticker: SYMBOL, uri: PROJECT_URI, salt: ERC20_SALT}),
-            baseCurrency: ETH_CURRENCY,
-            operator: OPERATOR,
+            description: REVDescription({name: _NAME, ticker: _SYMBOL, uri: _PROJECT_URI, salt: _ERC20_SALT}),
+            baseCurrency: _ETH_CURRENCY,
+            operator: operator,
             scopeCashOutsToLocalBalances: false,
             stageConfigurations: stageConfigurations
         });
@@ -276,14 +255,14 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             }
             // Specify all sucker deployments.
             suckerDeploymentConfiguration =
-                REVSuckerDeploymentConfig({deployerConfigurations: suckerDeployerConfigurations, salt: SUCKER_SALT});
+                REVSuckerDeploymentConfig({deployerConfigurations: suckerDeployerConfigurations, salt: _SUCKER_SALT});
         }
 
         // The project's allowed croptop posts.
         REVCroptopAllowedPost[] memory allowedPosts = new REVCroptopAllowedPost[](5);
         allowedPosts[0] = REVCroptopAllowedPost({
             category: 0,
-            minimumPrice: uint104(10 ** (DECIMALS - 5)),
+            minimumPrice: uint104(10 ** (_DECIMALS - 5)),
             minimumTotalSupply: 10_000,
             maximumTotalSupply: 999_999_999,
             maximumSplitPercent: 0,
@@ -291,7 +270,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         });
         allowedPosts[1] = REVCroptopAllowedPost({
             category: 1,
-            minimumPrice: uint104(10 ** (DECIMALS - 3)),
+            minimumPrice: uint104(10 ** (_DECIMALS - 3)),
             minimumTotalSupply: 10_000,
             maximumTotalSupply: 999_999_999,
             maximumSplitPercent: 0,
@@ -299,7 +278,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         });
         allowedPosts[2] = REVCroptopAllowedPost({
             category: 2,
-            minimumPrice: uint104(10 ** (DECIMALS - 1)),
+            minimumPrice: uint104(10 ** (_DECIMALS - 1)),
             minimumTotalSupply: 100,
             maximumTotalSupply: 999_999_999,
             maximumSplitPercent: 0,
@@ -307,7 +286,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         });
         allowedPosts[3] = REVCroptopAllowedPost({
             category: 3,
-            minimumPrice: uint104(10 ** DECIMALS),
+            minimumPrice: uint104(10 ** _DECIMALS),
             minimumTotalSupply: 10,
             maximumTotalSupply: 999_999_999,
             maximumSplitPercent: 0,
@@ -315,7 +294,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         });
         allowedPosts[4] = REVCroptopAllowedPost({
             category: 4,
-            minimumPrice: uint104(10 ** (DECIMALS + 2)),
+            minimumPrice: uint104(10 ** (_DECIMALS + 2)),
             minimumTotalSupply: 10,
             maximumTotalSupply: 999_999_999,
             maximumSplitPercent: 0,
@@ -328,13 +307,13 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             hookConfiguration: REVDeploy721TiersHookConfig({
                 baseline721HookConfiguration: REVBaseline721HookConfig({
-                    name: NAME,
-                    symbol: SYMBOL,
+                    name: _NAME,
+                    symbol: _SYMBOL,
                     baseUri: "ipfs://",
                     tokenUriResolver: IJB721TokenUriResolver(address(0)),
                     contractUri: "",
                     tiersConfig: JB721InitTiersConfig({
-                        tiers: new JB721TierConfig[](0), currency: ETH_CURRENCY, decimals: DECIMALS
+                        tiers: new JB721TierConfig[](0), currency: _ETH_CURRENCY, decimals: _DECIMALS
                     }),
                     flags: REV721TiersHookFlags({
                         noNewTiersWithReserves: false,
@@ -343,7 +322,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
                         preventOverspending: false
                     })
                 }),
-                salt: HOOK_SALT,
+                salt: _HOOK_SALT,
                 preventOperatorAdjustingTiers: false,
                 preventOperatorUpdatingMetadata: false,
                 preventOperatorMinting: false,
@@ -357,14 +336,14 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
         FeeProjectConfig memory feeProjectConfig = getCroptopRevnetConfig();
 
         // Only deploy if the project hasn't already been configured (restart-safe).
-        if (address(core.directory.controllerOf(FEE_PROJECT_ID)) == address(0)) {
+        if (address(core.directory.controllerOf(feeProjectId)) == address(0)) {
             // Approve the basic deployer to configure the project and transfer it.
-            core.projects.approve({to: address(revnet.basic_deployer), tokenId: FEE_PROJECT_ID});
+            core.projects.approve({to: address(revnet.basic_deployer), tokenId: feeProjectId});
 
             // Deploy the NANA fee project.
             revnet.basic_deployer
                 .deployFor({
-                    revnetId: FEE_PROJECT_ID,
+                    revnetId: feeProjectId,
                     configuration: feeProjectConfig.configuration,
                     terminalConfigurations: feeProjectConfig.terminalConfigurations,
                     suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
