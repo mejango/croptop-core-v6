@@ -424,6 +424,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     //*********************************************************************//
 
     /// @notice Setup the posts.
+    /// @dev `adjustTiers` expects newly added tiers to be sorted by ascending category, while the pay metadata must
+    /// keep `tierIdsToMint` aligned with the caller's `posts` array so the requested NFTs are minted in the requested
+    /// order. `_setupPosts` therefore sorts only the tier configs and carries each config's original post index beside
+    /// it.
     /// @param hook The NFT hook on which the posts will apply.
     /// @param posts An array of posts that should be published as NFTs to the specified project.
     /// @return tiersToAdd The tiers that will be created to represent the posts.
@@ -442,7 +446,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         // Set the size of the tier IDs of the posts that should be minted once published.
         tierIdsToMint = new uint256[](posts.length);
 
-        // Track which post produced each new tier so tier IDs can be assigned after category sorting.
+        // Track which post produced each new tier. `tiersToAdd` may be sorted before it is sent to the 721 hook, but
+        // `tierIdsToMint` must stay indexed by the original `posts` array for the mint metadata below.
         uint256[] memory newTierPostIndexes = new uint256[](posts.length);
 
         // Keep a reference to the hook's store for tier lookups.
@@ -591,14 +596,19 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             }
         }
 
-        // The 721 store requires new tiers sorted by ascending category. Preserve the caller's mint order by assigning
-        // each post's tier ID after sorting.
+        // The 721 store requires new tiers sorted by ascending category. This insertion sort normalizes caller input
+        // so multi-category publishes do not revert just because posts were supplied in mint order instead of category
+        // order. It is intentionally stable: equal-category posts stay in caller order because the loop only moves
+        // prior tiers with a strictly greater category.
         for (uint256 i = 1; i < numberOfTiersBeingAdded;) {
+            // Keep the tier and its original post index together while shifting larger-category tiers to the right.
             JB721TierConfig memory tierToSort = tiersToAdd[i];
             uint256 postIndexToSort = newTierPostIndexes[i];
             uint256 j = i;
 
             while (j != 0 && tiersToAdd[j - 1].category > tierToSort.category) {
+                // Shift both arrays in lockstep; otherwise the tier ID assigned after sorting would be written back to
+                // the wrong post in `tierIdsToMint`.
                 tiersToAdd[j] = tiersToAdd[j - 1];
                 newTierPostIndexes[j] = newTierPostIndexes[j - 1];
 
@@ -607,6 +617,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 }
             }
 
+            // Insert the tier at its category-sorted position with the original post index still attached.
             tiersToAdd[j] = tierToSort;
             newTierPostIndexes[j] = postIndexToSort;
 
@@ -615,6 +626,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             }
         }
 
+        // Now that the store-facing tier order is final, translate each newly-created tier ID back into the caller's
+        // post order. The pay metadata expects this array to line up with `posts`, not with the sorted `tiersToAdd`.
         for (uint256 i; i < numberOfTiersBeingAdded;) {
             uint256 postIndex = newTierPostIndexes[i];
             uint256 tierId = startingTierId + i;
