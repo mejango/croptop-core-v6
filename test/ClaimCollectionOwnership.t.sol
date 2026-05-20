@@ -315,6 +315,8 @@ contract ClaimCollectionOwnershipTest is Test {
             abi.encodeWithSelector(IJBController.launchRulesetsFor.selector),
             abi.encode(uint256(1))
         );
-        vm.mockCall(address(projects), abi.encodeWithSelector(IERC721.transferFrom.selector), abi.encode());
+        vm.mockCall(
+            address(projects), abi.encodeWithSignature("safeTransferFrom(address,address,uint256)"), abi.encode()
+        );
     }
 }

@@ -244,10 +244,12 @@ contract TestCTDeployer is Test {
         CTProjectConfig memory config = _defaultProjectConfig();
         CTSuckerDeploymentConfig memory suckerConfig = _emptySuckerConfig();
 
-        // Mock the transferFrom call - expect it to be called with (deployer, owner, projectId).
-        vm.mockCall(address(projects), abi.encodeWithSelector(IERC721.transferFrom.selector), abi.encode());
+        // Mock the safe transfer call - expect it to be called with (deployer, owner, projectId).
+        vm.mockCall(
+            address(projects), abi.encodeWithSignature("safeTransferFrom(address,address,uint256)"), abi.encode()
+        );
 
-        // We expect the transferFrom to be called. If the mock is not matched, it will revert.
+        // We expect the safe transfer to be called. If the mock is not matched, it will revert.
         deployer.deployProjectFor(owner, config, suckerConfig, controller);
     }
 
@@ -500,6 +502,70 @@ contract TestCTDeployer is Test {
         assertEq(totalSupply, 1000e18, "totalSupply should pass through");
     }
 
+    /// @notice Unscoped sucker cash-outs keep the tax exemption and use local backing for bridge accounting.
+    function test_beforeCashOutRecordedWith_suckerScopeFalseUsesLocalBacking() public {
+        // Register suckerAddr for this project.
+        vm.mockCall(
+            address(suckerRegistry),
+            abi.encodeWithSelector(IJBSuckerRegistry.isSuckerOf.selector, deployedProjectId, suckerAddr),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            address(suckerRegistry),
+            abi.encodeWithSelector(IJBSuckerRegistry.remoteTotalSupplyOf.selector, deployedProjectId),
+            abi.encode(250e18)
+        );
+        vm.mockCall(
+            address(suckerRegistry),
+            abi.encodeWithSelector(
+                IJBSuckerRegistry.remoteSurplusOf.selector, deployedProjectId, uint256(18), uint256(0)
+            ),
+            abi.encode(3 ether)
+        );
+
+        JBBeforeCashOutRecordedContext memory context =
+            _buildCashOutContext(deployedProjectId, suckerAddr, 100e18, 1000e18);
+        context.scopeCashOutsToLocalBalances = false;
+
+        (uint256 taxRate,, uint256 totalSupply, uint256 surplusValue,) = deployer.beforeCashOutRecordedWith(context);
+
+        assertEq(taxRate, 0, "sucker should remain tax exempt");
+        assertEq(totalSupply, 1000e18, "unscoped sucker totalSupply should stay local-only");
+        assertEq(surplusValue, 1 ether, "unscoped sucker surplus should stay local-only");
+    }
+
+    /// @notice Scoped sucker cash-outs remain local-only.
+    function test_beforeCashOutRecordedWith_suckerScopeTrueExcludesRemote() public {
+        // Register suckerAddr for this project.
+        vm.mockCall(
+            address(suckerRegistry),
+            abi.encodeWithSelector(IJBSuckerRegistry.isSuckerOf.selector, deployedProjectId, suckerAddr),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            address(suckerRegistry),
+            abi.encodeWithSelector(IJBSuckerRegistry.remoteTotalSupplyOf.selector, deployedProjectId),
+            abi.encode(250e18)
+        );
+        vm.mockCall(
+            address(suckerRegistry),
+            abi.encodeWithSelector(
+                IJBSuckerRegistry.remoteSurplusOf.selector, deployedProjectId, uint256(18), uint256(0)
+            ),
+            abi.encode(3 ether)
+        );
+
+        JBBeforeCashOutRecordedContext memory context =
+            _buildCashOutContext(deployedProjectId, suckerAddr, 100e18, 1000e18);
+        context.scopeCashOutsToLocalBalances = true;
+
+        (uint256 taxRate,, uint256 totalSupply, uint256 surplusValue,) = deployer.beforeCashOutRecordedWith(context);
+
+        assertEq(taxRate, 0, "sucker should remain tax exempt");
+        assertEq(totalSupply, 1000e18, "scoped sucker totalSupply should stay local-only");
+        assertEq(surplusValue, 1 ether, "scoped sucker surplus should stay local-only");
+    }
+
     /// @notice beforeCashOutRecordedWith returns defaults when no data hook is set and holder is not a sucker.
     function test_beforeCashOutRecordedWith_returnsDefaultsWhenNoDataHook() public {
         JBBeforeCashOutRecordedContext memory context = _buildCashOutContext(999, unauthorized, 100e18, 1000e18);
@@ -603,8 +669,10 @@ contract TestCTDeployer is Test {
             address(controller), abi.encodeWithSelector(IJBControllerProjectUriForTest.setUriOf.selector), abi.encode()
         );
 
-        // Mock projects.transferFrom (ERC721 transfer of project NFT to owner).
-        vm.mockCall(address(projects), abi.encodeWithSelector(IERC721.transferFrom.selector), abi.encode());
+        // Mock projects.safeTransferFrom (ERC721 transfer of project NFT to owner).
+        vm.mockCall(
+            address(projects), abi.encodeWithSignature("safeTransferFrom(address,address,uint256)"), abi.encode()
+        );
 
         // Mock permissions.setPermissionsFor (called for owner permissions after deployment).
         vm.mockCall(

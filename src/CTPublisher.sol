@@ -145,8 +145,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 revert CTPublisher_ZeroTotalSupply({hook: allowedPost.hook, category: allowedPost.category});
             }
 
-            // Make sure the minimum supply does not surpass the maximum supply.
-            if (allowedPost.minimumTotalSupply > allowedPost.maximumTotalSupply) {
+            // Make sure the minimum supply does not surpass the maximum supply. A max of 0 means unlimited.
+            if (allowedPost.maximumTotalSupply != 0 && allowedPost.minimumTotalSupply > allowedPost.maximumTotalSupply)
+            {
                 revert CTPublisher_MaxTotalSupplyLessThanMin({
                     min: allowedPost.minimumTotalSupply, max: allowedPost.maximumTotalSupply
                 });
@@ -380,8 +381,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @return minimumPrice The minimum price that a poster must pay to record a new NFT.
     /// @return minimumTotalSupply The minimum total number of available tokens that a minter must set to record a new
     /// NFT.
-    /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. Must be >=
-    /// minimumTotalSupply.
+    /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. 0 means
+    /// unlimited.
     /// @return maximumSplitPercent The maximum split percent that a poster can set. 0 means splits are not allowed.
     /// @return allowedAddresses The addresses allowed to post. Returns empty if all addresses are allowed.
     function allowanceFor(
@@ -440,6 +441,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         // Set the size of the tier IDs of the posts that should be minted once published.
         tierIdsToMint = new uint256[](posts.length);
+
+        // Track which post produced each new tier so tier IDs can be assigned after category sorting.
+        uint256[] memory newTierPostIndexes = new uint256[](posts.length);
 
         // Keep a reference to the hook's store for tier lookups.
         IJB721TiersHookStore store = hook.STORE();
@@ -532,8 +536,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     }
 
                     // Make sure the total supply being made available for the post is at most the allowed maximum total
-                    // supply.
-                    if (post.totalSupply > maximumTotalSupply) {
+                    // supply. A max of 0 means unlimited.
+                    if (maximumTotalSupply != 0 && post.totalSupply > maximumTotalSupply) {
                         revert CTPublisher_TotalSupplyTooBig({
                             totalSupply: post.totalSupply, maximumTotalSupply: maximumTotalSupply
                         });
@@ -575,15 +579,47 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                     splits: post.splits
                 });
 
-                // Set the ID of the tier to mint.
-                tierIdsToMint[i] = startingTierId + numberOfTiersBeingAdded++;
-
-                // Save the encodedIpfsUri as minted.
-                tierIdForEncodedIpfsUriOf[address(hook)][post.encodedIpfsUri] = tierIdsToMint[i];
+                newTierPostIndexes[numberOfTiersBeingAdded] = i;
+                numberOfTiersBeingAdded++;
 
                 // For new tiers, use the post's price for totalPrice accumulation.
                 totalPrice += post.price;
             }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        // The 721 store requires new tiers sorted by ascending category. Preserve the caller's mint order by assigning
+        // each post's tier ID after sorting.
+        for (uint256 i = 1; i < numberOfTiersBeingAdded;) {
+            JB721TierConfig memory tierToSort = tiersToAdd[i];
+            uint256 postIndexToSort = newTierPostIndexes[i];
+            uint256 j = i;
+
+            while (j != 0 && tiersToAdd[j - 1].category > tierToSort.category) {
+                tiersToAdd[j] = tiersToAdd[j - 1];
+                newTierPostIndexes[j] = newTierPostIndexes[j - 1];
+
+                unchecked {
+                    --j;
+                }
+            }
+
+            tiersToAdd[j] = tierToSort;
+            newTierPostIndexes[j] = postIndexToSort;
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        for (uint256 i; i < numberOfTiersBeingAdded;) {
+            uint256 postIndex = newTierPostIndexes[i];
+            uint256 tierId = startingTierId + i;
+            tierIdsToMint[postIndex] = tierId;
+            tierIdForEncodedIpfsUriOf[address(hook)][posts[postIndex].encodedIpfsUri] = tierId;
 
             unchecked {
                 ++i;

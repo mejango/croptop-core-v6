@@ -7,11 +7,13 @@ import "forge-std/Test.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
@@ -230,6 +232,26 @@ contract TestCTPublisher is Test {
         vm.prank(hookOwner);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_MaxTotalSupplyLessThanMin.selector, 100, 50));
         publisher.configurePostingCriteriaFor(posts);
+    }
+
+    function test_configureAllowsZeroMaxSupplyAsUnlimited() public {
+        CTAllowedPost[] memory posts = new CTAllowedPost[](1);
+        posts[0] = CTAllowedPost({
+            hook: hookAddr,
+            category: 1,
+            minimumPrice: 0,
+            minimumTotalSupply: 100,
+            maximumTotalSupply: 0,
+            maximumSplitPercent: 0,
+            allowedAddresses: new address[](0)
+        });
+
+        vm.prank(hookOwner);
+        publisher.configurePostingCriteriaFor(posts);
+
+        (, uint256 minSupply, uint256 maxSupply,,) = publisher.allowanceFor(hookAddr, 1);
+        assertEq(minSupply, 100, "minimum supply should be stored");
+        assertEq(maxSupply, 0, "zero max should mean unlimited");
     }
 
     //*********************************************************************//
@@ -550,6 +572,24 @@ contract TestCTPublisher is Test {
         }
     }
 
+    function test_mintFrom_zeroMaxSupplyAllowsAnyUint32Supply() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 0, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("unbounded-supply"),
+            totalSupply: type(uint32).max,
+            price: 0.1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        vm.prank(poster);
+        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+    }
+
     //*********************************************************************//
     // --- Split Percent Fuzz -------------------------------------------- //
     //*********************************************************************//
@@ -867,6 +907,76 @@ contract TestCTPublisher is Test {
         publisher.mintFrom{value: 0.4 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
+    function test_mintFrom_sortsNewTiersByCategoryAndPreservesMintOrder() public {
+        _configureCategoryWithSplits(1, 0, 1, 100, 0);
+        _configureCategoryWithSplits(2, 0, 1, 100, 0);
+        _setupMintMocks();
+
+        bytes32 categoryTwoUri = keccak256("category-two");
+        bytes32 categoryOneUri = keccak256("category-one");
+
+        CTPost[] memory posts = new CTPost[](2);
+        posts[0] = CTPost({
+            encodedIpfsUri: categoryTwoUri,
+            totalSupply: 10,
+            price: 0.1 ether,
+            category: 2,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+        posts[1] = CTPost({
+            encodedIpfsUri: categoryOneUri,
+            totalSupply: 10,
+            price: 0.1 ether,
+            category: 1,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        JB721TierConfig[] memory expectedTiers = new JB721TierConfig[](2);
+        expectedTiers[0] = _expectedTierConfig({encodedIpfsUri: categoryOneUri, category: 1});
+        expectedTiers[1] = _expectedTierConfig({encodedIpfsUri: categoryTwoUri, category: 2});
+
+        vm.expectCall(
+            hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector, expectedTiers, new uint256[](0))
+        );
+
+        uint256[] memory expectedTierIdsToMint = new uint256[](2);
+        expectedTierIdsToMint[0] = 2;
+        expectedTierIdsToMint[1] = 1;
+
+        bytes memory expectedMetadata = JBMetadataResolver.addToMetadata({
+            originalMetadata: "",
+            idToAdd: JBMetadataResolver.getId({purpose: "pay", target: address(0)}),
+            dataToAdd: abi.encode(true, expectedTierIdsToMint)
+        });
+        uint256 feeProjectIdForMetadata = feeProjectId;
+        assembly {
+            mstore(add(expectedMetadata, 32), feeProjectIdForMetadata)
+        }
+
+        vm.expectCall(
+            makeAddr("terminal"),
+            0.2 ether,
+            abi.encodeWithSelector(
+                IJBTerminal.pay.selector,
+                hookProjectId,
+                JBConstants.NATIVE_TOKEN,
+                0.2 ether,
+                poster,
+                0,
+                "Minted from Croptop",
+                expectedMetadata
+            )
+        );
+
+        vm.prank(poster);
+        publisher.mintFrom{value: 0.21 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, categoryOneUri), 1);
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, categoryTwoUri), 2);
+    }
+
     //*********************************************************************//
     // --- Fee Beneficiary Validation (Fix AO) --------------------------- //
     //*********************************************************************//
@@ -915,5 +1025,36 @@ contract TestCTPublisher is Test {
                 "should not revert with InvalidFeeBeneficiary"
             );
         }
+    }
+
+    function _expectedTierConfig(
+        bytes32 encodedIpfsUri,
+        uint24 category
+    )
+        internal
+        pure
+        returns (JB721TierConfig memory tier)
+    {
+        tier = JB721TierConfig({
+            price: 0.1 ether,
+            initialSupply: 10,
+            votingUnits: 0,
+            reserveFrequency: 0,
+            reserveBeneficiary: address(0),
+            encodedIpfsUri: encodedIpfsUri,
+            category: category,
+            discountPercent: 0,
+            flags: JB721TierConfigFlags({
+                allowOwnerMint: false,
+                useReserveBeneficiaryAsDefault: false,
+                transfersPausable: false,
+                useVotingUnits: true,
+                cantBeRemoved: false,
+                cantIncreaseDiscountPercent: false,
+                cantBuyWithCredits: false
+            }),
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
     }
 }

@@ -65,6 +65,11 @@ contract MockProjects {
         require(_ownerOf[tokenId] == from, "BAD_FROM");
         _ownerOf[tokenId] = to;
     }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId) external {
+        require(_ownerOf[tokenId] == from, "BAD_FROM");
+        _ownerOf[tokenId] = to;
+    }
 }
 
 contract MockDirectory is IJBDirectory {

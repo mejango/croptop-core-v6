@@ -257,8 +257,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             }
         }
 
-        // Transfer the project NFT to its intended owner.
-        PROJECTS.transferFrom({from: address(this), to: owner, tokenId: projectId});
+        // Transfer the project NFT to its intended owner. Use the safe path so contract owners must explicitly
+        // support receiving the project NFT before the launch can finalize.
+        PROJECTS.safeTransferFrom(address(this), owner, projectId);
 
         // Give the initial project owner direct collection-control permissions while CTDeployer remains the hook's
         // owner. This preserves the documented Croptop launch tradeoff: the owner can manage the collection directly
@@ -333,6 +334,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         )
     {
         // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
+        // Sucker cash-outs are the bridge accounting path: the value moving out of this chain must stay proportional
+        // to this chain's local backing. Do not add remote supply/surplus here.
         if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, addr: context.holder})) {
             return (0, context.cashOutCount, context.totalSupply, context.surplus.value, hookSpecifications);
         }
