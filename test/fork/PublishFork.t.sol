@@ -55,6 +55,12 @@ import "./../../src/CTDeployer.sol";
 import {CTPublisher} from "./../../src/CTPublisher.sol";
 import {CTPost} from "./../../src/structs/CTPost.sol";
 
+contract CroptopForkNonReceiverOwner {
+    function codeHashAnchor() external pure returns (bytes32) {
+        return keccak256("NOT_ERC721_RECEIVER");
+    }
+}
+
 /// @notice Fork tests for CTPublisher.mintFrom(). Deploys all JB infrastructure fresh within a mainnet fork,
 ///         then exercises the publish-and-mint flow end-to-end.
 contract PublishForkTest is Test, DeployPermit2 {
@@ -194,6 +200,26 @@ contract PublishForkTest is Test, DeployPermit2 {
         assertEq(balanceAfter, balanceBefore + 1, "NFT should be minted to beneficiary");
     }
 
+    function testFork_DeployProjectForRequiresSafeProjectNftReceiver() public {
+        CTProjectConfig memory config = CTProjectConfig({
+            terminalConfigurations: _ethTerminalConfig(),
+            projectUri: "https://safe-transfer.croptop.eth/",
+            allowedPosts: new CTDeployerAllowedPost[](0),
+            contractUri: "https://safe-transfer.croptop.eth/contract",
+            name: "SafeCrop",
+            symbol: "SAFE",
+            salt: bytes32(uint256(999))
+        });
+
+        CTSuckerDeploymentConfig memory suckerConfig =
+            CTSuckerDeploymentConfig({deployerConfigurations: new JBSuckerDeployerConfig[](0), salt: bytes32(0)});
+
+        address nonReceiverOwner = address(new CroptopForkNonReceiverOwner());
+
+        vm.expectRevert();
+        deployer.deployProjectFor(nonReceiverOwner, config, suckerConfig, jbController);
+    }
+
     /// @notice Verify 5% fee is routed to fee project and the rest to the test project.
     function testFork_MintFromFeeDistribution() public {
         CTPost[] memory posts = _singlePost(TEST_URI, POST_PRICE, POST_SUPPLY, POST_CATEGORY);
@@ -267,6 +293,39 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Verify two NFTs were minted total.
         assertEq(IERC721(address(testHook)).balanceOf(nftBeneficiary), 2, "Two NFTs should be minted across both calls");
+    }
+
+    /// @notice Verify unsorted multi-category posts are normalized before crossing into the canonical 721 store.
+    function testFork_MintFromUnsortedCategoriesPublishesBothNFTs() public {
+        CTPost[] memory posts = new CTPost[](2);
+        posts[0] = CTPost({
+            encodedIpfsUri: TEST_URI_2,
+            price: POST_PRICE,
+            totalSupply: POST_SUPPLY,
+            category: 2,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+        posts[1] = CTPost({
+            encodedIpfsUri: TEST_URI,
+            price: POST_PRICE,
+            totalSupply: POST_SUPPLY,
+            category: POST_CATEGORY,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        uint256 totalPrice = uint256(POST_PRICE) * posts.length;
+        uint256 fee = totalPrice / 20;
+
+        uint256 balanceBefore = IERC721(address(testHook)).balanceOf(nftBeneficiary);
+
+        vm.prank(poster);
+        publisher.mintFrom{value: totalPrice + fee}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
+
+        assertEq(IERC721(address(testHook)).balanceOf(nftBeneficiary), balanceBefore + 2, "both NFTs should mint");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI), 1, "category 1 tier sorted first");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI_2), 2, "category 2 tier sorted second");
     }
 
     // ───────────────────────── Internal deployment helpers
@@ -384,9 +443,17 @@ contract PublishForkTest is Test, DeployPermit2 {
         JBTerminalConfig[] memory terminalConfigs = _ethTerminalConfig();
 
         // Build allowed posts for the deployer.
-        CTDeployerAllowedPost[] memory allowedPosts = new CTDeployerAllowedPost[](1);
+        CTDeployerAllowedPost[] memory allowedPosts = new CTDeployerAllowedPost[](2);
         allowedPosts[0] = CTDeployerAllowedPost({
             category: POST_CATEGORY,
+            minimumPrice: 0,
+            minimumTotalSupply: 1,
+            maximumTotalSupply: 10_000,
+            maximumSplitPercent: 500_000_000, // 50%
+            allowedAddresses: new address[](0) // anyone can post
+        });
+        allowedPosts[1] = CTDeployerAllowedPost({
+            category: 2,
             minimumPrice: 0,
             minimumTotalSupply: 1,
             maximumTotalSupply: 10_000,

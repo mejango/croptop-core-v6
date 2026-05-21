@@ -20,7 +20,9 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 
 - **Trusted forwarder.** ERC-2771 `_msgSender()` is trusted in both publisher and deployer for permission checks, allowlists, and payment routing.
 - **CTDeployer as permanent data-hook proxy.** `CTDeployer` sets itself as the data hook for projects it deploys. `dataHookOf[projectId]` is set once and has no setter.
-- **Sucker registry.** `CTDeployer.beforeCashOutRecordedWith` trusts `SUCKER_REGISTRY.isSuckerOf()` for 0% tax cash outs.
+- **Sucker registry.** `CTDeployer.beforeCashOutRecordedWith` trusts `SUCKER_REGISTRY.isSuckerOf()` for 0% tax
+  cash outs. Those sucker cash-outs use local supply/surplus because they are bridge accounting, not ordinary global
+  cash-outs.
 - **Sucker deployment is fail-open at launch time.** Launch can continue on chains where the configured sucker deployer cascade cannot complete.
 - **CTProjectOwner as burn target.** Projects transferred to `CTProjectOwner` cannot be recovered.
 - **JBDirectory / terminal resolution.** `CTPublisher.mintFrom` trusts `DIRECTORY.primaryTerminalOf()`.
@@ -77,6 +79,10 @@ This is a known race. The mitigation is application-layer ordering and the fact 
 
 `CTDeployer.deployProjectFor` intentionally grants the initial owner enough hook permissions to manage the collection directly. That is part of the trust model until ownership is moved into a narrower surface.
 
+`CTDeployer` safe-transfers the final project NFT to the requested owner. Contract recipients must implement
+`onERC721Received`, otherwise the launch reverts before the project NFT can be stranded in a contract that cannot
+operate or transfer it.
+
 ### 7.4 The 5% Croptop fee only applies to new tier creation via `CTPublisher.mintFrom`
 
 Croptop's core value is allowing anyone to **post new items** (create new 721 tiers) to a project's collection by minting the first copy. This posting action can only happen through `CTPublisher.mintFrom`, which collects the 5% fee. Once a tier exists, anyone can mint additional copies of that tier by paying the project's terminal directly — these direct terminal payments do not go through CTPublisher and do not incur the Croptop fee. This is by design: the fee gates content creation (posting new tiers), not minting from existing tiers. Direct terminal payments to mint existing tiers are a standard Juicebox feature and are not restricted.
@@ -109,3 +115,10 @@ Frontends and marketplaces listing Croptop-launched project NFTs should surface 
 Anyone holding any project NFT can `safeTransferFrom` it to this contract and trigger a real on-chain permission grant: the PUBLISHER address gains `ADJUST_721_TIERS` authority on whatever projectId was transferred. The grant is dormant in current code because `CTPublisher` only invokes `ADJUST_721_TIERS` against project NFTs that the publisher actually administers via the Croptop deployer flow, and stray transfers do not bring the publisher's deployer state along. But the on-chain grant is real and would activate if any future publisher code path acts on caller-supplied project IDs. The same shape exists in `DefifaProjectOwner` for the `SET_SPLIT_GROUPS` permission and was previously fixed for `JBOmnichainDeployer.onERC721Received` (ecosystem AUDIT_REPORT finding 72).
 
 Accepted because the grants are dormant against the current publisher surface and the contract is not the recipient of hostile transfers in canonical flows. Anyone integrating `CTProjectOwner` into a publisher / deployer pair that operates on arbitrary projectIds must add the `require(from == address(0))` guard before relying on it.
+
+### 7.8 Registered sucker cash-outs use local backing
+
+`CTDeployer.beforeCashOutRecordedWith` gives registered suckers the documented 0% tax path. That branch intentionally
+returns the local `context.totalSupply` and `context.surplus.value` instead of adding remote sucker registry snapshots.
+A sucker cash-out is the cross-chain movement path, so the value leaving a chain should be proportional to that chain's
+funds.

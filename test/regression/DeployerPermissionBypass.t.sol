@@ -55,6 +55,10 @@ contract MockProjects {
     function transferFrom(address, address to, uint256) external {
         ownerOfProject = to;
     }
+
+    function safeTransferFrom(address, address to, uint256) external {
+        ownerOfProject = to;
+    }
 }
 
 contract MockController {

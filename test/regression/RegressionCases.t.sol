@@ -57,6 +57,11 @@ contract RegressionMockProjects {
         require(_ownerOf[tokenId] == from, "wrong from");
         _ownerOf[tokenId] = to;
     }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId) external {
+        require(_ownerOf[tokenId] == from, "wrong from");
+        _ownerOf[tokenId] = to;
+    }
 }
 
 contract RegressionMockController {

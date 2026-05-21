@@ -52,6 +52,12 @@ import {CTProjectConfig} from "../../src/structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "../../src/structs/CTSuckerDeploymentConfig.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
 
+contract CroptopNonReceiverOwner {
+    function codeHashAnchor() external pure returns (bytes32) {
+        return keccak256("NOT_ERC721_RECEIVER");
+    }
+}
+
 contract RegressionCurrencyRegressions is Test, DeployPermit2 {
     address internal constant MULTISIG = address(0xBEEF);
     address internal constant PROJECT_OWNER = address(0xA11CE);
@@ -162,6 +168,30 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             POST_PRICE,
             "the fee should be refunded back to the caller after the fee-project pay reverts"
         );
+    }
+
+    function test_deployerSafeTransfersProjectNftToContractOwners() public {
+        _deployCore();
+        _deployTerminal();
+        _deployHookInfra();
+        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, MULTISIG, address(0));
+
+        uint256 feeProjectId = _launchProject({
+            owner: PROJECT_OWNER,
+            baseCurrency: JBCurrencyIds.ETH,
+            dataHook: address(0),
+            useDataHookForPay: false,
+            useDataHookForCashOut: false
+        });
+
+        CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
+        CTDeployer deployer =
+            new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, address(0));
+
+        address nonReceiverOwner = address(new CroptopNonReceiverOwner());
+
+        vm.expectRevert();
+        _launchViaCTDeployer(deployer, nonReceiverOwner);
     }
 
     function _deployCore() internal {
