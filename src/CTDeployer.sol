@@ -241,6 +241,12 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             bytes32 suckerSalt = keccak256(abi.encode(suckerDeploymentConfiguration.salt, _msgSender()));
 
+            // A launch-time project is still owned by this deployer until the final NFT transfer, so check the
+            // intended owner before the registry sees `address(this)` as the current project owner.
+            _requireExplicitSuckerPeerPermissionFrom({
+                account: owner, projectId: projectId, suckerDeploymentConfiguration: suckerDeploymentConfiguration
+            });
+
             // Successful deployments are discoverable from the registry, and failures are reported without reverting
             // the project launch.
             try SUCKER_REGISTRY.deploySuckersFor({
@@ -293,10 +299,15 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         external
         returns (address[] memory suckers)
     {
+        // Resolve the project owner once because Juicebox permissions are checked against the owner's permission table.
         address owner = PROJECTS.ownerOf(projectId);
 
-        // First prove the external caller is allowed to request sucker deployment for the project owner.
+        // `DEPLOY_SUCKERS` authorizes this wrapper to ask the registry for new suckers, but it does not authorize
+        // choosing a non-default remote peer.
         _requirePermissionFrom({account: owner, projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS});
+
+        // Mirror the registry's explicit-peer gate against the original project authority before this wrapper becomes
+        // the registry caller.
         _requireExplicitSuckerPeerPermissionFrom({
             account: owner, projectId: projectId, suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
@@ -503,19 +514,24 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         internal
         view
     {
-        // forge-lint: disable-next-line(unsafe-typecast)
-        bytes32 selfPeer = bytes32(uint256(uint160(address(SUCKER_REGISTRY))));
-
+        // Scan every requested sucker configuration because a single explicit peer changes cross-chain authority.
         for (uint256 i; i < suckerDeploymentConfiguration.deployerConfigurations.length;) {
+            // Cache the configured peer so the default/explicit branch is evaluated from the exact value sent onward.
             bytes32 peer = suckerDeploymentConfiguration.deployerConfigurations[i].peer;
-            if (peer != bytes32(0) && peer != selfPeer) {
+
+            // `peer == 0` preserves the sucker's deterministic same-address peer behavior.
+            // Any nonzero peer is written directly into the new sucker and changes who can deliver remote roots.
+            if (peer != bytes32(0)) {
+                // Require the original project authority, not this wrapper, to authorize explicit remote peers.
                 _requirePermissionFrom({
                     account: account, projectId: projectId, permissionId: JBPermissionIds.SET_SUCKER_PEER
                 });
+                // One explicit peer is enough to prove the caller needs the stronger permission.
                 return;
             }
 
             unchecked {
+                // Skip overflow checks because `i` is bounded by the calldata array length.
                 ++i;
             }
         }

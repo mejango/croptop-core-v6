@@ -133,11 +133,9 @@ contract RegressionPermissionCheckingSuckerRegistry {
             || _permissions.hasPermission(msg.sender, owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true, true);
         if (!authorized) revert RegistryUnauthorized(msg.sender, owner, projectId);
 
-        // forge-lint: disable-next-line(unsafe-typecast)
-        bytes32 selfPeer = bytes32(uint256(uint160(address(this))));
         for (uint256 i; i < configurations.length;) {
             bytes32 peer = configurations[i].peer;
-            if (peer != bytes32(0) && peer != selfPeer) {
+            if (peer != bytes32(0)) {
                 bool peerAuthorized = msg.sender == owner
                     || _permissions.hasPermission(
                         msg.sender, owner, projectId, JBPermissionIds.SET_SUCKER_PEER, true, true
@@ -197,6 +195,47 @@ contract RegressionSuckerWrapperTest is Test {
         vm.prank(owner);
         address[] memory suckers = deployer.deploySuckersFor(projectId, config);
         assertEq(suckers.length, 0);
+    }
+
+    function testDeploySuckersForRequiresSetPeerForRegistryAddressPeer() external {
+        uint256 projectId = 9;
+        address owner = address(0xA11CE);
+        address operator = address(0xB0B);
+
+        RegressionPermissions permissions = new RegressionPermissions();
+        RegressionProjects projects = new RegressionProjects();
+        projects.setOwner(projectId, owner);
+
+        RegressionPermissionCheckingSuckerRegistry registry =
+            new RegressionPermissionCheckingSuckerRegistry(permissions, projects);
+
+        CTDeployer deployer = new CTDeployer({
+            permissions: permissions,
+            projects: IJBProjects(address(projects)),
+            deployer: IJB721TiersHookDeployer(address(0xBEEF)),
+            publisher: ICTPublisher(address(0xCAFE)),
+            suckerRegistry: IJBSuckerRegistry(address(registry)),
+            trustedForwarder: address(0)
+        });
+
+        permissions.setPermission(operator, owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true);
+        permissions.setPermission(address(deployer), owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true);
+        permissions.setPermission(address(deployer), owner, projectId, JBPermissionIds.SET_SUCKER_PEER, true);
+
+        // The registry address is a nonzero peer override, not a default peer sentinel.
+        CTSuckerDeploymentConfig memory config = _explicitPeerConfig(bytes32(uint256(uint160(address(registry)))));
+
+        vm.prank(operator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector,
+                owner,
+                operator,
+                projectId,
+                JBPermissionIds.SET_SUCKER_PEER
+            )
+        );
+        deployer.deploySuckersFor(projectId, config);
     }
 
     function testDeploySuckersForRequiresOriginalCallerSetPeerPermissionForExplicitPeer() external {
