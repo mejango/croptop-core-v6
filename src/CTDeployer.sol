@@ -282,7 +282,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     }
 
     /// @notice Deploy new suckers for an existing project.
-    /// @dev Only the juicebox's owner can deploy new suckers.
+    /// @dev Only the juicebox's owner or a `DEPLOY_SUCKERS` operator can deploy new suckers. Supplying an explicit
+    /// non-default peer also requires `SET_SUCKER_PEER`, matching the registry's direct-call rule.
     /// @param projectId The ID of the project to deploy suckers for.
     /// @param suckerDeploymentConfiguration The suckers to set up for the project.
     function deploySuckersFor(
@@ -296,6 +297,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
         // First prove the external caller is allowed to request sucker deployment for the project owner.
         _requirePermissionFrom({account: owner, projectId: projectId, permissionId: JBPermissionIds.DEPLOY_SUCKERS});
+        _requireExplicitSuckerPeerPermissionFrom({
+            account: owner, projectId: projectId, suckerDeploymentConfiguration: suckerDeploymentConfiguration
+        });
 
         // Deploy the suckers. The sucker registry performs its own permission check against this forwarding helper,
         // so an unapproved CTDeployer fails at the downstream registry boundary without an extra preflight read here.
@@ -483,5 +487,37 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @return sender The address which sent this call.
     function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
         return ERC2771Context._msgSender();
+    }
+
+    /// @notice Revert unless the caller may set explicit sucker peers for `projectId`.
+    /// @dev The registry enforces this against its direct caller. Since this deployer wraps the registry call, it must
+    /// mirror the check against the original caller so `DEPLOY_SUCKERS` alone cannot smuggle in arbitrary peers.
+    /// @param account The project owner account whose permission table is checked.
+    /// @param projectId The ID of the project to deploy suckers for.
+    /// @param suckerDeploymentConfiguration The sucker deployment configuration to inspect.
+    function _requireExplicitSuckerPeerPermissionFrom(
+        address account,
+        uint256 projectId,
+        CTSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+    )
+        internal
+        view
+    {
+        // forge-lint: disable-next-line(unsafe-typecast)
+        bytes32 selfPeer = bytes32(uint256(uint160(address(SUCKER_REGISTRY))));
+
+        for (uint256 i; i < suckerDeploymentConfiguration.deployerConfigurations.length;) {
+            bytes32 peer = suckerDeploymentConfiguration.deployerConfigurations[i].peer;
+            if (peer != bytes32(0) && peer != selfPeer) {
+                _requirePermissionFrom({
+                    account: account, projectId: projectId, permissionId: JBPermissionIds.SET_SUCKER_PEER
+                });
+                return;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 }
