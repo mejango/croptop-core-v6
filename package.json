@@ -1,6 +1,6 @@
 {
   "name": "@croptop/core-v6",
-  "version": "0.0.52",
+  "version": "0.0.53",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -10,9 +10,7 @@
     "foundry.toml",
     "references/",
     "remappings.txt",
-    "script/ConfigureFeeProject.s.sol",
-    "script/Deploy.s.sol",
-    "script/helpers/",
+    "script/",
     "src/"
   ],
   "engines": {
