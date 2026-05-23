@@ -4,13 +4,16 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookDeployer.sol";
+import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {IJBSucker} from "@bananapus/suckers-v6/src/interfaces/IJBSucker.sol";
+import {IJBSuckerDeployer} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerDeployer.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
+import {JBTokenMapping} from "@bananapus/suckers-v6/src/structs/JBTokenMapping.sol";
 
 import {CTDeployer} from "../../src/CTDeployer.sol";
 import {ICTPublisher} from "../../src/interfaces/ICTPublisher.sol";
@@ -119,7 +122,7 @@ contract RegressionPermissionCheckingSuckerRegistry {
     function deploySuckersFor(
         uint256 projectId,
         bytes32,
-        JBSuckerDeployerConfig[] calldata
+        JBSuckerDeployerConfig[] calldata configurations
     )
         external
         view
@@ -129,6 +132,22 @@ contract RegressionPermissionCheckingSuckerRegistry {
         bool authorized = msg.sender == owner
             || _permissions.hasPermission(msg.sender, owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true, true);
         if (!authorized) revert RegistryUnauthorized(msg.sender, owner, projectId);
+
+        for (uint256 i; i < configurations.length;) {
+            bytes32 peer = configurations[i].peer;
+            if (peer != bytes32(0)) {
+                bool peerAuthorized = msg.sender == owner
+                    || _permissions.hasPermission(
+                        msg.sender, owner, projectId, JBPermissionIds.SET_SUCKER_PEER, true, true
+                    );
+                if (!peerAuthorized) revert RegistryUnauthorized(msg.sender, owner, projectId);
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
         return new address[](0);
     }
 }
@@ -176,5 +195,102 @@ contract RegressionSuckerWrapperTest is Test {
         vm.prank(owner);
         address[] memory suckers = deployer.deploySuckersFor(projectId, config);
         assertEq(suckers.length, 0);
+    }
+
+    function testDeploySuckersForRequiresSetPeerForRegistryAddressPeer() external {
+        uint256 projectId = 9;
+        address owner = address(0xA11CE);
+        address operator = address(0xB0B);
+
+        RegressionPermissions permissions = new RegressionPermissions();
+        RegressionProjects projects = new RegressionProjects();
+        projects.setOwner(projectId, owner);
+
+        RegressionPermissionCheckingSuckerRegistry registry =
+            new RegressionPermissionCheckingSuckerRegistry(permissions, projects);
+
+        CTDeployer deployer = new CTDeployer({
+            permissions: permissions,
+            projects: IJBProjects(address(projects)),
+            deployer: IJB721TiersHookDeployer(address(0xBEEF)),
+            publisher: ICTPublisher(address(0xCAFE)),
+            suckerRegistry: IJBSuckerRegistry(address(registry)),
+            trustedForwarder: address(0)
+        });
+
+        permissions.setPermission(operator, owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true);
+        permissions.setPermission(address(deployer), owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true);
+        permissions.setPermission(address(deployer), owner, projectId, JBPermissionIds.SET_SUCKER_PEER, true);
+
+        // The registry address is a nonzero peer override, not a default peer sentinel.
+        CTSuckerDeploymentConfig memory config = _explicitPeerConfig(bytes32(uint256(uint160(address(registry)))));
+
+        vm.prank(operator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector,
+                owner,
+                operator,
+                projectId,
+                JBPermissionIds.SET_SUCKER_PEER
+            )
+        );
+        deployer.deploySuckersFor(projectId, config);
+    }
+
+    function testDeploySuckersForRequiresOriginalCallerSetPeerPermissionForExplicitPeer() external {
+        uint256 projectId = 8;
+        address owner = address(0xA11CE);
+        address operator = address(0xB0B);
+
+        RegressionPermissions permissions = new RegressionPermissions();
+        RegressionProjects projects = new RegressionProjects();
+        projects.setOwner(projectId, owner);
+
+        RegressionPermissionCheckingSuckerRegistry registry =
+            new RegressionPermissionCheckingSuckerRegistry(permissions, projects);
+
+        CTDeployer deployer = new CTDeployer({
+            permissions: permissions,
+            projects: IJBProjects(address(projects)),
+            deployer: IJB721TiersHookDeployer(address(0xBEEF)),
+            publisher: ICTPublisher(address(0xCAFE)),
+            suckerRegistry: IJBSuckerRegistry(address(registry)),
+            trustedForwarder: address(0)
+        });
+
+        permissions.setPermission(operator, owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true);
+        permissions.setPermission(address(deployer), owner, projectId, JBPermissionIds.DEPLOY_SUCKERS, true);
+        permissions.setPermission(address(deployer), owner, projectId, JBPermissionIds.SET_SUCKER_PEER, true);
+
+        CTSuckerDeploymentConfig memory config = _explicitPeerConfig(bytes32(uint256(uint160(address(0xFEED)))));
+
+        vm.prank(operator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector,
+                owner,
+                operator,
+                projectId,
+                JBPermissionIds.SET_SUCKER_PEER
+            )
+        );
+        deployer.deploySuckersFor(projectId, config);
+
+        permissions.setPermission(operator, owner, projectId, JBPermissionIds.SET_SUCKER_PEER, true);
+
+        vm.prank(operator);
+        address[] memory suckers = deployer.deploySuckersFor(projectId, config);
+        assertEq(suckers.length, 0);
+    }
+
+    function _explicitPeerConfig(bytes32 peer) internal pure returns (CTSuckerDeploymentConfig memory config) {
+        JBSuckerDeployerConfig[] memory deployerConfigurations = new JBSuckerDeployerConfig[](1);
+        deployerConfigurations[0] = JBSuckerDeployerConfig({
+            deployer: IJBSuckerDeployer(address(0xB0B)), peer: peer, mappings: new JBTokenMapping[](0)
+        });
+
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return CTSuckerDeploymentConfig({deployerConfigurations: deployerConfigurations, salt: bytes32("salt")});
     }
 }

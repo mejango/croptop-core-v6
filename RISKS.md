@@ -41,6 +41,9 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Allowlist is O(n).** `_isAllowed` linearly scans the full allowlist.
 - **Categories cannot be disabled cleanly.** Once configured, a category can only be made impractical through stricter bounds.
 - **CTDeployer grants broad permissions.** Wildcard permissions to the sucker registry and publisher apply to all projects deployed by that deployer instance.
+- **Explicit sucker peers require peer-setting authority.** `CTDeployer.deploySuckersFor` mirrors the sucker registry's
+  rule: default same-address peering only needs `DEPLOY_SUCKERS`, but non-default explicit peers also require
+  `SET_SUCKER_PEER` from the original caller.
 - **`deployProjectFor` is permissionless for new projects.** Anyone can create a project with arbitrary owners.
 - **`claimCollectionOwnershipOf` only checks current NFT ownership.** After claiming, the project owner must still grant `CTPublisher` the needed tier-adjust permission or publishing stops working.
 
