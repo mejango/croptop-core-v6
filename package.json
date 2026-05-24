@@ -33,7 +33,7 @@
     "@bananapus/router-terminal-v6": "^0.0.49",
     "@bananapus/suckers-v6": "^0.0.52",
     "@openzeppelin/contracts": "5.6.1",
-    "@rev-net/core-v6": "^0.0.65"
+    "@rev-net/core-v6": "^0.0.67"
   },
   "devDependencies": {
     "@bananapus/address-registry-v6": "^0.0.26",
