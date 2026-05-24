@@ -51,7 +51,14 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     // ---------------------------- events -------------------------------- //
     //*********************************************************************//
 
-    event CTDeployer_SuckerDeploymentFailed(uint256 indexed projectId, bytes32 indexed salt, bytes reason);
+    /// @notice Emitted when launch-time sucker deployment fails without reverting the collection launch.
+    /// @param projectId The project whose sucker deployment failed.
+    /// @param salt The salt used for the failed sucker deployment attempt.
+    /// @param reason The revert reason returned by the sucker registry.
+    /// @param caller The address that launched the project.
+    event CTDeployer_SuckerDeploymentFailed(
+        uint256 indexed projectId, bytes32 indexed salt, bytes reason, address caller
+    );
 
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
@@ -259,7 +266,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             // no-op
             }
             catch (bytes memory reason) {
-                emit CTDeployer_SuckerDeploymentFailed({projectId: projectId, salt: suckerSalt, reason: reason});
+                emit CTDeployer_SuckerDeploymentFailed({
+                    projectId: projectId, salt: suckerSalt, reason: reason, caller: _msgSender()
+                });
             }
         }
 
