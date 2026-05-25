@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import {Hook721Deployment, Hook721DeploymentLib} from "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
-import {CoreDeployment, CoreDeploymentLib} from "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
 import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
@@ -11,6 +10,7 @@ import {Script} from "forge-std/Script.sol";
 import {CTDeployer} from "./../src/CTDeployer.sol";
 import {CTProjectOwner} from "./../src/CTProjectOwner.sol";
 import {CTPublisher} from "./../src/CTPublisher.sol";
+import {CoreDeployment, CoreDeploymentLib} from "./helpers/CoreDeploymentLib.sol";
 
 contract DeployScript is Script, Sphinx {
     /// @notice tracks the deployment of the core contracts for the chain we are deploying to.

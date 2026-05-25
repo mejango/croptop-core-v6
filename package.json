@@ -1,6 +1,6 @@
 {
   "name": "@croptop/core-v6",
-  "version": "0.0.57",
+  "version": "0.0.58",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@bananapus/721-hook-v6": "^0.0.55",
-    "@bananapus/core-v6": "^0.0.60",
+    "@bananapus/core-v6": "^0.0.64",
     "@bananapus/ownable-v6": "^0.0.28",
     "@bananapus/permission-ids-v6": "^0.0.27",
     "@bananapus/router-terminal-v6": "^0.0.49",

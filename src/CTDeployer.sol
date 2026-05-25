@@ -184,6 +184,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         IJBController controller
     )
         external
+        payable
         override
         returns (uint256 projectId, IJB721TiersHook hook)
     {
@@ -194,7 +195,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         rulesetConfigurations[0].metadata.baseCurrency = JBCurrencyIds.ETH;
 
         // Reserve the project ID up front so permissionless project creations cannot invalidate hook deployment.
-        projectId = PROJECTS.createFor(address(this));
+        projectId = PROJECTS.createFor{value: msg.value}(address(this));
 
         // Deploy a blank project.
         hook = DEPLOYER.deployHookFor({
