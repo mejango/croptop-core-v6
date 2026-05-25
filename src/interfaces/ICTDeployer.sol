@@ -43,6 +43,7 @@ interface ICTDeployer {
         IJBController controller
     )
         external
+        payable
         returns (uint256 projectId, IJB721TiersHook hook);
 
     /// @notice Deploy new suckers for an existing project.

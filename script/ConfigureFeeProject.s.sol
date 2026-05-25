@@ -2,13 +2,13 @@
 pragma solidity 0.8.28;
 
 import {Hook721Deployment, Hook721DeploymentLib} from "@bananapus/721-hook-v6/script/helpers/Hook721DeploymentLib.sol";
-import {CoreDeployment, CoreDeploymentLib} from "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
 import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/script/helpers/SuckerDeploymentLib.sol";
 import {
     RouterTerminalDeployment,
     RouterTerminalDeploymentLib
 } from "@bananapus/router-terminal-v6/script/helpers/RouterTerminalDeploymentLib.sol";
 import {CroptopDeployment, CroptopDeploymentLib} from "./helpers/CroptopDeploymentLib.sol";
+import {CoreDeployment, CoreDeploymentLib} from "./helpers/CoreDeploymentLib.sol";
 
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/contracts/foundry/SphinxConstants.sol";
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";

@@ -161,6 +161,20 @@ contract TestCTDeployer is Test {
         );
     }
 
+    function test_deployProjectFor_forwardsProjectCreationFee() public {
+        _mockDeployProjectInfra();
+
+        uint256 creationFee = 0.01 ether;
+        CTProjectConfig memory config = _defaultProjectConfig();
+        CTSuckerDeploymentConfig memory suckerConfig = _emptySuckerConfig();
+
+        vm.expectCall(
+            address(projects), creationFee, abi.encodeWithSelector(IJBProjects.createFor.selector, address(deployer))
+        );
+
+        deployer.deployProjectFor{value: creationFee}(owner, config, suckerConfig, controller);
+    }
+
     /// @notice Verify that allowed posts from the config are forwarded to the publisher.
     function test_deployProjectFor_configuresAllowedPosts() public {
         _mockDeployProjectInfra();
