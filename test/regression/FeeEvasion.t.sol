@@ -20,9 +20,8 @@ import {CTPost} from "../../src/structs/CTPost.sol";
 
 /// @title FeeEvasionRegression
 /// @notice Fee evasion for existing tier mints.
-///         Before the fix, a user could set post.price = 0 for an existing tier
-///         to evade the 5% Croptop fee entirely. The fix reads the actual tier price
-///         from the store for existing tiers.
+///         Existing-tier mints must price from the stored tier, not caller-provided post.price, so the 5% Croptop fee
+///         cannot be avoided with post.price = 0.
 contract FeeEvasionRegression is Test {
     CTPublisher publisher;
 
@@ -90,9 +89,7 @@ contract FeeEvasionRegression is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
     }
 
-    /// @notice Test that fee is still charged when post.price = 0 for an existing tier.
-    ///         Before the fix, the attacker could set post.price = 0 and pay exactly 0 ETH
-    ///         for the fee. After the fix, the actual tier price is read from the store.
+    /// @notice Fee is still charged when post.price = 0 for an existing tier.
     function test_feeChargedForExistingTierEvenWithZeroPostPrice() public {
         _configureCategory();
 
@@ -161,7 +158,7 @@ contract FeeEvasionRegression is Test {
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored");
 
         // Now the attack: existing tier, but attacker sets post.price = 0.
-        // Update mocks for the second mint (maxTierId is now 1).
+        // Update mocks for the second mint with maxTierId set to 1.
         _setupMintMocks(1);
 
         CTPost[] memory attackPosts = new CTPost[](1);
@@ -177,9 +174,9 @@ contract FeeEvasionRegression is Test {
         // The fee is TIER_PRICE / FEE_DIVISOR = 1 ether / 20 = 0.05 ether.
         // The project payment is TIER_PRICE - fee = 1 ether - 0.05 ether = 0.95 ether.
         // Total required: TIER_PRICE = 1 ether (project gets 0.95 ether, fee is 0.05 ether).
-        // With the fix, the actual tier price (1 ether) is used, so the full msg.value is needed.
+        // The actual tier price (1 ether) is used, so the full msg.value is needed.
 
-        // Sending 0 ETH should revert because totalPrice is now the actual tier price (1 ether),
+        // Sending 0 ETH should revert because totalPrice is the actual tier price (1 ether),
         // not the attacker's 0.
         vm.prank(poster);
         vm.expectRevert();

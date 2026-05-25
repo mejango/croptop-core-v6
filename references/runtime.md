@@ -17,7 +17,7 @@
 
 - Posting criteria: category rules are the policy surface that protects the project from bad content or bad economics.
 - Fee routing: fee-project assumptions and fee exemptions are operationally important.
-- Tier reuse and duplicate content: content identity is part of runtime behavior, not just metadata.
+- Tier reuse and duplicate content: content identity is part of runtime behavior, not only metadata.
 - Burn-lock ownership: once ownership moves into the lock helper, reversibility expectations change drastically.
 
 ## Tests To Trust First

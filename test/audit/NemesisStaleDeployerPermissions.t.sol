@@ -196,7 +196,7 @@ contract NemesisStaleDeployerPermissionsTest is Test {
 
         vm.prank(ownerA);
         projects.transferFrom(ownerA, ownerB, 6);
-        assertEq(projects.ownerOf(6), ownerB, "ownerB is now the project owner");
+        assertEq(projects.ownerOf(6), ownerB, "ownerB owns the project");
 
         vm.prank(ownerA);
         hook.adjustTiers(new JB721TierConfig[](0), new uint256[](0));

@@ -24,7 +24,7 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     /// @notice The contract where operator permissions are stored.
     IJBPermissions public immutable override PERMISSIONS;
 
-    /// @notice The contract from which project are minted.
+    /// @notice The contract from which projects are minted.
     IJBProjects public immutable override PROJECTS;
 
     /// @notice The Croptop publisher contract that manages post allowances and content rules.
@@ -35,7 +35,7 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     //*********************************************************************//
 
     /// @param permissions The contract where operator permissions are stored.
-    /// @param projects The contract from which project are minted.
+    /// @param projects The contract from which projects are minted.
     /// @param publisher The Croptop publisher.
     constructor(IJBPermissions permissions, IJBProjects projects, ICTPublisher publisher) {
         PERMISSIONS = permissions;
@@ -47,8 +47,8 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
     // ---------------------- external transactions ---------------------- //
     //*********************************************************************//
 
-    /// @notice Give the croptop publisher permission to post to the project on this contract's behalf.
-    /// @dev Make sure to first configure certain posts before sending this contract ownership.
+    /// @notice Give the Croptop publisher permission to post to the project on this contract's behalf.
+    /// @dev Configure posting criteria before transferring ownership here; this contract has no transfer-out function.
     function onERC721Received(
         address operator,
         address from,
@@ -63,14 +63,14 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
         from;
         operator;
 
-        // Make sure the 721 received is the JBProjects contract.
+        // Only accept project NFTs from JBProjects.
         if (msg.sender != address(PROJECTS)) revert();
 
-        // Set the correct permission.
+        // Grant Croptop permission to add tiers for this locked project.
         uint8[] memory permissionIds = new uint8[](1);
         permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
 
-        // Give the croptop contract permission to post on this contract's behalf.
+        // Give the Croptop publisher permission to post on this contract's behalf.
         PERMISSIONS.setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({

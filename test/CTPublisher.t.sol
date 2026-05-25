@@ -698,7 +698,7 @@ contract TestCTPublisher is Test {
         });
 
         // Fee = 1 ether / 20 = 0.05 ether. Total needed = 1.05 ether.
-        // Send only 0.04 ether — less than just the fee.
+        // Send only 0.04 ether: less than the fee.
         uint256 fee = 1 ether / 20;
         vm.prank(poster);
         vm.expectRevert(
@@ -978,7 +978,7 @@ contract TestCTPublisher is Test {
     }
 
     //*********************************************************************//
-    // --- Fee Beneficiary Validation (Fix AO) --------------------------- //
+    // --- Fee Beneficiary Validation ------------------------------------ //
     //*********************************************************************//
 
     function test_mintFrom_zeroFeeBeneficiary_reverts() public {

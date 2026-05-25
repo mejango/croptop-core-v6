@@ -84,11 +84,11 @@ contract RegressionUriDriftTest is Test {
 
         assertEq(store.maxTierId(), 2, "publishing URI_B again should create a fresh tier");
         assertEq(store.tierUri(1), URI_B, "tier 1 still points at URI_B after mutation");
-        assertEq(store.tierUri(2), URI_B, "tier 2 now also points at URI_B");
+        assertEq(store.tierUri(2), URI_B, "tier 2 also points at URI_B");
         assertEq(
             publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_B),
             2,
-            "publisher now tracks URI_B as a second tier instead of rejecting the duplicate"
+            "publisher tracks URI_B as a second tier instead of rejecting the duplicate"
         );
     }
 

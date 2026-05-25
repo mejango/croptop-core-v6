@@ -12,13 +12,13 @@ import {MetadataResolverHelper} from "@bananapus/core-v6/test/helpers/MetadataRe
 ///         It uses a mock contract which only returns a metadata following the logic
 ///         of the CroptopPublisher contract during mint. This external contract is used to recreate the same
 contract Test_MetadataGeneration_Unit is Test {
-    /// @notice Create a new metadata from the _additionalPayMetadata and the datahook metadata (containing the tiers to
+    /// @notice Create new metadata from _additionalPayMetadata and the data hook metadata containing the tiers to
     /// mint).
     /// @dev    Naming follows CroptopPublisher contract.
     function test_metadataBuilding() public {
         MetadataResolverHelper _resolverHelper = new MetadataResolverHelper();
 
-        // The intial metadata passed to the terminal
+        // The initial metadata passed to the terminal.
         bytes4[] memory _ids = new bytes4[](10);
         bytes[] memory _datas = new bytes[](10);
 
@@ -37,12 +37,12 @@ contract Test_MetadataGeneration_Unit is Test {
 
         bytes memory _additionalPayMetadata = _resolverHelper.createMetadata(_ids, _datas);
 
-        // The referal to include in the first 32 bytes of the metadata
+        // The referral project ID to include in the first 32 bytes of the metadata.
         // forge-lint: disable-next-line(mixed-case-variable)
         uint256 FEE_PROJECT_ID = 420;
 
-        // The additional metadata to include
-        bytes4 datahookId = bytes4(bytes20(address(0xdeadbeef)));
+        // The additional data hook metadata to include.
+        bytes4 dataHookId = bytes4(bytes20(address(0xdeadbeef)));
         uint256[] memory tierIdsToMint = new uint256[](9);
 
         for (uint256 i = 0; i < 9; i++) {
@@ -51,10 +51,10 @@ contract Test_MetadataGeneration_Unit is Test {
 
         // Test: create the new metadata:
         bytes memory mintMetadata = JBMetadataResolver.addToMetadata({
-            originalMetadata: _additionalPayMetadata, idToAdd: datahookId, dataToAdd: abi.encode(true, tierIdsToMint)
+            originalMetadata: _additionalPayMetadata, idToAdd: dataHookId, dataToAdd: abi.encode(true, tierIdsToMint)
         });
 
-        // Add the referal id in the first 32 bytes
+        // Add the referral project ID in the first 32 bytes.
         assembly {
             mstore(add(mintMetadata, 32), FEE_PROJECT_ID)
         }
@@ -69,11 +69,11 @@ contract Test_MetadataGeneration_Unit is Test {
             assertEq(targetData, _datas[i], "metadata not equal");
         }
 
-        (found, targetData) = JBMetadataResolver.getDataFor(datahookId, mintMetadata);
-        assertTrue(found, "datahook metadata not found");
-        assertEq(targetData, abi.encode(true, tierIdsToMint), "datahook not equal");
+        (found, targetData) = JBMetadataResolver.getDataFor(dataHookId, mintMetadata);
+        assertTrue(found, "data hook metadata not found");
+        assertEq(targetData, abi.encode(true, tierIdsToMint), "data hook not equal");
 
         // forge-lint: disable-next-line(unsafe-typecast)
-        assertEq(uint256(bytes32(mintMetadata)), FEE_PROJECT_ID, "referal id not equal");
+        assertEq(uint256(bytes32(mintMetadata)), FEE_PROJECT_ID, "referral project ID not equal");
     }
 }

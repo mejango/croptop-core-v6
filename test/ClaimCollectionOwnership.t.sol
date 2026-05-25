@@ -243,8 +243,7 @@ contract ClaimCollectionOwnershipTest is Test {
         assertEq(maxSupply, 50, "maximum supply should be configured");
     }
 
-    /// @notice Claiming twice for the same hook should succeed (idempotent — just calls
-    ///         transferOwnershipToProject again, which the hook handles internally).
+    /// @notice Claiming twice for the same hook should succeed because the hook handles repeated ownership transfer.
     function test_claim_calledTwice_succeeds() public {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(deployedProjectId));
         vm.mockCall(

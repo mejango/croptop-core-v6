@@ -20,9 +20,8 @@ import {CTPost} from "../../src/structs/CTPost.sol";
 
 /// @title StaleTierIdMappingRegression
 /// @notice Stale tierIdForEncodedIpfsUriOf mapping after external tier removal.
-///         When a tier is removed externally via adjustTiers(), the publisher's mapping still pointed
-///         to the removed tier ID, blocking re-creation. The fix clears the stale mapping and allows
-///         the post to fall through to new-tier creation.
+///         When a tier is removed externally via adjustTiers(), the publisher clears the stale mapping and allows the
+///         post to fall through to new-tier creation.
 contract StaleTierIdMappingRegression is Test {
     CTPublisher publisher;
 
@@ -129,7 +128,7 @@ contract StaleTierIdMappingRegression is Test {
             abi.encode(true)
         );
 
-        // Mock tierOf for the removed tier — the fix calls tierOf before checking isTierRemoved.
+        // Mock tierOf for the removed tier because cache validation reads tier data before checking isTierRemoved.
         JB721Tier memory removedTier;
         removedTier.id = 1;
         removedTier.encodedIpfsUri = TEST_URI;
@@ -142,12 +141,11 @@ contract StaleTierIdMappingRegression is Test {
         // Update maxTierId to 1 so new tier gets ID 2.
         _setupMintMocks(1);
 
-        // Second mint with the same URI should succeed (creating a new tier),
-        // because the fix detects the stale mapping and clears it.
+        // Second mint with the same URI should succeed by clearing the stale mapping and creating a new tier.
         vm.prank(poster);
         publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
 
-        // Verify the mapping now points to the new tier ID (2).
+        // Verify the mapping points to the new tier ID (2).
         assertEq(
             publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI),
             2,

@@ -46,6 +46,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    /// @notice Thrown when a caller is not the Juicebox project owner for the hook being claimed.
     error CTDeployer_NotOwnerOfProject(uint256 projectId, address hook, address caller);
     //*********************************************************************//
     // ---------------------------- events -------------------------------- //
@@ -92,7 +93,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @param permissions The permissions contract.
     /// @param projects The projects contract.
     /// @param deployer The deployer to launch Croptop projects from.
-    /// @param publisher The croptop publisher.
+    /// @param publisher The Croptop publisher.
     /// @param suckerRegistry The sucker registry.
     /// @param trustedForwarder The trusted forwarder.
     constructor(
@@ -298,8 +299,8 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     }
 
     /// @notice Deploy new suckers for an existing project.
-    /// @dev Only the juicebox's owner or a `DEPLOY_SUCKERS` operator can deploy new suckers. Supplying an explicit
-    /// non-default peer also requires `SET_SUCKER_PEER`, matching the registry's direct-call rule.
+    /// @dev Only the Juicebox project owner or a `DEPLOY_SUCKERS` operator can deploy new suckers. Supplying an
+    /// explicit non-default peer also requires `SET_SUCKER_PEER`, matching the registry's direct-call rule.
     /// @param projectId The ID of the project to deploy suckers for.
     /// @param suckerDeploymentConfiguration The suckers to set up for the project.
     function deploySuckersFor(
@@ -365,7 +366,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
             return (0, context.cashOutCount, context.totalSupply, context.surplus.value, hookSpecifications);
         }
 
-        // If the ruleset has a data hook, forward the call to the datahook.
+        // If the ruleset has a data hook, forward the call to the data hook.
         IJBRulesetDataHook hook = dataHookOf[context.projectId];
         if (address(hook) == address(0)) {
             return (
@@ -428,9 +429,9 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         tokenId;
         operator;
 
-        // Make sure the 721 received is the JBProjects contract.
+        // Only accept project NFTs from JBProjects.
         if (msg.sender != address(PROJECTS)) revert();
-        // Make sure the 721 is being received as a mint.
+        // Only accept freshly minted project NFTs.
         if (from != address(0)) revert();
         return IERC721Receiver.onERC721Received.selector;
     }
@@ -451,7 +452,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     // --------------------- internal transactions ----------------------- //
     //*********************************************************************//
 
-    /// @notice Configure croptop posting.
+    /// @notice Configure Croptop posting criteria for a newly deployed hook.
     /// @param hook The hook that will be posted to.
     /// @param allowedPosts The type of posts that should be allowed.
     function _configurePostingCriteriaFor(address hook, CTDeployerAllowedPost[] memory allowedPosts) internal {

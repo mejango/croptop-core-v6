@@ -181,7 +181,7 @@ contract P12MockHook {
 // Test contract
 // ---------------------------------------------------------------------------
 
-/// @notice Regression tests for Croptop regression fixes:
+/// @notice Regression tests for Croptop metadata shadowing and URI cache desync.
 ///   Metadata shadow — additionalPayMetadata with duplicate pay ID
 ///   URI cache desync — tier URI changed via setMetadata
 contract CroptopRegressionFixesTest is Test {
@@ -232,8 +232,7 @@ contract CroptopRegressionFixesTest is Test {
     // Metadata shadow — duplicate pay ID in additionalPayMetadata
     // -----------------------------------------------------------------------
 
-    /// @notice When additionalPayMetadata already contains an entry for the pay ID,
-    ///         the fix should revert with CTPublisher_DuplicatePayMetadata.
+    /// @notice Reverts when additionalPayMetadata already contains an entry for the pay ID.
     function test_duplicateMetadataReverts() public {
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
@@ -314,9 +313,8 @@ contract CroptopRegressionFixesTest is Test {
     // URI cache desync — tier URI changed via setMetadata
     // -----------------------------------------------------------------------
 
-    /// @notice When a tier's URI is changed via setMetadata, the cache entry
-    ///         (old URI -> tier ID) becomes stale. The fix should detect
-    ///         the mismatch and clear the cache, creating a new tier.
+    /// @notice When a tier's URI is changed via setMetadata, the stale cache entry is cleared and a new tier is
+    /// created.
     function test_M42_fix_clears_stale_cache() public {
         // Step 1: Publish URI_A — creates tier 1.
         _publish(URI_A);
@@ -326,17 +324,18 @@ contract CroptopRegressionFixesTest is Test {
         vm.prank(hookOwner);
         hook.setMetadata("", "", "", "", address(this), 1, URI_B);
 
-        // The publisher cache still maps URI_A -> tier 1, but tier 1 now has URI_B.
+        // The publisher cache still maps URI_A -> tier 1, but tier 1 resolves to URI_B.
         assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "stale cache still maps URI_A -> tier 1");
 
-        // Step 3: Try to publish URI_A again. The fix should detect the mismatch
-        // (tier 1's actual URI is URI_B, not URI_A), clear the stale cache, and
-        // create a new tier 2 for URI_A.
+        // Step 3: Publishing URI_A again detects that tier 1's actual URI is URI_B, clears the stale cache, and creates
+        // a new tier 2 for URI_A.
         _publish(URI_A);
 
         assertEq(store.maxTierId(), 2, "new tier should be created for URI_A after cache invalidation");
         assertEq(
-            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 2, "URI_A should now map to tier 2 (fresh tier)"
+            publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A),
+            2,
+            "URI_A maps to tier 2 after cache invalidation"
         );
     }
 

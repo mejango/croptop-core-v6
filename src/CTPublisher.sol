@@ -86,7 +86,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
     /// @notice Packed values that determine the allowance of posts.
     /// @custom:param hook The hook for which this allowance applies.
-    /// @custom:param category The category for which the allowance applies
+    /// @custom:param category The category for which the allowance applies.
     mapping(address hook => mapping(uint256 category => uint256)) internal _packedAllowanceFor;
 
     //*********************************************************************//
@@ -114,8 +114,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // ---------------------- external transactions ---------------------- //
     //*********************************************************************//
 
-    /// @notice Lets collection owners define the rules for what can be posted in each category — minimum price,
-    /// supply
+    /// @notice Lets collection owners define the rules for what can be posted in each category: minimum price, supply
     /// bounds, maximum split percent, and an optional allowlist of addresses. Each call replaces the existing criteria
     /// for the specified categories.
     /// @param allowedPosts An array of criteria for allowed posts.
@@ -181,16 +180,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
     /// @notice Publish one or more NFT posts to a project's 721 hook and mint a first copy of each. For each new post,
     /// a tier is created on the hook. A 5% fee (1/FEE_DIVISOR) is taken from the total tier prices and routed to the
-    /// fee
-    /// project; the remainder is paid into the project's terminal, minting NFTs for the beneficiary.
+    /// fee project; the remainder is paid into the project's terminal, minting NFTs for the beneficiary.
     /// @dev Reverts if any post violates the category's configured allowance (price, supply, split, allowlist).
     /// @param hook The hook to mint from.
     /// @param posts An array of posts that should be published as NFTs to the specified project.
     /// @param nftBeneficiary The beneficiary of the NFT mints.
     /// @param feeBeneficiary The beneficiary of the fee project's token.
-    /// @param additionalPayMetadata Metadata bytes that should be included in the pay function's metadata. This
-    /// prepends the
-    /// payload needed for NFT creation.
+    /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
@@ -256,16 +252,14 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 if (exists) revert CTPublisher_DuplicatePayMetadata(payId);
             }
 
-            // Create the metadata for the payment to specify the tier IDs that should be minted. We create manually the
-            // original metadata, following
-            // the specifications from the JBMetadataResolver library.
+            // Add Croptop's pay metadata entry while preserving caller-provided metadata.
             mintMetadata = JBMetadataResolver.addToMetadata({
                 originalMetadata: additionalPayMetadata,
                 idToAdd: JBMetadataResolver.getId({purpose: "pay", target: metadataIdTarget}),
                 dataToAdd: abi.encode(true, tierIdsToMint)
             });
 
-            // Store the referal id in the first 32 bytes of the metadata (push to stack for immutable in assembly)
+            // Store the referral project ID in the first 32 bytes of the metadata.
             uint256 feeProjectId = FEE_PROJECT_ID;
 
             assembly {
@@ -597,7 +591,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         }
 
         // The 721 store requires new tiers sorted by ascending category. This insertion sort normalizes caller input
-        // so multi-category publishes do not revert just because posts were supplied in mint order instead of category
+        // so multi-category publishes do not revert when posts are supplied in mint order instead of category
         // order. It is intentionally stable: equal-category posts stay in caller order because the loop only moves
         // prior tiers with a strictly greater category.
         for (uint256 i = 1; i < numberOfTiersBeingAdded;) {
@@ -654,10 +648,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param addrs The candidate address.
     /// @param addresses An array of allowed addresses.
     function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
-        // Keep a reference to the number of address to check against.
+        // Keep a reference to the number of addresses to check against.
         uint256 numberOfAddresses = addresses.length;
 
-        // Check if the address is included
+        // Check whether the address is included.
         for (uint256 i; i < numberOfAddresses;) {
             if (addrs == addresses[i]) return true;
             unchecked {
@@ -677,13 +671,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         return super._contextSuffixLength();
     }
 
-    /// @notice Returns the calldata, prefered to use over `msg.data`
-    /// @return calldata the `msg.data` of this call
+    /// @notice Returns the calldata; preferred over `msg.data`.
+    /// @return calldata the `msg.data` of this call.
     function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 
-    /// @notice Returns the sender, prefered to use over `msg.sender`
+    /// @notice Returns the sender; preferred over `msg.sender`.
     /// @return sender the sender address of this call.
     function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
         return ERC2771Context._msgSender();

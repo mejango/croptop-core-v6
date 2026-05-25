@@ -95,10 +95,9 @@ contract PermMockProjects {
     }
 }
 
-/// @notice Regression test for bug AP — `claimCollectionOwnershipOf` must revoke deployer-scoped permissions.
-/// @dev Before the fix, `claimCollectionOwnershipOf` did not revoke the deployer-scoped permissions granted at
-///      deployment time, leading to stale permission leakage. The fix passes an empty `permissionIds` array to
-///      `setPermissionsFor`, which zeroes out the operator's packed permissions for that project scope.
+/// @notice `claimCollectionOwnershipOf` must revoke deployer-scoped permissions.
+/// @dev Passing an empty `permissionIds` array to `setPermissionsFor` zeroes out the operator's packed permissions for
+/// that project scope.
 contract PermissionLifecycleOnTransferTest is Test {
     PermTrackingPermissions permissions;
     PermMockProjects projects;
@@ -146,6 +145,8 @@ contract PermissionLifecycleOnTransferTest is Test {
 
         assertEq(account, address(deployer), "revocation should be on deployer's behalf");
         assertEq(operator, ownerA, "revocation should target the project owner");
+        // PROJECT_ID is 42 in this test.
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertEq(projectId, uint64(PROJECT_ID), "revocation should scope to the project ID");
         assertEq(permLen, 0, "revocation should pass empty permissionIds (clearing all perms)");
 

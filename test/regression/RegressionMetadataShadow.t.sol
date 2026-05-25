@@ -192,7 +192,7 @@ contract RegressionMetadataShadowTest is Test {
         bytes memory shadowingMetadata = JBMetadataResolver.createMetadata(ids, datas);
         bytes4 duplicatePayId = ids[0];
 
-        // FIX: metadata shadow attack now reverts instead of succeeding.
+        // Metadata shadowing reverts instead of minting forged tier IDs.
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePayMetadata.selector, duplicatePayId));
         publisher.mintFrom{value: 105}(
             IJB721TiersHook(address(hook)), posts, address(this), address(this), shadowingMetadata
