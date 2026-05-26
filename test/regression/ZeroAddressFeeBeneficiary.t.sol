@@ -116,9 +116,8 @@ contract ZBDirectory {
     }
 }
 
-/// @notice Regression test for bug AO — `CTPublisher.mintFrom` must revert when `feeBeneficiary` is `address(0)`.
-/// @dev Before the fix, `address(0)` was accepted as a fee beneficiary, causing fee project tokens to be minted
-///      to the zero address (effectively burned). The fix adds a validation check at line 208.
+/// @notice `CTPublisher.mintFrom` must revert when `feeBeneficiary` is `address(0)`.
+/// @dev Prevents fee project tokens from being minted to the zero address.
 contract ZeroAddressFeeBeneficiaryTest is Test {
     ZBMockPermissions permissions;
     ZBDirectory directory;

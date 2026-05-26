@@ -5,8 +5,8 @@ pragma solidity ^0.8.0;
 /// @custom:member category A category that should allow posts.
 /// @custom:member minimumPrice The minimum price that a post to the specified category should cost.
 /// @custom:member minimumTotalSupply The minimum total supply of NFTs that can be made available when minting.
-/// @custom:member maxTotalSupply The max total supply of NFTs that can be made available when minting. Leave as 0 for
-/// max.
+/// @custom:member maximumTotalSupply The maximum total supply of NFTs that can be made available when minting. 0 means
+/// unlimited.
 /// @custom:member maximumSplitPercent The maximum split percent (out of JBConstants.SPLITS_TOTAL_PERCENT) that a
 /// poster can set. 0 means splits are not allowed.
 /// @custom:member allowedAddresses A list of addresses that are allowed to post on the category through Croptop.

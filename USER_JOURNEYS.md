@@ -41,7 +41,7 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 **Postconditions**
 
-- the project now routes publishing through Croptop policy instead of direct free-form tier creation
+- the project routes publishing through Croptop policy instead of direct free-form tier creation
 
 ## Journey 2: Publish Content Into An Existing Croptop Project
 

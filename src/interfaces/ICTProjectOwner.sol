@@ -7,7 +7,7 @@ import {ICTPublisher} from "./ICTPublisher.sol";
 
 /// @notice A contract that can receive a Juicebox project NFT (via `safeTransferFrom`) and automatically grants the
 /// Croptop publisher permission to manage the project's 721 tiers. Once the project is transferred to this contract,
-/// its ownership is effectively burned while still allowing croptop posts.
+/// its ownership is effectively burned while still allowing Croptop posts.
 interface ICTProjectOwner {
     /// @notice The contract where operator permissions are stored.
     /// @return The permissions contract.

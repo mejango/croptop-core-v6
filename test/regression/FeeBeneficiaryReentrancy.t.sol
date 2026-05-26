@@ -241,8 +241,8 @@ contract FeeBeneficiaryReentrancyTest is Test {
             IJB721TiersHook(address(hook)), posts, address(this), victimFeeBeneficiary, bytes("")
         );
 
-        // With the fix, fee amounts are pinned before external calls, so both inner and outer fees
-        // are paid separately with correct beneficiaries.
+        // Fee amounts are pinned before external calls, so both inner and outer fees are paid separately with correct
+        // beneficiaries.
         assertEq(feeTerminal.callCount(), 2, "both inner and outer fee payments should execute");
         assertEq(feeTerminal.totalReceived(), 6, "total fees should be inner(1) + outer(5) = 6");
         assertEq(feeTerminal.lastBeneficiary(), victimFeeBeneficiary, "outer fee should go to victim beneficiary");

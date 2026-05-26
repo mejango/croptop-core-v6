@@ -13,17 +13,17 @@ import {CTPublisher} from "./../src/CTPublisher.sol";
 import {CoreDeployment, CoreDeploymentLib} from "./helpers/CoreDeploymentLib.sol";
 
 contract DeployScript is Script, Sphinx {
-    /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
+    /// @notice Tracks the core deployment for the current chain.
     CoreDeployment core;
-    /// @notice tracks the deployment of the 721 hook contracts for the chain we are deploying to.
+    /// @notice Tracks the 721 hook deployment for the current chain.
     Hook721Deployment hook;
-    /// @notice tracks the deployment of the sucker contracts for the chain we are deploying to.
+    /// @notice Tracks the sucker deployment for the current chain.
     SuckerDeployment suckers;
 
     /// @notice Set this to a non-zero value to reuse an existing fee project. Leaving it as 0 deploys a new one.
     uint256 private feeProjectId = 0;
 
-    /// @notice the salts that are used to deploy the contracts.
+    /// @notice CREATE2 salts used to deploy the Croptop contracts.
     bytes32 private constant _PUBLISHER_SALT = "_PUBLISHER_SALTV6_";
     bytes32 private constant _DEPLOYER_SALT = "_DEPLOYER_SALTV6_";
     bytes32 private constant _PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALTV6_";
@@ -36,7 +36,7 @@ contract DeployScript is Script, Sphinx {
     }
 
     function run() public {
-        // Get the deployment addresses for the nana CORE for this chain.
+        // Get the core deployment addresses for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
             vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v6/deployments/"))
@@ -65,7 +65,7 @@ contract DeployScript is Script, Sphinx {
 
         CTPublisher publisher;
         {
-            // Perform the check for the publisher.
+            // Check whether the publisher is already deployed.
             (address _publisher, bool _publisherIsDeployed) = _isDeployed({
                 salt: _PUBLISHER_SALT,
                 creationCode: type(CTPublisher).creationCode,
@@ -85,7 +85,7 @@ contract DeployScript is Script, Sphinx {
 
         CTDeployer deployer;
         {
-            // Perform the check for the publisher.
+            // Check whether the deployer is already deployed.
             (address _deployer, bool _deployerIsDeployed) = _isDeployed({
                 salt: _DEPLOYER_SALT,
                 creationCode: type(CTDeployer).creationCode,
@@ -109,7 +109,7 @@ contract DeployScript is Script, Sphinx {
 
         CTProjectOwner owner;
         {
-            // Perform the check for the publisher.
+            // Check whether the project-owner sink is already deployed.
             (address _owner, bool _ownerIsDeployed) = _isDeployed({
                 salt: _PROJECT_OWNER_SALT,
                 creationCode: type(CTProjectOwner).creationCode,

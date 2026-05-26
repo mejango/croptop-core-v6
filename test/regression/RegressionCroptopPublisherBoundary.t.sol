@@ -273,7 +273,7 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         vm.prank(hookOwner);
         hook.setMetadata("", "", "", "", address(0), 1, URI_B);
 
-        assertEq(store.encodedUriOf(1), URI_B, "hook metadata now says tier 1 is uri B");
+        assertEq(store.encodedUriOf(1), URI_B, "hook metadata says tier 1 is uri B");
         assertEq(
             publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A),
             1,
@@ -292,8 +292,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         // Croptop creates a second tier for the same canonical URI because it never re-syncs against hook metadata.
         assertEq(store.maxTierId(), 2, "publisher should have created a duplicate tier after the metadata drift");
         assertEq(store.encodedUriOf(1), URI_B, "tier 1 still resolves to uri B");
-        assertEq(store.encodedUriOf(2), URI_B, "tier 2 now also resolves to uri B");
-        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_B), 2, "cache now points uri B at tier 2");
+        assertEq(store.encodedUriOf(2), URI_B, "tier 2 also resolves to uri B");
+        assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_B), 2, "cache points uri B at tier 2");
     }
 
     function _configureCategory(uint24 category, uint104 minimumPrice, address[] memory allowedAddresses) internal {

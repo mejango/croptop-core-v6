@@ -116,17 +116,17 @@ library RevnetCoreDeploymentLib {
 }
 
 contract ConfigureFeeProjectScript is Script, Sphinx {
-    /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
+    /// @notice Tracks the core deployment for the current chain.
     CoreDeployment core;
-    /// @notice tracks the latest croptop deployment.
+    /// @notice Tracks the latest Croptop deployment.
     CroptopDeployment croptop;
-    /// @notice tracks the deployment of the 721 hook contracts for the chain we are deploying to.
+    /// @notice Tracks the 721 hook deployment for the current chain.
     Hook721Deployment hook;
-    /// @notice tracks the deployment of the revnet contracts for the chain we are deploying to.
+    /// @notice Tracks the Revnet deployment for the current chain.
     RevnetCoreDeployment revnet;
-    /// @notice tracks the deployment of the sucker contracts for the chain we are deploying to.
+    /// @notice Tracks the sucker deployment for the current chain.
     SuckerDeployment suckers;
-    /// @notice tracks the deployment of the router terminal.
+    /// @notice Tracks the router terminal deployment for the current chain.
     RouterTerminalDeployment routerTerminal;
 
     /// @notice The fee project ID configured by the Croptop publisher.
@@ -158,18 +158,18 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
     }
 
     function run() public {
-        // Get the deployment addresses for the nana CORE for this chain.
+        // Get the core deployment addresses for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
             vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v6/deployments/"))
         );
-        // Get the deployment addresses for the croptop contracts for this chain.
+        // Get the Croptop deployment addresses for this chain.
         croptop = CroptopDeploymentLib.getDeployment(vm.envOr("CROPTOP_DEPLOYMENT_PATH", string("deployments/")));
         // Get the deployment addresses for the 721 hook contracts for this chain.
         hook = Hook721DeploymentLib.getDeployment(
             vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook-v6/deployments/"))
         );
-        // Get the deployment addresses for the revnet contracts for this chain.
+        // Get the Revnet deployment addresses for this chain.
         revnet = RevnetCoreDeploymentLib.getDeployment(
             vm.envOr("REVNET_CORE_DEPLOYMENT_PATH", string("node_modules/@rev-net/core-v6/deployments/"))
         );
@@ -185,18 +185,17 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
             )
         );
 
-        // We do a quick sanity check to make sure revnet and croptop use the same juicebox core contracts.
+        // Make sure Revnet and Croptop use the same Juicebox directory.
         require(revnet.basicDeployer.DIRECTORY() == croptop.publisher.DIRECTORY());
 
         // Set the operator address to be the multisig.
         operator = safeAddress();
         trustedForwarder = core.controller.trustedForwarder();
 
-        // Get the fee project id from the croptop deployment.
+        // Get the fee project ID from the Croptop deployment.
         feeProjectId = croptop.publisher.FEE_PROJECT_ID();
 
-        // Check if there should be a new fee project created.
-        // Perform the deployment transactions.
+        // Perform the fee-project deployment if the project is not already configured.
         deploy();
     }
 
@@ -326,7 +325,7 @@ contract ConfigureFeeProjectScript is Script, Sphinx {
                 REVSuckerDeploymentConfig({deployerConfigurations: suckerDeployerConfigurations, salt: _SUCKER_SALT});
         }
 
-        // The project's allowed croptop posts.
+        // The project's allowed Croptop posts.
         REVCroptopAllowedPost[] memory allowedPosts = new REVCroptopAllowedPost[](5);
         allowedPosts[0] = REVCroptopAllowedPost({
             category: 0,

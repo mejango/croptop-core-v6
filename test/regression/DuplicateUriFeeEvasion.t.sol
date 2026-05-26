@@ -17,12 +17,9 @@ import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
 /// @title DuplicateUriFeeEvasionRegression
-/// @notice Duplicate encodedIpfsUri in a single mintFrom batch
-///         enables fee evasion. Before the fix, a second post with the same URI would read
-///         a stale tierIdForEncodedIpfsUriOf mapping (written by _setupPosts for the first
-///         post but not yet committed to the store), causing store.tierOf() to return price=0,
-///         so the fee was computed on 1x the price instead of 2x.
-///         The fix reverts with CTPublisher_DuplicatePost when duplicate URIs appear in a batch.
+/// @notice Duplicate encodedIpfsUri values in a single mintFrom batch should revert to avoid fee evasion.
+/// @dev The second post can read a stale tierIdForEncodedIpfsUriOf mapping written by _setupPosts before the new tier
+/// is committed to the store, so duplicates must be rejected before pricing.
 contract DuplicateUriFeeEvasionRegression is Test {
     CTPublisher publisher;
 

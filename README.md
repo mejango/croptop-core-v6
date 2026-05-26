@@ -61,7 +61,7 @@ Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not g
 - Croptop publishing policy is separate from ordinary 721 tier issuance
 - fee routing is part of the publish path and its fallback behavior matters
 - `CTProjectOwner` intentionally changes the ownership model and should be reviewed as part of the trust model
-- duplicate-content, stale-tier, and fee-evasion edge cases are runtime behavior, not just UI concerns
+- duplicate-content, stale-tier, and fee-evasion edge cases are runtime behavior, not only UI concerns
 
 ## Where State Lives
 

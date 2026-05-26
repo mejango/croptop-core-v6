@@ -448,7 +448,7 @@ contract TestRegressionGaps is Test {
             (,,,, address[] memory stored) = publisher.allowanceFor(hookAddr, uint24(s + 1));
             assertEq(stored.length, size, "stored allowlist length should match");
 
-            // Log gas for reference. We just need this to not revert (no DoS).
+            // Log gas for reference. The publish should not revert from allowlist size alone.
             // Gas should scale roughly linearly with allowlist size.
             emit log_named_uint(string(abi.encodePacked("Gas for allowlist size ", vm.toString(size))), gasUsed);
         }
@@ -650,7 +650,7 @@ contract TestRegressionGaps is Test {
         // Verify allowlist was fully replaced.
         (,,,, address[] memory stored2) = publisher.allowanceFor(hookAddr, 52);
         assertEq(stored2.length, 1, "allowlist should have 1 entry");
-        assertEq(stored2[0], unauthorized, "allowlist should now contain unauthorized");
+        assertEq(stored2[0], unauthorized, "allowlist should contain unauthorized");
     }
 
     // =========================================================================

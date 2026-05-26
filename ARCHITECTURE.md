@@ -67,7 +67,7 @@ This repo does not define treasury accounting. Its critical economic logic is pu
 - Fee routing is liveness-first but still value-sensitive; fallback refunds must stay correct.
 - `CTDeployer` has a larger review surface than a normal deployer because it can also participate at runtime.
 - Croptop's product boundary is partly social: until collection ownership is claimed away from `CTDeployer`, the project owner can interact through the granted permissions rather than only through the publisher surface.
-- Posting-policy bugs are product-level authorization bugs, not just metadata bugs.
+- Posting-policy bugs are product-level authorization bugs, not only metadata bugs.
 
 ## Safe Change Guide
 
