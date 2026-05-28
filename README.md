@@ -2,7 +2,6 @@
 
 Croptop turns a Juicebox project with a 721 hook into a permissioned publishing marketplace. Project owners define posting rules, then anyone who meets those rules can publish new NFT tiers and mint the first copy of each post.
 
-Docs: <https://docs.juicebox.money>  
 Site: <https://croptop.eth.limo>
 
 ## Documentation
