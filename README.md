@@ -2,14 +2,19 @@
 
 Croptop turns a Juicebox project with a 721 hook into a permissioned publishing marketplace. Project owners define posting rules, then anyone who meets those rules can publish new NFT tiers and mint the first copy of each post.
 
-Docs: <https://docs.juicebox.money>  
 Site: <https://croptop.eth.limo>
-Architecture: [ARCHITECTURE.md](./ARCHITECTURE.md)  
-User journeys: [USER_JOURNEYS.md](./USER_JOURNEYS.md)  
-Skills: [SKILLS.md](./SKILLS.md)  
-Risks: [RISKS.md](./RISKS.md)  
-Administration: [ADMINISTRATION.md](./ADMINISTRATION.md)  
-Audit instructions: [AUDIT_INSTRUCTIONS.md](./AUDIT_INSTRUCTIONS.md)
+
+## Documentation
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system overview, contract roles, data flow
+- [INVARIANTS.md](./INVARIANTS.md) — scoped guarantees that must hold across users, owners, deployers, and integrators
+- [RISKS.md](./RISKS.md) — runtime, admin, deployment, and integration risks
+- [USER_JOURNEYS.md](./USER_JOURNEYS.md) — end-to-end flows for posters, owners, and deployers
+- [ADMINISTRATION.md](./ADMINISTRATION.md) — owner and operator playbook
+- [AUDIT_INSTRUCTIONS.md](./AUDIT_INSTRUCTIONS.md) — what auditors should focus on
+- [SKILLS.md](./SKILLS.md) — domain knowledge for working in this repo
+- [STYLE_GUIDE.md](./STYLE_GUIDE.md) — code-style conventions
+- [CHANGELOG.md](./CHANGELOG.md) — release notes
 
 ## Overview
 
