@@ -1,7 +1,5 @@
 # Invariants of `croptop-core-v6`
 
-Last updated: 2026-05-28.
-
 Scope: the three production contracts in `src/` — `CTPublisher`, `CTDeployer`, `CTProjectOwner` — plus their three interfaces in `src/interfaces/` and the five structs in `src/structs/`. Croptop is a permissionless social-posting layer on top of a Juicebox revnet:
 
 - **`CTPublisher`** is the universal entrypoint: any caller (subject to per-category allowlist) can call `mintFrom` to create one or more new 721 tiers on a project's tiered-NFT hook AND mint the first copy in a single transaction. Tier creation is gated by per-category `minimumPrice`, `minimumTotalSupply`, `maximumTotalSupply`, `maximumSplitPercent` set by the project owner (or an `ADJUST_721_TIERS` operator). A 5% (`1/FEE_DIVISOR=20`) fee routes to the configured fee project. Duplicate IPFS URIs within a batch revert, and the second mint of an already-published URI reuses the existing tier rather than creating a duplicate.
