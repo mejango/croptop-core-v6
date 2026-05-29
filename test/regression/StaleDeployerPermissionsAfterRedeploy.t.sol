@@ -27,7 +27,7 @@ import {CTDeployerAllowedPost} from "../../src/structs/CTDeployerAllowedPost.sol
 import {CTProjectConfig} from "../../src/structs/CTProjectConfig.sol";
 import {CTSuckerDeploymentConfig} from "../../src/structs/CTSuckerDeploymentConfig.sol";
 
-contract NemesisProjects {
+contract MockProjects {
     uint256 public countValue;
     address public ownerOfProject;
 
@@ -57,10 +57,10 @@ contract NemesisProjects {
     }
 }
 
-contract NemesisController {
-    NemesisProjects public immutable PROJECTS;
+contract MockController {
+    MockProjects public immutable PROJECTS;
 
-    constructor(NemesisProjects projects_) {
+    constructor(MockProjects projects_) {
         PROJECTS = projects_;
     }
 
@@ -79,7 +79,7 @@ contract NemesisController {
     }
 }
 
-contract NemesisSuckerRegistry {
+contract MockSuckerRegistry {
     function isSuckerOf(uint256, address) external pure returns (bool) {
         return false;
     }
@@ -97,7 +97,7 @@ contract NemesisSuckerRegistry {
     }
 }
 
-contract NemesisPermissionedHook is JBPermissioned {
+contract MockPermissionedHook is JBPermissioned {
     address public immutable ownerAccount;
     uint256 public immutable projectId;
     address public adjustedBy;
@@ -124,7 +124,7 @@ contract NemesisPermissionedHook is JBPermissioned {
     }
 }
 
-contract NemesisHookDeployer {
+contract MockHookDeployer {
     IJB721TiersHook public hook;
 
     function setHook(IJB721TiersHook hook_) external {
@@ -144,25 +144,25 @@ contract NemesisHookDeployer {
     }
 }
 
-contract NemesisStaleDeployerPermissionsTest is Test {
+contract StaleDeployerPermissionsAfterRedeployTest is Test {
     JBPermissions internal permissions;
-    NemesisProjects internal projects;
-    NemesisHookDeployer internal hookDeployer;
-    NemesisSuckerRegistry internal suckerRegistry;
-    NemesisController internal controller;
+    MockProjects internal projects;
+    MockHookDeployer internal hookDeployer;
+    MockSuckerRegistry internal suckerRegistry;
+    MockController internal controller;
     CTPublisher internal publisher;
     CTDeployer internal deployer;
-    NemesisPermissionedHook internal hook;
+    MockPermissionedHook internal hook;
 
     address internal ownerA = makeAddr("ownerA");
     address internal ownerB = makeAddr("ownerB");
 
     function setUp() public {
         permissions = new JBPermissions(address(0));
-        projects = new NemesisProjects();
+        projects = new MockProjects();
         projects.setCount(5);
-        hookDeployer = new NemesisHookDeployer();
-        suckerRegistry = new NemesisSuckerRegistry();
+        hookDeployer = new MockHookDeployer();
+        suckerRegistry = new MockSuckerRegistry();
         publisher = new CTPublisher(IJBDirectory(makeAddr("directory")), permissions, 1, address(0));
         deployer = new CTDeployer(
             permissions,
@@ -172,9 +172,9 @@ contract NemesisStaleDeployerPermissionsTest is Test {
             IJBSuckerRegistry(address(suckerRegistry)),
             address(0)
         );
-        hook = new NemesisPermissionedHook(permissions, address(deployer), 6);
+        hook = new MockPermissionedHook(permissions, address(deployer), 6);
         hookDeployer.setHook(IJB721TiersHook(address(hook)));
-        controller = new NemesisController(projects);
+        controller = new MockController(projects);
     }
 
     function test_initialOwnerKeepsHookPermissionsAfterProjectNftTransferUntilClaim() public {
