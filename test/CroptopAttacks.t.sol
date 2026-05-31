@@ -157,7 +157,9 @@ contract CroptopAttacks is Test {
 
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 0.1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.1 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -179,7 +181,9 @@ contract CroptopAttacks is Test {
 
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 0.01 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.01 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.01 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -201,7 +205,9 @@ contract CroptopAttacks is Test {
 
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 0.01 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.01 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.01 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -223,7 +229,9 @@ contract CroptopAttacks is Test {
 
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 0.01 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.01 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.01 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -248,7 +256,9 @@ contract CroptopAttacks is Test {
 
         vm.prank(unauthorized);
         vm.expectRevert();
-        publisher.mintFrom{value: 0.01 ether}(IJB721TiersHook(hookAddr), posts, unauthorized, unauthorized, "");
+        publisher.mintFrom{value: 0.01 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.01 ether, unauthorized, unauthorized, ""
+        );
     }
 
     // =========================================================================
@@ -270,7 +280,9 @@ contract CroptopAttacks is Test {
 
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 0.01 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.01 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.01 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -340,7 +352,9 @@ contract CroptopAttacks is Test {
                 CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 750_000_000, 500_000_000
             )
         );
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -374,7 +388,9 @@ contract CroptopAttacks is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 100_000_000, 0)
         );
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -439,6 +455,8 @@ contract CroptopAttacks is Test {
                 CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 999_000_000, 500_000_000
             )
         );
-        publisher.mintFrom{value: 0.4 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.4 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.4 ether, poster, poster, ""
+        );
     }
 }

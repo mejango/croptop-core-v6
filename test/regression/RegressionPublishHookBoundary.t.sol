@@ -11,6 +11,7 @@ import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -209,7 +210,13 @@ contract RegressionPublishHookBoundaryTest is Test {
             abi.encodeWithSelector(CTPublisher.CTPublisher_MintNotDelivered.selector, address(hook), beneficiary, 1, 0)
         );
         publisher.mintFrom{value: price + fee}(
-            IJB721TiersHook(address(hook)), posts, beneficiary, address(0xFEE), bytes("")
+            IJB721TiersHook(address(hook)),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            price + fee,
+            beneficiary,
+            address(0xFEE),
+            bytes("")
         );
 
         assertEq(hook.adjustedTiers(), 0, "tier creation rolled back");

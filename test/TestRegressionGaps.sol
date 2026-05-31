@@ -16,6 +16,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBBeforeCashOutRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforeCashOutRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforePayRecordedContext.sol";
 import {JBCashOutHookSpecification} from "@bananapus/core-v6/src/structs/JBCashOutHookSpecification.sol";
@@ -510,7 +511,9 @@ contract TestRegressionGaps is Test {
             uint256 gasBefore = gasleft();
             // This may revert downstream (mock terminal), but the allowlist check happens before that.
             // We use try-catch to capture the gas used for the allowlist check path.
-            try publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), mintPosts, poster, poster, "") {}
+            try publisher.mintFrom{value: 0.02 ether}(
+                IJB721TiersHook(hookAddr), mintPosts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, ""
+            ) {}
                 catch {}
             uint256 gasUsed = gasBefore - gasleft();
 
@@ -558,7 +561,7 @@ contract TestRegressionGaps is Test {
         // The call may revert downstream in mocked terminal calls, but NOT with NotInAllowList.
         vm.prank(unauthorized);
         try publisher.mintFrom{value: 0.02 ether}(
-            IJB721TiersHook(hookAddr), mintPosts, unauthorized, unauthorized, ""
+            IJB721TiersHook(hookAddr), mintPosts, JBConstants.NATIVE_TOKEN, 0.02 ether, unauthorized, unauthorized, ""
         ) {}
         catch (bytes memory reason) {
             // Make sure it did NOT revert with CTPublisher_NotInAllowList.
@@ -603,7 +606,9 @@ contract TestRegressionGaps is Test {
 
         vm.prank(unauthorized);
         vm.expectRevert();
-        publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), mintPosts, unauthorized, unauthorized, "");
+        publisher.mintFrom{value: 0.02 ether}(
+            IJB721TiersHook(hookAddr), mintPosts, JBConstants.NATIVE_TOKEN, 0.02 ether, unauthorized, unauthorized, ""
+        );
     }
 
     /// @notice Reconfiguring the allowlist should fully replace the old one.

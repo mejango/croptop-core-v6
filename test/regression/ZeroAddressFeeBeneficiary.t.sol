@@ -11,6 +11,7 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -191,6 +192,8 @@ contract ZeroAddressFeeBeneficiaryTest is Test {
         publisher.mintFrom{value: 105}(
             IJB721TiersHook(address(hook)),
             posts,
+            JBConstants.NATIVE_TOKEN,
+            105,
             address(this),
             address(0), // zero address fee beneficiary
             bytes("")
@@ -214,6 +217,8 @@ contract ZeroAddressFeeBeneficiaryTest is Test {
         publisher.mintFrom{value: 105}(
             IJB721TiersHook(address(hook)),
             posts,
+            JBConstants.NATIVE_TOKEN,
+            105,
             address(this),
             address(0xBEEF), // valid fee beneficiary
             bytes("")

@@ -24,7 +24,7 @@ Croptop is built around three ideas:
 - publishers call `mintFrom` to create or reuse 721 tiers that represent their post
 - a one-click deployer can create a full Juicebox project, its 721 hook config, and its posting rules in one transaction
 
-Every mint collects a 5% Croptop fee unless the target project is itself the fee project. `CTPublisher.mintFrom` is the ETH-priced path: it only supports hooks whose tier pricing context is ETH, or the native-token currency alias, with 18 decimals, and it reverts if the project payment does not mint the requested NFTs to the beneficiary. If the fee terminal rejects that fee payment, Croptop refunds the fee portion to `_msgSender()` and still lets the publish continue. If `_msgSender()` cannot receive ETH, the mint reverts.
+Every mint collects a 5% Croptop fee unless the target project is itself the fee project. `CTPublisher.mintFrom` takes a terminal `token` and `amount`, like a Juicebox terminal payment: native-token mints use `msg.value`, while ERC-20 mints pull `amount` from `_msgSender()` and forward exact-use allowances to the project and fee terminals. The payment token's accounting context must match the hook's tier pricing context, and the transaction reverts if the project payment does not mint the requested NFTs to the beneficiary. If the fee terminal rejects the fee payment, Croptop refunds the fee portion to `_msgSender()` and still lets the publish continue. Native refunds can still revert if `_msgSender()` cannot receive ETH.
 
 Use this repo when the product is permissioned publishing on top of a Juicebox project. Do not use it for plain 721 tier sales.
 

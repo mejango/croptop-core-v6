@@ -111,7 +111,9 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
 
         vm.prank(POSTER);
         vm.expectRevert();
-        publisher.mintFrom{value: _totalValue()}(hook, _singlePost(), NFT_BENEFICIARY, FEE_BENEFICIARY, "");
+        publisher.mintFrom{value: _totalValue()}(
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+        );
 
         MockPriceFeed identityFeed = new MockPriceFeed(1e18, 18);
         vm.prank(MULTISIG);
@@ -123,7 +125,9 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
         });
 
         vm.prank(POSTER);
-        publisher.mintFrom{value: _totalValue()}(hook, _singlePost(), NFT_BENEFICIARY, FEE_BENEFICIARY, "");
+        publisher.mintFrom{value: _totalValue()}(
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+        );
     }
 
     function test_misconfiguredFeeProjectRefundsAllCroptopFees() public {
@@ -154,7 +158,9 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, JBConstants.NATIVE_TOKEN);
 
         vm.prank(POSTER);
-        publisher.mintFrom{value: _totalValue()}(hook, _singlePost(), NFT_BENEFICIARY, FEE_BENEFICIARY, "");
+        publisher.mintFrom{value: _totalValue()}(
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+        );
 
         uint256 feeProjectBalanceAfter =
             jbTerminalStore.balanceOf(address(jbMultiTerminal), feeProjectId, JBConstants.NATIVE_TOKEN);

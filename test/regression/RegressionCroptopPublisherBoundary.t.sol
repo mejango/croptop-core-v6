@@ -11,6 +11,7 @@ import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -246,6 +247,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         publisher.mintFrom{value: 2 ether}(
             IJB721TiersHook(address(hook)),
             _singlePost({uri: URI_A, price: 1 ether, category: 1}),
+            JBConstants.NATIVE_TOKEN,
+            2 ether,
             unrestrictedPoster,
             unrestrictedPoster,
             ""
@@ -258,7 +261,13 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
 
         vm.prank(outsider);
         publisher.mintFrom{value: 2 ether}(
-            IJB721TiersHook(address(hook)), _singlePost({uri: URI_A, price: 0, category: 1}), outsider, outsider, ""
+            IJB721TiersHook(address(hook)),
+            _singlePost({uri: URI_A, price: 0, category: 1}),
+            JBConstants.NATIVE_TOKEN,
+            2 ether,
+            outsider,
+            outsider,
+            ""
         );
 
         // The outsider's second call succeeds because existing-tier reuse skips the allowlist and price checks.
@@ -282,6 +291,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         publisher.mintFrom{value: 2 ether}(
             IJB721TiersHook(address(hook)),
             _singlePost({uri: URI_A, price: 1 ether, category: 1}),
+            JBConstants.NATIVE_TOKEN,
+            2 ether,
             unrestrictedPoster,
             unrestrictedPoster,
             ""
@@ -305,6 +316,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         publisher.mintFrom{value: 2 ether}(
             IJB721TiersHook(address(hook)),
             _singlePost({uri: URI_B, price: 1 ether, category: 1}),
+            JBConstants.NATIVE_TOKEN,
+            2 ether,
             unrestrictedPoster,
             unrestrictedPoster,
             ""

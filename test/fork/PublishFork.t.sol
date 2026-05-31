@@ -193,7 +193,9 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Mint.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom{value: totalValue}(
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+        );
 
         // Verify NFT was minted to the beneficiary.
         uint256 balanceAfter = IERC721(address(testHook)).balanceOf(nftBeneficiary);
@@ -235,7 +237,9 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Mint.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom{value: totalValue}(
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+        );
 
         // Verify fee project terminal balance increased by the fee amount.
         uint256 feeProjectBalanceAfter =
@@ -265,7 +269,9 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: insufficientValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom{value: insufficientValue}(
+            testHook, posts, JBConstants.NATIVE_TOKEN, insufficientValue, nftBeneficiary, feeBeneficiary, ""
+        );
     }
 
     /// @notice Verify that minting the same encodedIpfsUri twice reuses the existing tier ID.
@@ -277,7 +283,9 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // First mint.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom{value: totalValue}(
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+        );
 
         // Record the tier ID assigned to this URI after the first mint.
         uint256 tierIdAfterFirst = publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI);
@@ -285,7 +293,9 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         // Second mint with the same URI. The existing tier should be reused.
         vm.prank(poster);
-        publisher.mintFrom{value: totalValue}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom{value: totalValue}(
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+        );
 
         // Verify the tier ID is unchanged — no new tier was created.
         uint256 tierIdAfterSecond = publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI);
@@ -321,7 +331,9 @@ contract PublishForkTest is Test, DeployPermit2 {
         uint256 balanceBefore = IERC721(address(testHook)).balanceOf(nftBeneficiary);
 
         vm.prank(poster);
-        publisher.mintFrom{value: totalPrice + fee}(testHook, posts, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom{value: totalPrice + fee}(
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalPrice + fee, nftBeneficiary, feeBeneficiary, ""
+        );
 
         assertEq(IERC721(address(testHook)).balanceOf(nftBeneficiary), balanceBefore + 2, "both NFTs should mint");
         assertEq(publisher.tierIdForEncodedIpfsUriOf(address(testHook), TEST_URI), 1, "category 1 tier sorted first");

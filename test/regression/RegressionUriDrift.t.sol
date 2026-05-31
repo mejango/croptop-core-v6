@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -101,7 +102,9 @@ contract RegressionUriDriftTest is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "");
+        publisher.mintFrom{value: 1.05 ether}(
+            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+        );
     }
 }
 

@@ -12,7 +12,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 
 | Priority | Risk | Why it matters | Primary controls |
 |----------|------|----------------|------------------|
-| P0 | Hook/store and terminal trust | `mintFrom` depends on hook storage and directory terminal resolution; a bad integration can misprice posts or redirect value. | Native-ETH 18-decimal pricing guard, post-payment NFT delivery check, review integration assumptions, verify hook/store pairings, and monitor terminal configuration. |
+| P0 | Hook/store and terminal trust | `mintFrom` depends on hook storage and directory terminal resolution; a bad integration can misprice posts or redirect value. | Payment-token accounting context guard, post-payment NFT delivery check, review integration assumptions, verify hook/store pairings, and monitor terminal configuration. |
 | P1 | Tier ID race during concurrent posting | `_setupPosts` predicts future tier IDs before `adjustTiers`; concurrent writes can shift those IDs and break the batch. | Application-layer ordering, atomic reverts on mismatch, and operator awareness. |
 | P1 | Fee-path degradation without mint failure | The fee terminal is fail-open via try/catch, so publishing continues even if the fee project temporarily stops receiving revenue. | Terminal health monitoring, fallback-beneficiary handling, and explicit fee-routing checks. |
 | P1 | Launch-time hook permissions persist until claim | `CTDeployer` grants the deploy-time `owner` four direct-hook permissions (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`) that persist on the deployer's permission table until `claimCollectionOwnershipOf` is called. A subsequent project NFT transfer does not revoke these — the original recipient can still act on the hook during the pre-claim window. | Project NFT sellers should call `claimCollectionOwnershipOf` before transfer; buyers of pre-claim NFTs should call it immediately on receipt. Marketplaces should surface claim status. |
@@ -33,9 +33,9 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 
 - **Fee evasion via duplicate posts across hooks.** Duplicate-content checks are keyed per hook, so the same URI can be reused across different hooks.
 - **Fee calculation rounding.** Fee is `totalPrice / 20`, so integer division truncates small amounts.
-- **Fee is computed from `msg.value`.** Force-sent ETH does not affect the fee calculation.
-- **Publisher fee path is native-ETH only.** `mintFrom` rejects hooks whose tier pricing context is not ETH, or the native-token currency alias, with 18 decimals. ERC-20 or non-18 pricing needs a separate payment and fee design.
-- **Fee terminal fallback refunds the caller.** If the fee project cannot accept the fee, Croptop refunds `_msgSender()`. Relayers or contracts that cannot receive ETH will make the mint revert.
+- **Fee is computed from the caller-supplied `amount`.** Force-sent ETH or tokens do not affect the fee calculation.
+- **Payment token must match tier pricing.** Native-token payments only support ETH/native-token-alias 18-decimal pricing. ERC-20 payments require the project terminal's accounting context for `token` to match the hook's tier pricing currency and decimals. Hooks that need currency conversion should route through a terminal path that exposes matching accounting units to Croptop.
+- **Fee terminal fallback refunds the caller.** If the fee project cannot accept the fee, Croptop refunds `_msgSender()`. Native refunds to relayers or contracts that cannot receive ETH will make the mint revert.
 - **Split percent manipulation.** Posters can direct large shares of tier revenue away from the project if `maximumSplitPercent` is configured high.
 
 ## 3. Access Control
@@ -60,7 +60,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 ## 5. Reentrancy Surface
 
 - **`mintFrom` external call chain.** The function calls into the hook and terminals. It currently relies on local-call state isolation rather than a `ReentrancyGuard`.
-- **Fee payment ordering.** The fee is sent after the main payment. This is safe under the current `msg.value`-based accounting model, but future mutable storage in the publisher would make the surface riskier.
+- **Fee payment ordering.** The fee is sent after the main payment. This is safe under the current `amount`-based accounting model, but future mutable storage in the publisher would make the surface riskier.
 
 ## 6. Integration Risks
 

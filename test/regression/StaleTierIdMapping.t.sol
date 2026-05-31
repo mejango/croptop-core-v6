@@ -10,6 +10,7 @@ import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
@@ -175,7 +176,9 @@ contract StaleTierIdMappingRegression is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
 
         // Verify tier ID 1 was stored in the mapping.
         assertEq(
@@ -204,7 +207,9 @@ contract StaleTierIdMappingRegression is Test {
 
         // Second mint with the same URI should succeed by clearing the stale mapping and creating a new tier.
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
 
         // Verify the mapping points to the new tier ID (2).
         assertEq(
@@ -267,7 +272,9 @@ contract StaleTierIdMappingRegression is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1);
 
@@ -275,7 +282,9 @@ contract StaleTierIdMappingRegression is Test {
         _setupMintMocks(1);
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
 
         // Mapping should still point to tier 1.
         assertEq(

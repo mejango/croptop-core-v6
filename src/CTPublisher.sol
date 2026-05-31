@@ -13,9 +13,12 @@ import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
 import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
@@ -28,27 +31,36 @@ import {CTPost} from "./structs/CTPost.sol";
 /// remainder into the project's terminal. Duplicate IPFS URIs are tracked so subsequent mints of the same content reuse
 /// the existing tier rather than creating a new one.
 contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
+    // A library that handles optional-return ERC-20 operations.
+    using SafeERC20 for IERC20;
+
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error CTPublisher_DuplicatePayMetadata(bytes4 payMetadataId);
     error CTPublisher_DuplicatePost(bytes32 encodedIpfsUri);
     error CTPublisher_EmptyEncodedIpfsUri(uint256 postIndex);
+    error CTPublisher_FeePaymentFailed(uint256 feeAmount);
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
-    error CTPublisher_InvalidPricingContext(uint256 currency, uint256 decimals);
+    error CTPublisher_InsufficientPayment(uint256 expected, uint256 sent);
+    error CTPublisher_InvalidFeeBeneficiary();
+    error CTPublisher_InvalidPaymentTokenContext(
+        address token, uint256 tokenCurrency, uint256 tokenDecimals, uint256 pricingCurrency, uint256 pricingDecimals
+    );
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
     error CTPublisher_MintNotDelivered(
         address hook, address beneficiary, uint256 expectedBalance, uint256 actualBalance
     );
+    error CTPublisher_MsgValueNotAllowed(uint256 value);
+    error CTPublisher_NativeTokenAmountMismatch(uint256 amount, uint256 msgValue);
+    error CTPublisher_NoPosts(address caller);
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
-    error CTPublisher_DuplicatePayMetadata(bytes4 payMetadataId);
-    error CTPublisher_FeePaymentFailed(uint256 feeAmount);
     error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
+    error CTPublisher_TemporaryAllowanceNotConsumed(address token, address spender, uint256 allowance);
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
     error CTPublisher_TotalSupplyTooSmall(uint256 totalSupply, uint256 minimumTotalSupply);
-    error CTPublisher_NoPosts(address caller);
-    error CTPublisher_InvalidFeeBeneficiary();
     error CTPublisher_UnauthorizedToPostInCategory(address hook, uint24 category);
     error CTPublisher_ZeroTotalSupply(address hook, uint24 category);
 
@@ -189,12 +201,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @dev Reverts if any post violates the category's configured allowance (price, supply, split, allowlist).
     /// @param hook The hook to mint from.
     /// @param posts An array of posts that should be published as NFTs to the specified project.
+    /// @param token The terminal token to pay with.
+    /// @param amount The total token amount supplied for the post payment and Croptop fee.
     /// @param nftBeneficiary The beneficiary of the NFT mints.
     /// @param feeBeneficiary The beneficiary of the fee project's token.
     /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
+        address token,
+        uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
         bytes calldata additionalPayMetadata
@@ -203,14 +219,139 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         payable
         override
     {
+        if (token == JBConstants.NATIVE_TOKEN) {
+            if (amount != msg.value) {
+                revert CTPublisher_NativeTokenAmountMismatch({amount: amount, msgValue: msg.value});
+            }
+        } else {
+            if (msg.value != 0) revert CTPublisher_MsgValueNotAllowed({value: msg.value});
+            IERC20(token).safeTransferFrom({from: _msgSender(), to: address(this), value: amount});
+        }
+
+        _mintFrom({
+            hook: hook,
+            posts: posts,
+            token: token,
+            amount: amount,
+            nftBeneficiary: nftBeneficiary,
+            feeBeneficiary: feeBeneficiary,
+            additionalPayMetadata: additionalPayMetadata
+        });
+    }
+
+    //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
+
+    /// @notice Get the tiers for the provided encoded IPFS URIs.
+    /// @dev The returned tier IDs may be stale if the corresponding tiers were removed externally via adjustTiers.
+    /// In that case, the store's tierOf call will return a tier with default/empty values. Callers should check
+    /// tier fields before relying on them.
+    /// @param hook The hook from which to get tiers.
+    /// @param encodedIpfsUris The URIs to get tiers of.
+    /// @return tiers The tiers that correspond to the provided encoded IPFS URIs.
+    function tiersFor(
+        address hook,
+        bytes32[] memory encodedIpfsUris
+    )
+        external
+        view
+        override
+        returns (JB721Tier[] memory tiers)
+    {
+        // Set the number of tiers.
+        tiers = new JB721Tier[](encodedIpfsUris.length);
+
+        // Get the hook's store.
+        IJB721TiersHookStore store = IJB721TiersHook(hook).STORE();
+
+        // For each encoded IPFS URI being checked.
+        for (uint256 i; i < encodedIpfsUris.length;) {
+            // Get the tier ID the URI is stored in.
+            uint256 tierId = tierIdForEncodedIpfsUriOf[hook][encodedIpfsUris[i]];
+
+            // Get the tier.
+            tiers[i] = store.tierOf({hook: hook, id: tierId, includeResolvedUri: true});
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    //*********************************************************************//
+    // -------------------------- public views --------------------------- //
+    //*********************************************************************//
+
+    /// @notice Get the allowance for the provided hook and category.
+    /// @param hook The hook to get the allowance for.
+    /// @param category The category to get the allowance for.
+    /// @return minimumPrice The minimum price.
+    /// @return minimumTotalSupply The minimum total supply.
+    /// @return maximumTotalSupply The maximum total supply.
+    /// @return maximumSplitPercent The maximum split percent.
+    /// @return allowedAddresses The addresses that are allowed to post.
+    function allowanceFor(
+        address hook,
+        uint256 category
+    )
+        public
+        view
+        override
+        returns (
+            uint256 minimumPrice,
+            uint256 minimumTotalSupply,
+            uint256 maximumTotalSupply,
+            uint256 maximumSplitPercent,
+            address[] memory allowedAddresses
+        )
+    {
+        // Get a reference to the packed allowance for the hook and category.
+        uint256 packed = _packedAllowanceFor[hook][category];
+
+        // Get a reference to the minimum price.
+        minimumPrice = packed & ((1 << 104) - 1);
+        // Get a reference to the minimum total supply.
+        minimumTotalSupply = (packed >> 104) & ((1 << 32) - 1);
+        // Get a reference to the maximum total supply.
+        maximumTotalSupply = (packed >> 136) & ((1 << 32) - 1);
+        // Get a reference to the maximum split percent.
+        maximumSplitPercent = (packed >> 168) & ((1 << 32) - 1);
+
+        allowedAddresses = _allowedAddresses[hook][category];
+    }
+
+    //*********************************************************************//
+    // ---------------------- internal transactions ---------------------- //
+    //*********************************************************************//
+
+    /// @notice Shared implementation for native and ERC-20 publish payments.
+    /// @param hook The hook to mint from.
+    /// @param posts An array of posts that should be published as NFTs to the specified project.
+    /// @param token The terminal token to pay with.
+    /// @param amount The total token amount supplied for the post payment and Croptop fee.
+    /// @param nftBeneficiary The beneficiary of the NFT mints.
+    /// @param feeBeneficiary The beneficiary of the fee project's token.
+    /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
+    function _mintFrom(
+        IJB721TiersHook hook,
+        CTPost[] calldata posts,
+        address token,
+        uint256 amount,
+        address nftBeneficiary,
+        address feeBeneficiary,
+        bytes calldata additionalPayMetadata
+    )
+        internal
+    {
         // Reject empty posts to prevent fee-free metadata shadowing.
         if (posts.length == 0) revert CTPublisher_NoPosts(_msgSender());
 
         // Reject address(0) as fee beneficiary to prevent burning fee project tokens.
         if (feeBeneficiary == address(0)) revert CTPublisher_InvalidFeeBeneficiary();
 
-        // Keep a reference to the amount being paid, which is msg.value minus the fee.
-        uint256 payValue = msg.value;
+        // Keep a reference to the amount being paid, which is `amount` minus the fee.
+        uint256 payValue = amount;
 
         // Keep a reference to the mint metadata.
         bytes memory mintMetadata;
@@ -219,13 +360,17 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         uint256 projectId = hook.projectId();
 
         (uint256 pricingCurrency, uint256 pricingDecimals) = hook.pricingContext();
-        // Some existing native-ETH hooks use the native token address truncated to a currency ID instead of
-        // JBCurrencyIds.ETH. That alias is still 18-decimal native ETH pricing, so the ETH-denominated fee math holds.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        uint256 nativeTokenCurrency = uint256(uint32(uint160(JBConstants.NATIVE_TOKEN)));
-        if ((pricingCurrency != JBCurrencyIds.ETH && pricingCurrency != nativeTokenCurrency) || pricingDecimals != 18) {
-            revert CTPublisher_InvalidPricingContext({currency: pricingCurrency, decimals: pricingDecimals});
-        }
+
+        // Get a reference to the project's current payment terminal.
+        IJBTerminal projectTerminal = DIRECTORY.primaryTerminalOf({projectId: projectId, token: token});
+
+        _requirePaymentTokenMatchesPricing({
+            terminal: projectTerminal,
+            projectId: projectId,
+            token: token,
+            pricingCurrency: pricingCurrency,
+            pricingDecimals: pricingDecimals
+        });
 
         uint256 mintCount = posts.length;
         {
@@ -240,9 +385,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 // This rounding is in the payer's favor and the loss is negligible for practical amounts.
                 uint256 fee = totalPrice / FEE_DIVISOR;
 
-                // Make sure enough ETH was sent to cover the fee.
+                // Make sure enough was sent to cover the fee.
                 if (payValue < fee) {
-                    revert CTPublisher_InsufficientEthSent({expected: totalPrice + fee, sent: msg.value});
+                    _revertInsufficientPayment({token: token, expected: totalPrice + fee, sent: amount});
                 }
 
                 payValue -= fee;
@@ -250,7 +395,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
             // Make sure the amount sent to this function is at least the specified price of the tier plus the fee.
             if (totalPrice > payValue) {
-                revert CTPublisher_InsufficientEthSent({expected: totalPrice, sent: msg.value});
+                _revertInsufficientPayment({token: token, expected: totalPrice, sent: amount});
             }
 
             // Add the new tiers.
@@ -285,31 +430,30 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         emit Mint({
             projectId: projectId,
             hook: hook,
+            token: token,
             nftBeneficiary: nftBeneficiary,
             feeBeneficiary: feeBeneficiary,
             posts: posts,
             postValue: payValue,
-            txValue: msg.value,
+            amount: amount,
             caller: _msgSender()
         });
 
         {
             uint256 balanceBefore = hook.STORE().balanceOf({hook: address(hook), owner: nftBeneficiary});
 
-            // Get a reference to the project's current ETH payment terminal.
-            IJBTerminal projectTerminal =
-                DIRECTORY.primaryTerminalOf({projectId: projectId, token: JBConstants.NATIVE_TOKEN});
-
             // Make the payment.
-            projectTerminal.pay{value: payValue}({
+            _prepareAllowanceFor({token: token, spender: address(projectTerminal), amount: payValue});
+            projectTerminal.pay{value: token == JBConstants.NATIVE_TOKEN ? payValue : 0}({
                 projectId: projectId,
-                token: JBConstants.NATIVE_TOKEN,
+                token: token,
                 amount: payValue,
                 beneficiary: nftBeneficiary,
                 minReturnedTokens: 0,
                 memo: "Minted from Croptop",
                 metadata: mintMetadata
             });
+            _requireTemporaryAllowanceConsumed({token: token, spender: address(projectTerminal)});
 
             uint256 expectedBalance = balanceBefore + mintCount;
             uint256 balanceAfter = hook.STORE().balanceOf({hook: address(hook), owner: nftBeneficiary});
@@ -324,126 +468,160 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         }
 
         // Reuse payValue to hold the pre-computed fee amount, avoiding reliance on address(this).balance
-        // after the external call above (which could be manipulated by reentrancy or force-sent ETH).
-        payValue = msg.value - payValue;
+        // after the external call above (which could be manipulated by reentrancy or force-sent tokens).
+        payValue = amount - payValue;
 
         // Pay the fee if there is one.
         if (payValue != 0) {
-            // Get a reference to the fee project's current ETH payment terminal.
-            IJBTerminal feeTerminal =
-                DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: JBConstants.NATIVE_TOKEN});
+            // Get a reference to the fee project's current payment terminal.
+            IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: token});
 
             // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
             // rather than trapping or silently redirecting protocol funds.
-            try feeTerminal.pay{value: payValue}({
+            _prepareAllowanceFor({token: token, spender: address(feeTerminal), amount: payValue});
+            try feeTerminal.pay{value: token == JBConstants.NATIVE_TOKEN ? payValue : 0}({
                 projectId: FEE_PROJECT_ID,
                 amount: payValue,
-                token: JBConstants.NATIVE_TOKEN,
+                token: token,
                 beneficiary: feeBeneficiary,
                 minReturnedTokens: 0,
                 memo: "",
                 metadata: ""
-            }) {}
-            catch {
-                (bool success,) = _msgSender().call{value: payValue}("");
-                if (!success) revert CTPublisher_FeePaymentFailed(payValue);
+            }) {
+                _requireTemporaryAllowanceConsumed({token: token, spender: address(feeTerminal)});
+            } catch {
+                _clearAllowanceFor({token: token, spender: address(feeTerminal)});
+                _refundFee({token: token, amount: payValue});
             }
         }
-    }
-
-    //*********************************************************************//
-    // ------------------------- external views -------------------------- //
-    //*********************************************************************//
-
-    /// @notice Get the tiers for the provided encoded IPFS URIs.
-    /// @dev The returned tier IDs may be stale if the corresponding tiers were removed externally via adjustTiers.
-    /// In that case, the store's tierOf call will return a tier with default/empty values. Callers should check
-    /// the returned tier's initialSupply or other fields to confirm the tier still exists.
-    /// @param hook The hook from which to get tiers.
-    /// @param encodedIpfsUris The URIs to get tiers of.
-    /// @return tiers The tiers that correspond to the provided encoded IPFS URIs. If there's no tier yet, an empty tier
-    /// is returned.
-    function tiersFor(
-        address hook,
-        bytes32[] memory encodedIpfsUris
-    )
-        external
-        view
-        override
-        returns (JB721Tier[] memory tiers)
-    {
-        uint256 numberOfEncodedIpfsUris = encodedIpfsUris.length;
-
-        // Initialize the tier array being returned.
-        tiers = new JB721Tier[](numberOfEncodedIpfsUris);
-
-        // Get the tier for each provided encoded IPFS URI.
-        for (uint256 i; i < numberOfEncodedIpfsUris;) {
-            // Check if there's a tier ID stored for the encoded IPFS URI.
-            uint256 tierId = tierIdForEncodedIpfsUriOf[hook][encodedIpfsUris[i]];
-
-            // If there's a tier ID stored, resolve it.
-            if (tierId != 0) {
-                tiers[i] = IJB721TiersHook(hook).STORE().tierOf({hook: hook, id: tierId, includeResolvedUri: false});
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    //*********************************************************************//
-    // -------------------------- public views --------------------------- //
-    //*********************************************************************//
-
-    /// @notice Post allowances for a particular category on a particular hook.
-    /// @param hook The hook contract for which this allowance applies.
-    /// @param category The category for which this allowance applies.
-    /// @return minimumPrice The minimum price that a poster must pay to record a new NFT.
-    /// @return minimumTotalSupply The minimum total number of available tokens that a minter must set to record a new
-    /// NFT.
-    /// @return maximumTotalSupply The max total supply of NFTs that can be made available when minting. 0 means
-    /// unlimited.
-    /// @return maximumSplitPercent The maximum split percent that a poster can set. 0 means splits are not allowed.
-    /// @return allowedAddresses The addresses allowed to post. Returns empty if all addresses are allowed.
-    function allowanceFor(
-        address hook,
-        uint256 category
-    )
-        public
-        view
-        override
-        returns (
-            uint256 minimumPrice,
-            uint256 minimumTotalSupply,
-            uint256 maximumTotalSupply,
-            uint256 maximumSplitPercent,
-            address[] memory allowedAddresses
-        )
-    {
-        // Get a reference to the packed values.
-        uint256 packed = _packedAllowanceFor[hook][category];
-
-        // minimum price in bits 0-103 (104 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        minimumPrice = uint256(uint104(packed));
-        // minimum supply in bits 104-135 (32 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        minimumTotalSupply = uint256(uint32(packed >> 104));
-        // maximum supply in bits 136-167 (32 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        maximumTotalSupply = uint256(uint32(packed >> 136));
-        // maximum split percent in bits 168-199 (32 bits).
-        // forge-lint: disable-next-line(unsafe-typecast)
-        maximumSplitPercent = uint256(uint32(packed >> 168));
-
-        allowedAddresses = _allowedAddresses[hook][category];
     }
 
     //*********************************************************************//
     // ------------------------ internal helpers ------------------------- //
     //*********************************************************************//
+
+    /// @notice Clear a temporary ERC-20 allowance granted by this publisher.
+    /// @param token The token whose allowance should be cleared.
+    /// @param spender The contract whose allowance should be cleared.
+    function _clearAllowanceFor(address token, address spender) internal {
+        if (token == JBConstants.NATIVE_TOKEN) return;
+
+        IERC20(token).forceApprove({spender: spender, value: 0});
+    }
+
+    /// @notice Check if an address is included in an allow list.
+    /// @dev Uses an O(n) linear scan over the `addresses` array. This is acceptable for typical allow list sizes
+    /// (fewer than ~100 addresses), where gas cost is negligible. For very large allow lists, a Merkle proof
+    /// pattern would scale better, but the added complexity is not warranted for the expected use case.
+    /// @param addrs The candidate address.
+    /// @param addresses An array of allowed addresses.
+    function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
+        // Keep a reference to the number of addresses to check against.
+        uint256 numberOfAddresses = addresses.length;
+
+        // Check whether the address is included.
+        for (uint256 i; i < numberOfAddresses;) {
+            if (addrs == addresses[i]) return true;
+            unchecked {
+                ++i;
+            }
+        }
+
+        return false;
+    }
+
+    /// @notice Grant a temporary ERC-20 allowance for a downstream terminal payment.
+    /// @param token The token being paid.
+    /// @param spender The terminal expected to consume the allowance.
+    /// @param amount The exact allowance to grant.
+    function _prepareAllowanceFor(address token, address spender, uint256 amount) internal {
+        if (token == JBConstants.NATIVE_TOKEN) return;
+
+        IERC20(token).forceApprove({spender: spender, value: amount});
+    }
+
+    /// @notice Refund a fee payment when the fee terminal is unavailable.
+    /// @param token The token to refund.
+    /// @param amount The amount to refund.
+    function _refundFee(address token, uint256 amount) internal {
+        if (token == JBConstants.NATIVE_TOKEN) {
+            (bool success,) = _msgSender().call{value: amount}("");
+            if (!success) revert CTPublisher_FeePaymentFailed(amount);
+
+            return;
+        }
+
+        IERC20(token).safeTransfer({to: _msgSender(), value: amount});
+    }
+
+    /// @notice Require the payment token's terminal accounting context to match the hook's pricing context.
+    /// @param terminal The terminal being paid.
+    /// @param projectId The ID of the project being paid.
+    /// @param token The token being paid.
+    /// @param pricingCurrency The hook's pricing currency.
+    /// @param pricingDecimals The hook's pricing decimals.
+    function _requirePaymentTokenMatchesPricing(
+        IJBTerminal terminal,
+        uint256 projectId,
+        address token,
+        uint256 pricingCurrency,
+        uint256 pricingDecimals
+    )
+        internal
+        view
+    {
+        if (token == JBConstants.NATIVE_TOKEN) {
+            bool nativePricing = pricingDecimals == 18
+                && (pricingCurrency == JBCurrencyIds.ETH || pricingCurrency == JBConstants.NATIVE_TOKEN_CURRENCY);
+            if (!nativePricing) {
+                revert CTPublisher_InvalidPaymentTokenContext({
+                    token: token,
+                    tokenCurrency: JBCurrencyIds.ETH,
+                    tokenDecimals: 18,
+                    pricingCurrency: pricingCurrency,
+                    pricingDecimals: pricingDecimals
+                });
+            }
+
+            return;
+        }
+
+        JBAccountingContext memory context = terminal.accountingContextForTokenOf({projectId: projectId, token: token});
+
+        if (context.token != token || context.currency != pricingCurrency || context.decimals != pricingDecimals) {
+            revert CTPublisher_InvalidPaymentTokenContext({
+                token: token,
+                tokenCurrency: context.currency,
+                tokenDecimals: context.decimals,
+                pricingCurrency: pricingCurrency,
+                pricingDecimals: pricingDecimals
+            });
+        }
+    }
+
+    /// @notice Revert if a downstream terminal did not consume its exact-use ERC-20 allowance.
+    /// @param token The token whose allowance was temporarily granted.
+    /// @param spender The terminal expected to consume the allowance.
+    function _requireTemporaryAllowanceConsumed(address token, address spender) internal view {
+        if (token == JBConstants.NATIVE_TOKEN) return;
+
+        uint256 allowance = IERC20(token).allowance({owner: address(this), spender: spender});
+        if (allowance != 0) {
+            revert CTPublisher_TemporaryAllowanceNotConsumed({token: token, spender: spender, allowance: allowance});
+        }
+    }
+
+    /// @notice Revert with the native-compatible error for ETH payments, or the token-generic error otherwise.
+    /// @param token The token being paid.
+    /// @param expected The minimum required amount.
+    /// @param sent The supplied amount.
+    function _revertInsufficientPayment(address token, uint256 expected, uint256 sent) internal pure {
+        if (token == JBConstants.NATIVE_TOKEN) {
+            revert CTPublisher_InsufficientEthSent({expected: expected, sent: sent});
+        }
+
+        revert CTPublisher_InsufficientPayment({expected: expected, sent: sent});
+    }
 
     /// @notice Setup the posts.
     /// @dev `adjustTiers` expects newly added tiers to be sorted by ascending category, while the pay metadata must
@@ -667,27 +845,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 mstore(tiersToAdd, numberOfTiersBeingAdded)
             }
         }
-    }
-
-    /// @notice Check if an address is included in an allow list.
-    /// @dev Uses an O(n) linear scan over the `addresses` array. This is acceptable for typical allow list sizes
-    /// (fewer than ~100 addresses), where gas cost is negligible. For very large allow lists, a Merkle proof
-    /// pattern would scale better, but the added complexity is not warranted for the expected use case.
-    /// @param addrs The candidate address.
-    /// @param addresses An array of allowed addresses.
-    function _isAllowed(address addrs, address[] memory addresses) internal pure returns (bool) {
-        // Keep a reference to the number of addresses to check against.
-        uint256 numberOfAddresses = addresses.length;
-
-        // Check whether the address is included.
-        for (uint256 i; i < numberOfAddresses;) {
-            if (addrs == addresses[i]) return true;
-            unchecked {
-                ++i;
-            }
-        }
-
-        return false;
     }
 
     //*********************************************************************//

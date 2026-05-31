@@ -18,20 +18,22 @@ interface ICTPublisher {
     /// @notice Emitted when NFT posts are minted.
     /// @param projectId The ID of the project the posts belong to.
     /// @param hook The tiered ERC-721 hook the posts were minted from.
+    /// @param token The terminal token used to pay.
     /// @param nftBeneficiary The address that received the minted NFTs.
     /// @param feeBeneficiary The address that received fee project tokens.
     /// @param posts The posts that were minted.
-    /// @param postValue The total value of the posts.
-    /// @param txValue The total value sent with the transaction.
+    /// @param postValue The amount paid to the post's project after the Croptop fee.
+    /// @param amount The total token amount supplied for the post payment and Croptop fee.
     /// @param caller The address that minted the posts.
     event Mint(
         uint256 indexed projectId,
         IJB721TiersHook indexed hook,
+        address token,
         address indexed nftBeneficiary,
         address feeBeneficiary,
         CTPost[] posts,
         uint256 postValue,
-        uint256 txValue,
+        uint256 amount,
         address caller
     );
 
@@ -90,12 +92,16 @@ interface ICTPublisher {
     /// @notice Publish NFT posts and mint a first copy of each. A fee is taken for the fee project.
     /// @param hook The hook to mint from.
     /// @param posts An array of posts to publish as NFTs.
+    /// @param token The terminal token to pay with.
+    /// @param amount The total token amount supplied for the post payment and Croptop fee.
     /// @param nftBeneficiary The beneficiary of the NFT mints.
     /// @param feeBeneficiary The beneficiary of the fee project's tokens.
     /// @param additionalPayMetadata Extra metadata bytes to include in the payment.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
+        address token,
+        uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
         bytes calldata additionalPayMetadata

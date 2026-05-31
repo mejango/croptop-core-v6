@@ -13,9 +13,17 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 - `CTDeployerAllowedPost`
 - `CTPost`
 
+## 0.0.63 — Support token-aware publisher mints
+
+- `CTPublisher.mintFrom` now takes a terminal `token` and `amount`, matching the payment shape used by Juicebox terminals.
+- Native-token mints require `amount == msg.value` and an ETH/native-token-alias 18-decimal hook pricing context.
+- ERC-20 mints pull `amount` from the caller, require the project's terminal accounting context for `token` to match the hook's tier pricing context, and grant exact-use temporary allowances to the project and fee terminals.
+- `CTPublisher.mintFrom` still verifies that the NFT beneficiary's hook-store balance increases by the number of requested posts after the project payment.
+- Added coverage for ERC-20 pricing success, mismatched payment-token accounting contexts, native-token pricing mismatch, and terminal paths that accept payment without delivering NFTs.
+
 ## 0.0.62 — Verify publisher mint delivery and native ETH pricing
 
-- `CTPublisher.mintFrom` now requires the target 721 hook's tier pricing context to be ETH, or the native-token currency alias, with 18 decimals, matching the publisher's native-ETH payment and fee path.
+- `CTPublisher.mintFrom` added a native-token pricing guard requiring the target 721 hook's tier pricing context to be ETH, or the native-token currency alias, with 18 decimals. This native-only restriction was replaced by the token-aware payment path in `0.0.63`.
 - `CTPublisher.mintFrom` now verifies that the NFT beneficiary's hook-store balance increases by the number of requested posts after the project payment. If the project terminal path does not mint the requested NFTs, the transaction reverts and rolls back the tier adjustment and payment.
 - Added regression coverage for unsupported pricing contexts and terminal paths that accept payment without delivering NFTs.
 

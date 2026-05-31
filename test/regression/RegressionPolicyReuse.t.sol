@@ -12,6 +12,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -127,7 +128,9 @@ contract RegressionPolicyReuseTest is Test {
         CTPost[] memory initialPosts = _singlePost();
 
         vm.prank(alice);
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "");
+        publisher.mintFrom{value: mintValue}(
+            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+        );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, URI), 1, "initial publish should store tier id");
 
@@ -149,7 +152,9 @@ contract RegressionPolicyReuseTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NotInAllowList.selector, alice, _asArray(bob)));
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), blockedNewUri, alice, alice, "");
+        publisher.mintFrom{value: mintValue}(
+            IJB721TiersHook(hookAddr), blockedNewUri, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+        );
 
         JB721Tier memory existingTier = JB721Tier({
             id: 1,
@@ -180,7 +185,9 @@ contract RegressionPolicyReuseTest is Test {
         );
 
         vm.prank(alice);
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "");
+        publisher.mintFrom{value: mintValue}(
+            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+        );
     }
 
     function _configureAllowlist(address allowedPoster) internal {

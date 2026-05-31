@@ -10,6 +10,7 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
@@ -200,7 +201,13 @@ contract RegressionMetadataShadowTest is Test {
         // Metadata shadowing reverts instead of minting forged tier IDs.
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePayMetadata.selector, duplicatePayId));
         publisher.mintFrom{value: 105}(
-            IJB721TiersHook(address(hook)), posts, address(this), address(this), shadowingMetadata
+            IJB721TiersHook(address(hook)),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            105,
+            address(this),
+            address(this),
+            shadowingMetadata
         );
     }
 }

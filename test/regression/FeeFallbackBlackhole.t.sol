@@ -11,6 +11,7 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -171,7 +172,9 @@ contract RejectingMintCaller {
         external
         payable
     {
-        publisher.mintFrom{value: msg.value}(hook, posts, nftBeneficiary, feeBeneficiary, bytes(""));
+        publisher.mintFrom{value: msg.value}(
+            hook, posts, JBConstants.NATIVE_TOKEN, msg.value, nftBeneficiary, feeBeneficiary, bytes("")
+        );
     }
 
     receive() external payable {
@@ -190,7 +193,9 @@ contract AcceptingMintCaller {
         external
         payable
     {
-        publisher.mintFrom{value: msg.value}(hook, posts, nftBeneficiary, feeBeneficiary, bytes(""));
+        publisher.mintFrom{value: msg.value}(
+            hook, posts, JBConstants.NATIVE_TOKEN, msg.value, nftBeneficiary, feeBeneficiary, bytes("")
+        );
     }
 
     receive() external payable {}

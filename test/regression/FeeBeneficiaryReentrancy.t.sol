@@ -11,6 +11,7 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -195,7 +196,9 @@ contract ReentrantProjectTerminal {
                 splits: new JBSplit[](0)
             });
 
-            publisher.mintFrom{value: 21}(hook, posts, address(this), attackerFeeBeneficiary, bytes(""));
+            publisher.mintFrom{value: 21}(
+                hook, posts, JBConstants.NATIVE_TOKEN, 21, address(this), attackerFeeBeneficiary, bytes("")
+            );
         }
 
         store.mint({hook: address(hook), owner: beneficiary, count: 1});
@@ -253,7 +256,13 @@ contract FeeBeneficiaryReentrancyTest is Test {
         });
 
         publisher.mintFrom{value: 105}(
-            IJB721TiersHook(address(hook)), posts, address(this), victimFeeBeneficiary, bytes("")
+            IJB721TiersHook(address(hook)),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            105,
+            address(this),
+            victimFeeBeneficiary,
+            bytes("")
         );
 
         // Fee amounts are pinned before external calls, so both inner and outer fees are paid separately with correct

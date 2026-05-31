@@ -15,7 +15,9 @@ import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
 import {JB721TierConfigFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierConfigFlags.sol";
@@ -23,6 +25,35 @@ import {JB721TierConfigFlags} from "@bananapus/721-hook-v6/src/structs/JB721Tier
 import {CTPublisher} from "../src/CTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../src/structs/CTPost.sol";
+
+contract MockCroptopERC20 {
+    mapping(address account => uint256 balance) public balanceOf;
+    mapping(address owner => mapping(address spender => uint256 amount)) public allowance;
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function mint(address account, uint256 amount) external {
+        balanceOf[account] += amount;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        uint256 allowed = allowance[from][msg.sender];
+        if (allowed != type(uint256).max) allowance[from][msg.sender] = allowed - amount;
+
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+}
 
 contract MockCroptopHookStore {
     mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
@@ -43,6 +74,8 @@ contract MockCroptopHookStore {
 }
 
 contract MockCroptopTerminal {
+    mapping(address token => JBAccountingContext context) public contextForToken;
+
     MockCroptopHookStore public store;
 
     address public hook;
@@ -54,10 +87,14 @@ contract MockCroptopTerminal {
         mintCount = mintCount_;
     }
 
+    function accountingContextForTokenOf(uint256, address token) external view returns (JBAccountingContext memory) {
+        return contextForToken[token];
+    }
+
     function pay(
         uint256,
-        address,
-        uint256,
+        address token,
+        uint256 amount,
         address beneficiary,
         uint256,
         string calldata,
@@ -67,8 +104,15 @@ contract MockCroptopTerminal {
         payable
         returns (uint256)
     {
+        if (token != JBConstants.NATIVE_TOKEN) {
+            IERC20(token).transferFrom({from: msg.sender, to: address(this), value: amount});
+        }
         if (mintCount != 0) store.mint({hook: hook, owner: beneficiary, count: mintCount});
         return 0;
+    }
+
+    function setAccountingContext(address token, uint8 decimals, uint32 currency) external {
+        contextForToken[token] = JBAccountingContext({token: token, decimals: decimals, currency: currency});
     }
 }
 
@@ -510,7 +554,9 @@ contract TestCTPublisher is Test {
                 CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 600_000_000, 500_000_000
             )
         );
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
     }
 
     function test_mintFrom_splitPercentExactlyAtLimit_succeeds() public {
@@ -529,7 +575,9 @@ contract TestCTPublisher is Test {
 
         // Should pass validation. May revert downstream in mock, but NOT with split percent error.
         vm.prank(poster);
-        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -560,7 +608,9 @@ contract TestCTPublisher is Test {
 
         // splitPercent=0 should always be allowed (0 <= 0).
         vm.prank(poster);
-        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -589,7 +639,9 @@ contract TestCTPublisher is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 1, 0));
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
     }
 
     function test_mintFrom_splitPercentWithinLimit_passesValidation() public {
@@ -618,7 +670,9 @@ contract TestCTPublisher is Test {
 
         // Should pass split validation.
         vm.prank(poster);
-        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -647,7 +701,9 @@ contract TestCTPublisher is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        );
     }
 
     //*********************************************************************//
@@ -677,10 +733,14 @@ contract TestCTPublisher is Test {
                     CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, postSplitPercent, maxSplitPercent
                 )
             );
-            publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+            publisher.mintFrom{value: 0.02 ether}(
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, ""
+            );
         } else {
             vm.prank(poster);
-            try publisher.mintFrom{value: 0.02 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+            try publisher.mintFrom{value: 0.02 ether}(
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, ""
+            ) {}
             catch (bytes memory reason) {
                 assertTrue(
                     keccak256(reason)
@@ -764,7 +824,9 @@ contract TestCTPublisher is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether + fee, 0.04 ether)
         );
-        publisher.mintFrom{value: 0.04 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.04 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.04 ether, poster, poster, ""
+        );
     }
 
     function test_mintFrom_exactPriceNoFee_reverts() public {
@@ -785,7 +847,9 @@ contract TestCTPublisher is Test {
         // After fee deduction: payValue = 1 - 0.05 = 0.95, which is < totalPrice (1).
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether, 1 ether));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        );
     }
 
     function test_mintFrom_exactPricePlusFee_succeeds() public {
@@ -805,7 +869,9 @@ contract TestCTPublisher is Test {
         // Send exactly 1.05 ether (price + fee). Should not revert with InsufficientEthSent.
         uint256 fee = 1 ether / 20;
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 1 ether + fee}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether + fee, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             assertTrue(
                 // forge-lint: disable-next-line(unsafe-typecast)
@@ -861,7 +927,9 @@ contract TestCTPublisher is Test {
 
         // Send exactly the price with no fee. Should not revert with InsufficientEthSent.
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(feeHook), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(feeHook), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             assertTrue(
                 // forge-lint: disable-next-line(unsafe-typecast)
@@ -871,8 +939,9 @@ contract TestCTPublisher is Test {
         }
     }
 
-    function test_mintFrom_revertsForNonEthPricingContext() public {
+    function test_mintFrom_revertsWhenNativePaymentDoesNotMatchPricingContext() public {
         _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
         vm.mockCall(
             hookAddr,
             abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
@@ -890,8 +959,92 @@ contract TestCTPublisher is Test {
         });
 
         vm.prank(poster);
-        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InvalidPricingContext.selector, 2, 6));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CTPublisher.CTPublisher_InvalidPaymentTokenContext.selector,
+                JBConstants.NATIVE_TOKEN,
+                uint256(JBCurrencyIds.ETH),
+                uint256(18),
+                uint256(JBCurrencyIds.USD),
+                uint256(6)
+            )
+        );
+        publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        );
+    }
+
+    function test_mintFrom_revertsWhenErc20PaymentDoesNotMatchPricingContext() public {
+        _configureCategoryWithSplits(5, 1_000_000, 1, 100, 0);
+        _setupMintMocks();
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.USD), uint256(6))
+        );
+
+        MockCroptopERC20 token = new MockCroptopERC20();
+        token.mint(poster, 1_050_000);
+        terminal.setAccountingContext({token: address(token), decimals: 18, currency: JBCurrencyIds.ETH});
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("usd-token-mismatch"),
+            totalSupply: 10,
+            price: 1_000_000,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        vm.prank(poster);
+        token.approve(address(publisher), 1_050_000);
+
+        vm.prank(poster);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CTPublisher.CTPublisher_InvalidPaymentTokenContext.selector,
+                address(token),
+                uint256(JBCurrencyIds.ETH),
+                uint256(18),
+                uint256(JBCurrencyIds.USD),
+                uint256(6)
+            )
+        );
+        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), 1_050_000, poster, poster, "");
+    }
+
+    function test_mintFrom_supportsErc20PricingContext() public {
+        _configureCategoryWithSplits(5, 1_000_000, 1, 100, 0);
+        _setupMintMocks();
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.USD), uint256(6))
+        );
+
+        MockCroptopERC20 token = new MockCroptopERC20();
+        token.mint(poster, 1_050_000);
+        terminal.setAccountingContext({token: address(token), decimals: 6, currency: JBCurrencyIds.USD});
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("usd-token"),
+            totalSupply: 10,
+            price: 1_000_000,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        vm.prank(poster);
+        token.approve(address(publisher), 1_050_000);
+
+        vm.prank(poster);
+        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), 1_050_000, poster, poster, "");
+
+        assertEq(token.balanceOf(address(terminal)), 1_050_000, "terminal should receive price plus fee");
+        assertEq(token.allowance(address(publisher), address(terminal)), 0, "temporary allowance consumed");
     }
 
     function test_mintFrom_supportsNativeTokenPricingAlias() public {
@@ -916,7 +1069,9 @@ contract TestCTPublisher is Test {
 
         uint256 fee = 0.1 ether / 20;
         vm.prank(poster);
-        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.1 ether + fee}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, ""
+        );
     }
 
     function test_mintFrom_revertsWhenPaymentDoesNotMintRequestedNfts() public {
@@ -939,7 +1094,9 @@ contract TestCTPublisher is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CTPublisher.CTPublisher_MintNotDelivered.selector, hookAddr, poster, 1, 0)
         );
-        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.1 ether + fee}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, ""
+        );
     }
 
     //*********************************************************************//
@@ -1003,7 +1160,9 @@ contract TestCTPublisher is Test {
 
         uint256 fee = 0.1 ether / 20;
         vm.prank(poster);
-        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.1 ether + fee}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, ""
+        );
     }
 
     function test_mintFrom_multiplePostsDifferentSplits() public {
@@ -1037,7 +1196,9 @@ contract TestCTPublisher is Test {
                 CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 600_000_000, 500_000_000
             )
         );
-        publisher.mintFrom{value: 0.4 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.4 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.4 ether, poster, poster, ""
+        );
     }
 
     function test_mintFrom_sortsNewTiersByCategoryAndPreservesMintOrder() public {
@@ -1104,7 +1265,9 @@ contract TestCTPublisher is Test {
         );
 
         vm.prank(poster);
-        publisher.mintFrom{value: 0.21 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 0.21 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.21 ether, poster, poster, ""
+        );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, categoryOneUri), 1);
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, categoryTwoUri), 2);
@@ -1130,7 +1293,9 @@ contract TestCTPublisher is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InvalidFeeBeneficiary.selector));
-        publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, address(0), "");
+        publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, address(0), ""
+        );
     }
 
     function test_mintFrom_nonzeroFeeBeneficiary_passesValidation() public {
@@ -1150,7 +1315,9 @@ contract TestCTPublisher is Test {
         // Should pass the feeBeneficiary check. May revert downstream in mocks, but NOT with
         // InvalidFeeBeneficiary.
         vm.prank(poster);
-        try publisher.mintFrom{value: 0.2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 0.2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             assertTrue(
                 // forge-lint: disable-next-line(unsafe-typecast)

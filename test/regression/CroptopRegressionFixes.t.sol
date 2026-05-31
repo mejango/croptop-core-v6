@@ -11,6 +11,7 @@ import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
@@ -279,7 +280,15 @@ contract CroptopRegressionFixesTest is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePayMetadata.selector, ids[0]));
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, shadowingMetadata);
+        publisher.mintFrom{value: 1.05 ether}(
+            IJB721TiersHook(address(hook)),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            1.05 ether,
+            poster,
+            poster,
+            shadowingMetadata
+        );
     }
 
     /// @notice Empty additionalPayMetadata should NOT revert.
@@ -296,7 +305,9 @@ contract CroptopRegressionFixesTest is Test {
 
         // Empty metadata — should succeed.
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "");
+        publisher.mintFrom{value: 1.05 ether}(
+            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+        );
 
         assertEq(
             publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "tier should be created with empty metadata"
@@ -323,7 +334,15 @@ contract CroptopRegressionFixesTest is Test {
         bytes memory unrelatedMetadata = JBMetadataResolver.createMetadata(ids, datas);
 
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, unrelatedMetadata);
+        publisher.mintFrom{value: 1.05 ether}(
+            IJB721TiersHook(address(hook)),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            1.05 ether,
+            poster,
+            poster,
+            unrelatedMetadata
+        );
 
         assertEq(
             publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A),
@@ -405,6 +424,8 @@ contract CroptopRegressionFixesTest is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(address(hook)), posts, poster, poster, "");
+        publisher.mintFrom{value: 1.05 ether}(
+            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+        );
     }
 }

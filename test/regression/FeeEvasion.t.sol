@@ -12,6 +12,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -196,7 +197,9 @@ contract FeeEvasionRegression is Test {
 
         // First mint to create the tier and populate the mapping.
         vm.prank(poster);
-        publisher.mintFrom{value: 2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+        );
 
         // Verify the mapping was set.
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored");
@@ -224,11 +227,15 @@ contract FeeEvasionRegression is Test {
         // not the attacker's 0.
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 0}(IJB721TiersHook(hookAddr), attackPosts, poster, poster, "");
+        publisher.mintFrom{value: 0}(
+            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 0, poster, poster, ""
+        );
 
         // Sending the correct amount should succeed.
         vm.prank(poster);
-        publisher.mintFrom{value: 2 ether}(IJB721TiersHook(hookAddr), attackPosts, poster, poster, "");
+        publisher.mintFrom{value: 2 ether}(
+            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+        );
     }
 
     /// @notice Test that the correct fee amount is deducted for existing tier mints.
@@ -290,7 +297,9 @@ contract FeeEvasionRegression is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+        );
 
         // Second mint with the existing tier. Even with post.price = 0, the fee
         // should be based on the actual price (1 ether).
@@ -314,11 +323,15 @@ contract FeeEvasionRegression is Test {
 
         // Sending exactly 1.05 ether should succeed.
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(hookAddr), existingPosts, poster, poster, "");
+        publisher.mintFrom{value: 1.05 ether}(
+            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+        );
 
         // Sending 1.04 ether should fail (1.04 - 0.05 = 0.99 < 1 ether totalPrice).
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 1.04 ether}(IJB721TiersHook(hookAddr), existingPosts, poster, poster, "");
+        publisher.mintFrom{value: 1.04 ether}(
+            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.04 ether, poster, poster, ""
+        );
     }
 }
