@@ -9,17 +9,22 @@ import {JB721TierConfigFlags} from "@bananapus/721-hook-v6/src/structs/JB721Tier
 import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {IJBPrices} from "@bananapus/core-v6/src/interfaces/IJBPrices.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
+import {JBSingleAllowance} from "@bananapus/core-v6/src/structs/JBSingleAllowance.sol";
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IAllowanceTransfer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 import {ICTPublisher} from "./interfaces/ICTPublisher.sol";
 import {CTAllowedPost} from "./structs/CTAllowedPost.sol";
@@ -56,7 +61,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_NativeTokenAmountMismatch(uint256 amount, uint256 msgValue);
     error CTPublisher_NoPosts(address caller);
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
+    error CTPublisher_OverflowAlert(uint256 value, uint256 limit);
+    error CTPublisher_PermitAllowanceNotEnough(uint256 amount, uint256 allowance);
+    error CTPublisher_PriceFeedUnavailable(uint256 paymentCurrency, uint256 pricingCurrency);
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
+    error CTPublisher_ReentrantTokenTransfer(address token);
     error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
     error CTPublisher_TemporaryAllowanceNotConsumed(address token, address spender, uint256 allowance);
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
@@ -71,6 +80,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @notice The divisor that describes the fee that should be taken.
     /// @dev This is equal to 100 divided by the fee percent.
     uint256 public constant override FEE_DIVISOR = 20;
+
+    /// @notice The canonical Permit2 utility used to pull ERC-20 payments from posters.
+    IPermit2 public constant override PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
@@ -105,6 +117,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @custom:param hook The hook for which this allowance applies.
     /// @custom:param category The category for which the allowance applies.
     mapping(address hook => mapping(uint256 category => uint256)) internal _packedAllowanceFor;
+
+    /// @notice Whether this publisher is currently measuring an incoming ERC-20 balance delta.
+    bool internal _acceptingToken;
 
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
@@ -219,20 +234,51 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         payable
         override
     {
-        if (token == JBConstants.NATIVE_TOKEN) {
-            if (amount != msg.value) {
-                revert CTPublisher_NativeTokenAmountMismatch({amount: amount, msgValue: msg.value});
-            }
-        } else {
-            if (msg.value != 0) revert CTPublisher_MsgValueNotAllowed({value: msg.value});
-            IERC20(token).safeTransferFrom({from: _msgSender(), to: address(this), value: amount});
-        }
+        JBSingleAllowance memory permit2Allowance;
+        uint256 acceptedAmount = _acceptFundsFor({token: token, amount: amount, permit2Allowance: permit2Allowance});
 
         _mintFrom({
             hook: hook,
             posts: posts,
             token: token,
-            amount: amount,
+            amount: acceptedAmount,
+            nftBeneficiary: nftBeneficiary,
+            feeBeneficiary: feeBeneficiary,
+            additionalPayMetadata: additionalPayMetadata
+        });
+    }
+
+    /// @notice Publish posts using a Permit2 allowance to pull ERC-20 payment tokens.
+    /// @dev Native-token payments ignore `permit2Allowance`.
+    /// @param hook The hook to mint from.
+    /// @param posts An array of posts that should be published as NFTs to the specified project.
+    /// @param token The terminal token to pay with.
+    /// @param amount The total token amount supplied for the post payment and Croptop fee.
+    /// @param nftBeneficiary The beneficiary of the NFT mints.
+    /// @param feeBeneficiary The beneficiary of the fee project's token.
+    /// @param permit2Allowance The Permit2 allowance authorizing this publisher to pull `token`.
+    /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
+    function mintFrom(
+        IJB721TiersHook hook,
+        CTPost[] calldata posts,
+        address token,
+        uint256 amount,
+        address nftBeneficiary,
+        address feeBeneficiary,
+        JBSingleAllowance calldata permit2Allowance,
+        bytes calldata additionalPayMetadata
+    )
+        external
+        payable
+        override
+    {
+        uint256 acceptedAmount = _acceptFundsFor({token: token, amount: amount, permit2Allowance: permit2Allowance});
+
+        _mintFrom({
+            hook: hook,
+            posts: posts,
+            token: token,
+            amount: acceptedAmount,
             nftBeneficiary: nftBeneficiary,
             feeBeneficiary: feeBeneficiary,
             additionalPayMetadata: additionalPayMetadata
@@ -325,6 +371,64 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // ---------------------- internal transactions ---------------------- //
     //*********************************************************************//
 
+    /// @notice Accept incoming native or ERC-20 funds from the caller.
+    /// @param token The token to accept.
+    /// @param amount The number of tokens to accept.
+    /// @param permit2Allowance The optional Permit2 allowance for ERC-20 pulls.
+    /// @return acceptedAmount The number of tokens that were received.
+    function _acceptFundsFor(
+        address token,
+        uint256 amount,
+        JBSingleAllowance memory permit2Allowance
+    )
+        internal
+        returns (uint256 acceptedAmount)
+    {
+        if (token == JBConstants.NATIVE_TOKEN) {
+            if (amount != msg.value) {
+                revert CTPublisher_NativeTokenAmountMismatch({amount: amount, msgValue: msg.value});
+            }
+
+            return amount;
+        }
+
+        if (msg.value != 0) revert CTPublisher_MsgValueNotAllowed({value: msg.value});
+
+        if (permit2Allowance.amount != 0) {
+            if (amount > permit2Allowance.amount) {
+                revert CTPublisher_PermitAllowanceNotEnough({amount: amount, allowance: permit2Allowance.amount});
+            }
+
+            IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
+                details: IAllowanceTransfer.PermitDetails({
+                    token: token,
+                    amount: permit2Allowance.amount,
+                    expiration: permit2Allowance.expiration,
+                    nonce: permit2Allowance.nonce
+                }),
+                spender: address(this),
+                sigDeadline: permit2Allowance.sigDeadline
+            });
+
+            try PERMIT2.permit({
+                owner: _msgSender(), permitSingle: permitSingle, signature: permit2Allowance.signature
+            }) {}
+            catch (bytes memory reason) {
+                emit Permit2AllowanceFailed({token: token, owner: _msgSender(), reason: reason});
+            }
+        }
+
+        uint256 balanceBefore = _balanceOf(token);
+
+        if (_acceptingToken) revert CTPublisher_ReentrantTokenTransfer(token);
+        _acceptingToken = true;
+
+        _transferFrom({from: _msgSender(), to: payable(address(this)), token: token, amount: amount});
+
+        acceptedAmount = _balanceOf(token) - balanceBefore;
+        _acceptingToken = false;
+    }
+
     /// @notice Shared implementation for native and ERC-20 publish payments.
     /// @param hook The hook to mint from.
     /// @param posts An array of posts that should be published as NFTs to the specified project.
@@ -364,19 +468,23 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         // Get a reference to the project's current payment terminal.
         IJBTerminal projectTerminal = DIRECTORY.primaryTerminalOf({projectId: projectId, token: token});
 
-        _requirePaymentTokenMatchesPricing({
-            terminal: projectTerminal,
-            projectId: projectId,
-            token: token,
-            pricingCurrency: pricingCurrency,
-            pricingDecimals: pricingDecimals
-        });
+        JBAccountingContext memory paymentContext =
+            _paymentContextOf({terminal: projectTerminal, projectId: projectId, token: token});
 
         uint256 mintCount = posts.length;
         {
             // Setup the posts.
             (JB721TierConfig[] memory tiersToAdd, uint256[] memory tierIdsToMint, uint256 totalPrice) =
                 _setupPosts({hook: hook, posts: posts});
+
+            totalPrice = _paymentAmountFromPricing({
+                hook: hook,
+                projectId: projectId,
+                paymentContext: paymentContext,
+                pricingCurrency: pricingCurrency,
+                pricingDecimals: pricingDecimals,
+                pricingAmount: totalPrice
+            });
 
             if (projectId != FEE_PROJECT_ID) {
                 // Keep a reference to the fee that will be paid.
@@ -475,6 +583,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         if (payValue != 0) {
             // Get a reference to the fee project's current payment terminal.
             IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: token});
+            if (address(feeTerminal) == address(0)) {
+                _refundFee({token: token, amount: payValue});
+                return;
+            }
 
             // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
             // rather than trapping or silently redirecting protocol funds.
@@ -499,6 +611,15 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     //*********************************************************************//
     // ------------------------ internal helpers ------------------------- //
     //*********************************************************************//
+
+    /// @notice Return this contract's balance of a token.
+    /// @param token The token whose balance should be read.
+    /// @return balance The current balance.
+    function _balanceOf(address token) internal view returns (uint256 balance) {
+        if (token == JBConstants.NATIVE_TOKEN) return address(this).balance;
+
+        return IERC20(token).balanceOf(address(this));
+    }
 
     /// @notice Clear a temporary ERC-20 allowance granted by this publisher.
     /// @param token The token whose allowance should be cleared.
@@ -530,6 +651,98 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         return false;
     }
 
+    /// @notice Check whether two currency IDs both represent native ETH accounting.
+    /// @param currency The first currency ID.
+    /// @param otherCurrency The second currency ID.
+    function _isNativeEthCurrencyPair(uint256 currency, uint256 otherCurrency) internal pure returns (bool) {
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 nativeTokenCurrency = uint32(uint160(JBConstants.NATIVE_TOKEN));
+
+        return (currency == JBCurrencyIds.ETH || currency == nativeTokenCurrency)
+            && (otherCurrency == JBCurrencyIds.ETH || otherCurrency == nativeTokenCurrency);
+    }
+
+    /// @notice Convert a hook pricing amount into the selected terminal token's accounting units.
+    /// @param hook The hook whose pricing oracle should be used when currencies differ.
+    /// @param projectId The ID of the project being paid.
+    /// @param paymentContext The terminal accounting context for the selected payment token.
+    /// @param pricingCurrency The hook's pricing currency.
+    /// @param pricingDecimals The hook's pricing decimals.
+    /// @param pricingAmount The tier-price amount to convert.
+    /// @return paymentAmount The required amount denominated in `paymentContext` units.
+    function _paymentAmountFromPricing(
+        IJB721TiersHook hook,
+        uint256 projectId,
+        JBAccountingContext memory paymentContext,
+        uint256 pricingCurrency,
+        uint256 pricingDecimals,
+        uint256 pricingAmount
+    )
+        internal
+        view
+        returns (uint256 paymentAmount)
+    {
+        if (pricingAmount == 0) return 0;
+
+        if (
+            paymentContext.currency == pricingCurrency
+                || _isNativeEthCurrencyPair({currency: paymentContext.currency, otherCurrency: pricingCurrency})
+        ) {
+            return _scaleAmount({
+                amount: pricingAmount, fromDecimals: pricingDecimals, toDecimals: paymentContext.decimals
+            });
+        }
+
+        IJBPrices prices = hook.PRICES();
+        if (address(prices) == address(0)) {
+            revert CTPublisher_PriceFeedUnavailable({
+                paymentCurrency: paymentContext.currency, pricingCurrency: pricingCurrency
+            });
+        }
+
+        uint256 ratio = prices.pricePerUnitOf({
+            projectId: projectId,
+            pricingCurrency: paymentContext.currency,
+            unitCurrency: pricingCurrency,
+            decimals: paymentContext.decimals
+        });
+        if (ratio == 0) {
+            revert CTPublisher_PriceFeedUnavailable({
+                paymentCurrency: paymentContext.currency, pricingCurrency: pricingCurrency
+            });
+        }
+
+        return
+            Math.mulDiv({x: pricingAmount, y: ratio, denominator: 10 ** pricingDecimals, rounding: Math.Rounding.Ceil});
+    }
+
+    /// @notice Return the terminal accounting context for the selected payment token.
+    /// @param terminal The terminal being paid.
+    /// @param projectId The ID of the project being paid.
+    /// @param token The token being paid.
+    /// @return context The terminal's accounting context for `token`.
+    function _paymentContextOf(
+        IJBTerminal terminal,
+        uint256 projectId,
+        address token
+    )
+        internal
+        view
+        returns (JBAccountingContext memory context)
+    {
+        context = terminal.accountingContextForTokenOf({projectId: projectId, token: token});
+
+        if (context.token != token || context.currency == 0) {
+            revert CTPublisher_InvalidPaymentTokenContext({
+                token: token,
+                tokenCurrency: context.currency,
+                tokenDecimals: context.decimals,
+                pricingCurrency: 0,
+                pricingDecimals: 0
+            });
+        }
+    }
+
     /// @notice Grant a temporary ERC-20 allowance for a downstream terminal payment.
     /// @param token The token being paid.
     /// @param spender The terminal expected to consume the allowance.
@@ -554,51 +767,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         IERC20(token).safeTransfer({to: _msgSender(), value: amount});
     }
 
-    /// @notice Require the payment token's terminal accounting context to match the hook's pricing context.
-    /// @param terminal The terminal being paid.
-    /// @param projectId The ID of the project being paid.
-    /// @param token The token being paid.
-    /// @param pricingCurrency The hook's pricing currency.
-    /// @param pricingDecimals The hook's pricing decimals.
-    function _requirePaymentTokenMatchesPricing(
-        IJBTerminal terminal,
-        uint256 projectId,
-        address token,
-        uint256 pricingCurrency,
-        uint256 pricingDecimals
-    )
-        internal
-        view
-    {
-        if (token == JBConstants.NATIVE_TOKEN) {
-            bool nativePricing = pricingDecimals == 18
-                && (pricingCurrency == JBCurrencyIds.ETH || pricingCurrency == JBConstants.NATIVE_TOKEN_CURRENCY);
-            if (!nativePricing) {
-                revert CTPublisher_InvalidPaymentTokenContext({
-                    token: token,
-                    tokenCurrency: JBCurrencyIds.ETH,
-                    tokenDecimals: 18,
-                    pricingCurrency: pricingCurrency,
-                    pricingDecimals: pricingDecimals
-                });
-            }
-
-            return;
-        }
-
-        JBAccountingContext memory context = terminal.accountingContextForTokenOf({projectId: projectId, token: token});
-
-        if (context.token != token || context.currency != pricingCurrency || context.decimals != pricingDecimals) {
-            revert CTPublisher_InvalidPaymentTokenContext({
-                token: token,
-                tokenCurrency: context.currency,
-                tokenDecimals: context.decimals,
-                pricingCurrency: pricingCurrency,
-                pricingDecimals: pricingDecimals
-            });
-        }
-    }
-
     /// @notice Revert if a downstream terminal did not consume its exact-use ERC-20 allowance.
     /// @param token The token whose allowance was temporarily granted.
     /// @param spender The terminal expected to consume the allowance.
@@ -621,6 +789,27 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         }
 
         revert CTPublisher_InsufficientPayment({expected: expected, sent: sent});
+    }
+
+    /// @notice Scale an amount between decimal domains, rounding up when precision is reduced.
+    /// @param amount The amount to scale.
+    /// @param fromDecimals The decimals currently used by `amount`.
+    /// @param toDecimals The decimals to scale into.
+    /// @return scaledAmount The scaled amount.
+    function _scaleAmount(
+        uint256 amount,
+        uint256 fromDecimals,
+        uint256 toDecimals
+    )
+        internal
+        pure
+        returns (uint256 scaledAmount)
+    {
+        if (fromDecimals == toDecimals) return amount;
+        if (fromDecimals < toDecimals) return amount * (10 ** (toDecimals - fromDecimals));
+
+        uint256 denominator = 10 ** (fromDecimals - toDecimals);
+        return Math.mulDiv({x: amount, y: 1, denominator: denominator, rounding: Math.Rounding.Ceil});
     }
 
     /// @notice Setup the posts.
@@ -845,6 +1034,22 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 mstore(tiersToAdd, numberOfTiersBeingAdded)
             }
         }
+    }
+
+    /// @notice Pull tokens from `from`, preferring ERC-20 approvals and falling back to Permit2.
+    /// @param from The address the transfer should originate from.
+    /// @param to The address receiving tokens.
+    /// @param token The token to transfer.
+    /// @param amount The number of tokens to transfer.
+    function _transferFrom(address from, address payable to, address token, uint256 amount) internal {
+        if (IERC20(token).allowance({owner: from, spender: address(this)}) >= amount) {
+            return IERC20(token).safeTransferFrom({from: from, to: to, value: amount});
+        }
+
+        if (amount > type(uint160).max) revert CTPublisher_OverflowAlert({value: amount, limit: type(uint160).max});
+
+        // forge-lint: disable-next-line(unsafe-typecast)
+        PERMIT2.transferFrom({from: from, to: to, amount: uint160(amount), token: token});
     }
 
     //*********************************************************************//

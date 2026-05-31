@@ -9,6 +9,7 @@ import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
@@ -128,6 +129,10 @@ contract MockTerminal {
     function configure(MockStore store_, address hook_) external {
         _store = store_;
         _hook = hook_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
     }
 
     function pay(

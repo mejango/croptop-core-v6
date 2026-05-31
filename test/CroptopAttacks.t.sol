@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {IJBSplitHook} from "@bananapus/core-v6/src/interfaces/IJBSplitHook.sol";
 import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
@@ -13,6 +14,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTPublisher} from "../src/CTPublisher.sol";
@@ -135,6 +137,15 @@ contract CroptopAttacks is Test {
             address(directory),
             abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector),
             abi.encode(terminalAddr)
+        );
+        vm.mockCall(
+            terminalAddr,
+            abi.encodeWithSelector(
+                IJBTerminal.accountingContextForTokenOf.selector, hookProjectId, JBConstants.NATIVE_TOKEN
+            ),
+            abi.encode(
+                JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: JBCurrencyIds.ETH})
+            )
         );
         vm.mockCall(terminalAddr, "", abi.encode(uint256(0)));
     }

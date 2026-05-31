@@ -14,6 +14,7 @@ import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTPublisher} from "../../src/CTPublisher.sol";
@@ -35,6 +36,10 @@ contract FeeEvasionMockTerminal {
     constructor(FeeEvasionMockStore store_, address hook_) {
         _store = store_;
         _hook = hook_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
     }
 
     function pay(

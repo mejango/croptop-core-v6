@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {JBSingleAllowance} from "@bananapus/core-v6/src/structs/JBSingleAllowance.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTAllowedPost} from "../structs/CTAllowedPost.sol";
 import {CTPost} from "../structs/CTPost.sol";
 
@@ -36,6 +38,12 @@ interface ICTPublisher {
         uint256 amount,
         address caller
     );
+
+    /// @notice Emitted when Permit2 approval by signature fails before the token pull is attempted.
+    /// @param token The ERC-20 token being paid.
+    /// @param owner The payment owner whose signature was submitted.
+    /// @param reason The low-level revert reason returned by Permit2.
+    event Permit2AllowanceFailed(address indexed token, address indexed owner, bytes reason);
 
     /// @notice The post allowance for a particular category on a particular hook.
     /// @param hook The hook contract for which this allowance applies.
@@ -71,6 +79,10 @@ interface ICTPublisher {
     /// @return The fee project ID.
     function FEE_PROJECT_ID() external view returns (uint256);
 
+    /// @notice The Permit2 utility used to pull ERC-20 payments from posters.
+    /// @return The Permit2 contract.
+    function PERMIT2() external view returns (IPermit2);
+
     /// @notice The tier ID that an IPFS metadata URI has been saved to for a given hook.
     /// @param hook The hook for which the tier ID applies.
     /// @param encodedIpfsUri The encoded IPFS URI to look up.
@@ -104,6 +116,28 @@ interface ICTPublisher {
         uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
+        bytes calldata additionalPayMetadata
+    )
+        external
+        payable;
+
+    /// @notice Publish NFT posts and mint a first copy of each using Permit2 for the ERC-20 pull.
+    /// @param hook The hook to mint from.
+    /// @param posts An array of posts to publish as NFTs.
+    /// @param token The terminal token to pay with.
+    /// @param amount The total token amount supplied for the post payment and Croptop fee.
+    /// @param nftBeneficiary The beneficiary of the NFT mints.
+    /// @param feeBeneficiary The beneficiary of the fee project's tokens.
+    /// @param permit2Allowance The Permit2 allowance authorizing this publisher to pull `token`.
+    /// @param additionalPayMetadata Extra metadata bytes to include in the payment.
+    function mintFrom(
+        IJB721TiersHook hook,
+        CTPost[] calldata posts,
+        address token,
+        uint256 amount,
+        address nftBeneficiary,
+        address feeBeneficiary,
+        JBSingleAllowance calldata permit2Allowance,
         bytes calldata additionalPayMetadata
     )
         external

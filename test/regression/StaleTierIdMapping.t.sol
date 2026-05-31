@@ -12,6 +12,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -48,6 +49,10 @@ contract StaleTierTerminal {
         store = store_;
         hook = hook_;
         mintCount = mintCount_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
     }
 
     function pay(

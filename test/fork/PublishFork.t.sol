@@ -21,10 +21,13 @@ import {JBFeelessAddresses} from "@bananapus/core-v6/src/JBFeelessAddresses.sol"
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
 import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
+import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.sol";
+import {JBSingleAllowance} from "@bananapus/core-v6/src/structs/JBSingleAllowance.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {MockPriceFeed} from "@bananapus/core-v6/test/mock/MockPriceFeed.sol";
 
@@ -34,7 +37,12 @@ import {JB721TiersHook} from "@bananapus/721-hook-v6/src/JB721TiersHook.sol";
 import {JB721TiersHookDeployer} from "@bananapus/721-hook-v6/src/JB721TiersHookDeployer.sol";
 import {JB721CheckpointsDeployer} from "@bananapus/721-hook-v6/src/JB721CheckpointsDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
+import {IJB721TokenUriResolver} from "@bananapus/721-hook-v6/src/interfaces/IJB721TokenUriResolver.sol";
 import {JBAddressRegistry} from "@bananapus/address-registry-v6/src/JBAddressRegistry.sol";
+import {JB721InitTiersConfig} from "@bananapus/721-hook-v6/src/structs/JB721InitTiersConfig.sol";
+import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
+import {JB721TiersHookFlags} from "@bananapus/721-hook-v6/src/structs/JB721TiersHookFlags.sol";
+import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v6/src/structs/JBDeploy721TiersHookConfig.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 // Suckers — deploy fresh within fork.
@@ -52,12 +60,78 @@ import {DeployPermit2} from "@uniswap/permit2/test/utils/DeployPermit2.sol";
 // Croptop
 // forge-lint: disable-next-line(unaliased-plain-import)
 import "./../../src/CTDeployer.sol";
+import {CTAllowedPost} from "./../../src/structs/CTAllowedPost.sol";
 import {CTPublisher} from "./../../src/CTPublisher.sol";
 import {CTPost} from "./../../src/structs/CTPost.sol";
 
 contract CroptopForkNonReceiverOwner {
     function codeHashAnchor() external pure returns (bytes32) {
         return keccak256("NOT_ERC721_RECEIVER");
+    }
+}
+
+contract ForkMockERC20 {
+    uint8 public immutable decimals;
+
+    mapping(address account => uint256 balance) public balanceOf;
+    mapping(address owner => mapping(address spender => uint256 amount)) public allowance;
+
+    constructor(uint8 decimals_) {
+        decimals = decimals_;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function mint(address account, uint256 amount) external {
+        balanceOf[account] += amount;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        uint256 allowed = allowance[from][msg.sender];
+        if (allowed != type(uint256).max) allowance[from][msg.sender] = allowed - amount;
+
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+}
+
+contract ForkPermit2Wallet {
+    bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+
+    function approveToken(address token, address spender, uint256 amount) external {
+        ForkMockERC20(token).approve(spender, amount);
+    }
+
+    function isValidSignature(bytes32, bytes calldata) external pure returns (bytes4) {
+        return ERC1271_MAGIC_VALUE;
+    }
+
+    function mintFrom(
+        CTPublisher publisher,
+        IJB721TiersHook hook,
+        CTPost[] calldata posts,
+        address token,
+        uint256 amount,
+        address nftBeneficiary,
+        address feeBeneficiary,
+        JBSingleAllowance calldata permit2Allowance,
+        bytes calldata additionalPayMetadata
+    )
+        external
+    {
+        publisher.mintFrom(
+            hook, posts, token, amount, nftBeneficiary, feeBeneficiary, permit2Allowance, additionalPayMetadata
+        );
     }
 }
 
@@ -90,6 +164,7 @@ contract PublishForkTest is Test, DeployPermit2 {
     JBFeelessAddresses jbFeelessAddresses;
     JBTerminalStore jbTerminalStore;
     JBMultiTerminal jbMultiTerminal;
+    IPermit2 permit2;
 
     // ───────────────────────── 721 hook (deployed fresh)
     // ──────────────────
@@ -200,6 +275,129 @@ contract PublishForkTest is Test, DeployPermit2 {
         // Verify NFT was minted to the beneficiary.
         uint256 balanceAfter = IERC721(address(testHook)).balanceOf(nftBeneficiary);
         assertEq(balanceAfter, balanceBefore + 1, "NFT should be minted to beneficiary");
+    }
+
+    function testFork_MintFromSupportsTokenPricingAndPermit2() public {
+        _assertMintFromPullsErc20WithPermit2();
+        _assertMintFromSupportsDifferentPaymentCurrencyThroughPriceFeed();
+        _assertMintFromSupportsUsdPricedUsdcProject();
+    }
+
+    function _assertMintFromPullsErc20WithPermit2() internal {
+        ForkMockERC20 usdc = new ForkMockERC20(6);
+        (uint256 projectId, IJB721TiersHook hook) = _launchDirectPricedProject({
+            paymentToken: address(usdc),
+            paymentDecimals: 6,
+            paymentCurrency: JBCurrencyIds.USD,
+            hookCurrency: JBCurrencyIds.USD,
+            hookDecimals: 6
+        });
+
+        ForkPermit2Wallet permitPoster = new ForkPermit2Wallet();
+        uint256 price = 100e6;
+        uint256 fee = price / 20;
+        uint256 totalAmount = price + fee;
+
+        usdc.mint(address(permitPoster), totalAmount);
+        permitPoster.approveToken(address(usdc), address(permit2), totalAmount);
+
+        JBSingleAllowance memory permit2Allowance = JBSingleAllowance({
+            sigDeadline: block.timestamp + 1 days,
+            // forge-lint: disable-next-line(unsafe-typecast)
+            amount: uint160(totalAmount),
+            expiration: uint48(block.timestamp + 2 days),
+            nonce: 0,
+            signature: ""
+        });
+
+        uint256 balanceBefore = IERC721(address(hook)).balanceOf(nftBeneficiary);
+        uint256 projectBalanceBefore = jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(usdc));
+        CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
+
+        permitPoster.mintFrom(
+            publisher, hook, posts, address(usdc), totalAmount, nftBeneficiary, feeBeneficiary, permit2Allowance, ""
+        );
+
+        assertEq(IERC721(address(hook)).balanceOf(nftBeneficiary), balanceBefore + 1, "NFT should mint");
+        assertEq(
+            jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(usdc)) - projectBalanceBefore,
+            price,
+            "project should receive the post price"
+        );
+        assertEq(usdc.allowance(address(permitPoster), address(publisher)), 0, "publisher approval should stay unset");
+    }
+
+    function _assertMintFromSupportsDifferentPaymentCurrencyThroughPriceFeed() internal {
+        ForkMockERC20 weth = new ForkMockERC20(18);
+        (uint256 projectId, IJB721TiersHook hook) = _launchDirectPricedProject({
+            paymentToken: address(weth),
+            paymentDecimals: 18,
+            paymentCurrency: JBCurrencyIds.ETH,
+            hookCurrency: JBCurrencyIds.USD,
+            hookDecimals: 6
+        });
+
+        MockPriceFeed ethPerUsd = new MockPriceFeed(5e14, 18);
+        vm.prank(multisig);
+        jbPrices.addPriceFeedFor({
+            projectId: 0, pricingCurrency: JBCurrencyIds.ETH, unitCurrency: JBCurrencyIds.USD, feed: ethPerUsd
+        });
+
+        uint256 price = 100e6;
+        uint256 convertedPrice = 5e16;
+        uint256 fee = convertedPrice / 20;
+        uint256 totalAmount = convertedPrice + fee;
+
+        weth.mint(poster, totalAmount);
+        vm.prank(poster);
+        weth.approve(address(publisher), totalAmount);
+
+        uint256 balanceBefore = IERC721(address(hook)).balanceOf(nftBeneficiary);
+        uint256 projectBalanceBefore = jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(weth));
+        CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
+
+        vm.prank(poster);
+        publisher.mintFrom(hook, posts, address(weth), totalAmount, nftBeneficiary, feeBeneficiary, "");
+
+        assertEq(IERC721(address(hook)).balanceOf(nftBeneficiary), balanceBefore + 1, "NFT should mint");
+        assertEq(
+            jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(weth)) - projectBalanceBefore,
+            convertedPrice,
+            "project should receive the converted post price"
+        );
+    }
+
+    function _assertMintFromSupportsUsdPricedUsdcProject() internal {
+        ForkMockERC20 usdc = new ForkMockERC20(6);
+        (uint256 projectId, IJB721TiersHook hook) = _launchDirectPricedProject({
+            paymentToken: address(usdc),
+            paymentDecimals: 6,
+            paymentCurrency: JBCurrencyIds.USD,
+            hookCurrency: JBCurrencyIds.USD,
+            hookDecimals: 6
+        });
+
+        uint256 price = 100e6;
+        uint256 fee = price / 20;
+        uint256 totalAmount = price + fee;
+
+        usdc.mint(poster, totalAmount);
+        vm.prank(poster);
+        usdc.approve(address(publisher), totalAmount);
+
+        uint256 balanceBefore = IERC721(address(hook)).balanceOf(nftBeneficiary);
+        uint256 projectBalanceBefore = jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(usdc));
+        CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
+
+        vm.prank(poster);
+        publisher.mintFrom(hook, posts, address(usdc), totalAmount, nftBeneficiary, feeBeneficiary, "");
+
+        assertEq(IERC721(address(hook)).balanceOf(nftBeneficiary), balanceBefore + 1, "NFT should mint");
+        assertEq(
+            jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(usdc)) - projectBalanceBefore,
+            price,
+            "project should receive the post price"
+        );
     }
 
     function testFork_DeployProjectForRequiresSafeProjectNftReceiver() public {
@@ -376,7 +574,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         jbFeelessAddresses = new JBFeelessAddresses(multisig);
         jbTerminalStore = new JBTerminalStore(jbDirectory, jbPrices, jbRulesets);
 
-        address permit2 = deployPermit2();
+        permit2 = IPermit2(deployPermit2());
 
         jbMultiTerminal = new JBMultiTerminal(
             jbFeelessAddresses,
@@ -385,7 +583,7 @@ contract PublishForkTest is Test, DeployPermit2 {
             jbSplits,
             jbTerminalStore,
             jbTokens,
-            IPermit2(permit2),
+            permit2,
             trustedForwarder
         );
     }
@@ -495,6 +693,132 @@ contract PublishForkTest is Test, DeployPermit2 {
         contexts[0] = JBAccountingContext({
             token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
+
+        configs = new JBTerminalConfig[](1);
+        configs[0] =
+            JBTerminalConfig({terminal: IJBTerminal(address(jbMultiTerminal)), accountingContextsToAccept: contexts});
+    }
+
+    function _launchDirectPricedProject(
+        address paymentToken,
+        uint8 paymentDecimals,
+        uint32 paymentCurrency,
+        uint32 hookCurrency,
+        uint8 hookDecimals
+    )
+        internal
+        returns (uint256 projectId, IJB721TiersHook hook)
+    {
+        projectId = jbProjects.count() + 1;
+        hook = _deployPricedHook({projectId: projectId, hookCurrency: hookCurrency, hookDecimals: hookDecimals});
+
+        uint256 launchedProjectId = _launchPricedRulesetFor({
+            hook: hook,
+            hookCurrency: hookCurrency,
+            terminalConfigurations: _singleTokenTerminalConfig({
+                token: paymentToken, decimals: paymentDecimals, currency: paymentCurrency
+            })
+        });
+        assertEq(launchedProjectId, projectId, "hook/project ids should align");
+
+        _grantPublisherTierPermission(projectId);
+        _configureOpenPostCategory(hook);
+    }
+
+    function _configureOpenPostCategory(IJB721TiersHook hook) internal {
+        CTAllowedPost[] memory allowedPosts = new CTAllowedPost[](1);
+        allowedPosts[0] = CTAllowedPost({
+            hook: address(hook),
+            category: POST_CATEGORY,
+            minimumPrice: 0,
+            minimumTotalSupply: 1,
+            maximumTotalSupply: 10_000,
+            maximumSplitPercent: 0,
+            allowedAddresses: new address[](0)
+        });
+        publisher.configurePostingCriteriaFor(allowedPosts);
+    }
+
+    function _grantPublisherTierPermission(uint256 projectId) internal {
+        uint8[] memory permissionIds = new uint8[](1);
+        permissionIds[0] = JBPermissionIds.ADJUST_721_TIERS;
+        jbPermissions.setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: address(publisher),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                projectId: uint64(projectId),
+                permissionIds: permissionIds
+            })
+        });
+    }
+
+    function _deployPricedHook(
+        uint256 projectId,
+        uint32 hookCurrency,
+        uint8 hookDecimals
+    )
+        internal
+        returns (IJB721TiersHook hook)
+    {
+        JB721InitTiersConfig memory tiersConfig =
+            JB721InitTiersConfig({tiers: new JB721TierConfig[](0), currency: hookCurrency, decimals: hookDecimals});
+        JB721TiersHookFlags memory flags = JB721TiersHookFlags({
+            noNewTiersWithReserves: false,
+            noNewTiersWithVotes: false,
+            noNewTiersWithOwnerMinting: false,
+            preventOverspending: false,
+            issueTokensForSplits: false
+        });
+        JBDeploy721TiersHookConfig memory config = JBDeploy721TiersHookConfig({
+            name: "PricedCrop",
+            symbol: "PRICE",
+            baseUri: "ipfs://",
+            tokenUriResolver: IJB721TokenUriResolver(address(0)),
+            contractUri: "ipfs://priced",
+            tiersConfig: tiersConfig,
+            flags: flags
+        });
+
+        hook =
+            hookDeployer.deployHookFor({projectId: projectId, deployTiersHookConfig: config, salt: bytes32(projectId)});
+    }
+
+    function _launchPricedRulesetFor(
+        IJB721TiersHook hook,
+        uint32 hookCurrency,
+        JBTerminalConfig[] memory terminalConfigurations
+    )
+        internal
+        returns (uint256 projectId)
+    {
+        JBRulesetConfig[] memory rulesetConfigs = new JBRulesetConfig[](1);
+        rulesetConfigs[0].weight = 1_000_000 * (10 ** 18);
+        rulesetConfigs[0].metadata.baseCurrency = hookCurrency;
+        rulesetConfigs[0].metadata.dataHook = address(hook);
+        rulesetConfigs[0].metadata.useDataHookForPay = true;
+        rulesetConfigs[0].metadata.useDataHookForCashOut = true;
+
+        projectId = jbController.launchProjectFor({
+            owner: projectOwner,
+            projectUri: "ipfs://priced-project",
+            rulesetConfigurations: rulesetConfigs,
+            terminalConfigurations: terminalConfigurations,
+            memo: "priced project"
+        });
+    }
+
+    function _singleTokenTerminalConfig(
+        address token,
+        uint8 decimals,
+        uint32 currency
+    )
+        internal
+        view
+        returns (JBTerminalConfig[] memory configs)
+    {
+        JBAccountingContext[] memory contexts = new JBAccountingContext[](1);
+        contexts[0] = JBAccountingContext({token: token, decimals: decimals, currency: currency});
 
         configs = new JBTerminalConfig[](1);
         configs[0] =

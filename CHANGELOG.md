@@ -13,13 +13,22 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 - `CTDeployerAllowedPost`
 - `CTPost`
 
+## 0.0.64 — Add Permit2 publisher payments and cross-currency pricing
+
+- Added a `CTPublisher.mintFrom` overload that accepts a `JBSingleAllowance`, allowing ERC-20 publish payments to be pulled through Permit2 without a direct publisher approval.
+- `CTPublisher.mintFrom` now prices hook tiers into the selected payment token's terminal accounting units. Same-currency payments scale decimals directly; different-currency payments use the hook's `PRICES` oracle and revert if no nonzero price is available.
+- ETH and the native-token currency alias are treated as the same currency for native-token payments, preserving existing ETH-priced collection behavior without requiring an identity price feed.
+- The project terminal remains the source of truth for whether a payment token is accepted. Croptop validates the selected token's accounting context, then the terminal payment and post-payment NFT delivery check complete the mint.
+- If the fee project has no terminal for the selected ERC-20, the fee is refunded to `_msgSender()` instead of attempting a zero-address terminal call.
+- Added unit and fork coverage for Permit2 payments, USD-priced USDC mints, converted payment-token mints, missing price feeds, and missing fee-terminal refunds.
+
 ## 0.0.63 — Support token-aware publisher mints
 
 - `CTPublisher.mintFrom` now takes a terminal `token` and `amount`, matching the payment shape used by Juicebox terminals.
-- Native-token mints require `amount == msg.value` and an ETH/native-token-alias 18-decimal hook pricing context.
-- ERC-20 mints pull `amount` from the caller, require the project's terminal accounting context for `token` to match the hook's tier pricing context, and grant exact-use temporary allowances to the project and fee terminals.
+- Native-token mints require `amount == msg.value`.
+- ERC-20 mints pull `amount` from the caller and grant exact-use temporary allowances to the project and fee terminals.
 - `CTPublisher.mintFrom` still verifies that the NFT beneficiary's hook-store balance increases by the number of requested posts after the project payment.
-- Added coverage for ERC-20 pricing success, mismatched payment-token accounting contexts, native-token pricing mismatch, and terminal paths that accept payment without delivering NFTs.
+- Added coverage for ERC-20 pricing success, native-token pricing, and terminal paths that accept payment without delivering NFTs.
 
 ## 0.0.62 — Verify publisher mint delivery and native ETH pricing
 

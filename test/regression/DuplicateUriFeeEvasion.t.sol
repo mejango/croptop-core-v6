@@ -6,12 +6,14 @@ import "forge-std/Test.sol";
 
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTPublisher} from "../../src/CTPublisher.sol";
@@ -87,13 +89,31 @@ contract DuplicateUriFeeEvasionRegression is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
         vm.mockCall(
             address(directory),
-            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, hookProjectId),
+            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, hookProjectId, JBConstants.NATIVE_TOKEN),
             abi.encode(terminalAddr)
         );
         vm.mockCall(
             address(directory),
-            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, feeProjectId),
+            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, feeProjectId, JBConstants.NATIVE_TOKEN),
             abi.encode(feeTerminalAddr)
+        );
+        vm.mockCall(
+            terminalAddr,
+            abi.encodeWithSelector(
+                IJBTerminal.accountingContextForTokenOf.selector, hookProjectId, JBConstants.NATIVE_TOKEN
+            ),
+            abi.encode(
+                JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: JBCurrencyIds.ETH})
+            )
+        );
+        vm.mockCall(
+            feeTerminalAddr,
+            abi.encodeWithSelector(
+                IJBTerminal.accountingContextForTokenOf.selector, feeProjectId, JBConstants.NATIVE_TOKEN
+            ),
+            abi.encode(
+                JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: JBCurrencyIds.ETH})
+            )
         );
         vm.mockCall(terminalAddr, "", abi.encode(uint256(0)));
         vm.mockCall(feeTerminalAddr, "", abi.encode(uint256(0)));

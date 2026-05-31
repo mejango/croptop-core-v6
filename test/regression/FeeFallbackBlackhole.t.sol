@@ -13,6 +13,7 @@ import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.s
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -100,6 +101,10 @@ contract AcceptingProjectTerminal {
     function configure(BlackholeMockStore store_, address hook_) external {
         _store = store_;
         _hook = hook_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
     }
 
     function pay(
