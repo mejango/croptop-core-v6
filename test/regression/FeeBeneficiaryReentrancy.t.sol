@@ -11,6 +11,7 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -40,6 +41,8 @@ contract MockPermissions is IJBPermissions {
 }
 
 contract MockStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
     function maxTierIdOf(address) external pure returns (uint256) {
         return 0;
     }
@@ -50,6 +53,10 @@ contract MockStore {
 
     function tierOf(address, uint256, bool) external pure returns (JB721Tier memory tier) {
         return tier;
+    }
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
     }
 
     // Accept direct ether transfers (required alongside payable fallback to silence compiler warning 3628).
@@ -81,6 +88,10 @@ contract MockHook {
 
     function owner() external view returns (address) {
         return OWNER;
+    }
+
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
     }
 
     // Accept direct ether transfers (required alongside payable fallback to silence compiler warning 3628).
@@ -146,12 +157,15 @@ contract ReentrantProjectTerminal {
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
     IJB721TiersHook public immutable hook;
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
+    MockStore public immutable store;
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
     address public immutable attackerFeeBeneficiary;
     bool internal entered;
 
-    constructor(CTPublisher publisher_, IJB721TiersHook hook_, address attackerFeeBeneficiary_) {
+    constructor(CTPublisher publisher_, IJB721TiersHook hook_, MockStore store_, address attackerFeeBeneficiary_) {
         publisher = publisher_;
         hook = hook_;
+        store = store_;
         attackerFeeBeneficiary = attackerFeeBeneficiary_;
     }
 
@@ -159,7 +173,7 @@ contract ReentrantProjectTerminal {
         uint256,
         address,
         uint256,
-        address,
+        address beneficiary,
         uint256,
         string calldata,
         bytes calldata
@@ -184,6 +198,7 @@ contract ReentrantProjectTerminal {
             publisher.mintFrom{value: 21}(hook, posts, address(this), attackerFeeBeneficiary, bytes(""));
         }
 
+        store.mint({hook: address(hook), owner: beneficiary, count: 1});
         return 0;
     }
 
@@ -210,7 +225,7 @@ contract FeeBeneficiaryReentrancyTest is Test {
         publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, address(0));
         feeTerminal = new FeeTerminalRecorder();
         projectTerminal =
-            new ReentrantProjectTerminal(publisher, IJB721TiersHook(address(hook)), attackerFeeBeneficiary);
+            new ReentrantProjectTerminal(publisher, IJB721TiersHook(address(hook)), store, attackerFeeBeneficiary);
         directory.setTerminals(address(projectTerminal), address(feeTerminal));
 
         CTAllowedPost[] memory allowedPosts = new CTAllowedPost[](1);

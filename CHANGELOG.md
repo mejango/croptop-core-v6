@@ -13,6 +13,12 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 - `CTDeployerAllowedPost`
 - `CTPost`
 
+## 0.0.62 — Verify publisher mint delivery and native ETH pricing
+
+- `CTPublisher.mintFrom` now requires the target 721 hook's tier pricing context to be ETH, or the native-token currency alias, with 18 decimals, matching the publisher's native-ETH payment and fee path.
+- `CTPublisher.mintFrom` now verifies that the NFT beneficiary's hook-store balance increases by the number of requested posts after the project payment. If the project terminal path does not mint the requested NFTs, the transaction reverts and rolls back the tier adjustment and payment.
+- Added regression coverage for unsupported pricing contexts and terminal paths that accept payment without delivering NFTs.
+
 ## 0.0.47 — Bump v6 deps to nana-core-v6 0.0.53 cohort
 
 - `@bananapus/core-v6`: `^0.0.49 → ^0.0.53` ([PR #145](https://github.com/Bananapus/nana-core-v6/pull/145)).

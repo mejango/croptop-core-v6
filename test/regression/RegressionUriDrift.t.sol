@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
@@ -40,6 +41,7 @@ contract RegressionUriDriftTest is Test {
         directory = new MockDirectory(IJBTerminal(address(terminal)));
         store = new MockStore();
         hook = new MockHook(hookOwner, PROJECT_ID, store);
+        terminal.configure({store_: store, hook_: address(hook)});
         publisher = new CTPublisher(
             IJBDirectory(address(directory)), IJBPermissions(address(permissions)), FEE_PROJECT_ID, address(0)
         );
@@ -117,11 +119,19 @@ contract MockDirectory {
 }
 
 contract MockTerminal {
+    MockStore internal _store;
+    address internal _hook;
+
+    function configure(MockStore store_, address hook_) external {
+        _store = store_;
+        _hook = hook_;
+    }
+
     function pay(
         uint256,
         address,
         uint256,
-        address,
+        address beneficiary,
         uint256,
         string calldata,
         bytes calldata
@@ -130,11 +140,14 @@ contract MockTerminal {
         payable
         returns (uint256)
     {
+        _store.mint({hook: _hook, owner: beneficiary, count: 1});
         return 0;
     }
 }
 
 contract MockStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
     struct TierData {
         bytes32 uri;
         uint104 price;
@@ -191,6 +204,10 @@ contract MockStore {
         });
     }
 
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
+    }
+
     // forge-lint: disable-next-line(mixed-case-function)
     function setEncodedIPFSUriOf(uint256 tierId, bytes32 uri) external {
         _tiers[tierId].uri = uri;
@@ -223,6 +240,10 @@ contract MockHook {
 
     function owner() external view returns (address) {
         return _owner;
+    }
+
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
     }
 
     function STORE() external view returns (IJB721TiersHookStore) {

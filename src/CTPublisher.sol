@@ -11,6 +11,7 @@ import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBOwnable} from "@bananapus/ownable-v6/src/JBOwnable.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
@@ -34,7 +35,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_DuplicatePost(bytes32 encodedIpfsUri);
     error CTPublisher_EmptyEncodedIpfsUri(uint256 postIndex);
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
+    error CTPublisher_InvalidPricingContext(uint256 currency, uint256 decimals);
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
+    error CTPublisher_MintNotDelivered(
+        address hook, address beneficiary, uint256 expectedBalance, uint256 actualBalance
+    );
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
     error CTPublisher_DuplicatePayMetadata(bytes4 payMetadataId);
@@ -213,6 +218,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         // Keep a reference to the project's ID.
         uint256 projectId = hook.projectId();
 
+        (uint256 pricingCurrency, uint256 pricingDecimals) = hook.pricingContext();
+        // Some existing native-ETH hooks use the native token address truncated to a currency ID instead of
+        // JBCurrencyIds.ETH. That alias is still 18-decimal native ETH pricing, so the ETH-denominated fee math holds.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 nativeTokenCurrency = uint256(uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        if ((pricingCurrency != JBCurrencyIds.ETH && pricingCurrency != nativeTokenCurrency) || pricingDecimals != 18) {
+            revert CTPublisher_InvalidPricingContext({currency: pricingCurrency, decimals: pricingDecimals});
+        }
+
+        uint256 mintCount = posts.length;
         {
             // Setup the posts.
             (JB721TierConfig[] memory tiersToAdd, uint256[] memory tierIdsToMint, uint256 totalPrice) =
@@ -279,6 +294,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         });
 
         {
+            uint256 balanceBefore = hook.STORE().balanceOf({hook: address(hook), owner: nftBeneficiary});
+
             // Get a reference to the project's current ETH payment terminal.
             IJBTerminal projectTerminal =
                 DIRECTORY.primaryTerminalOf({projectId: projectId, token: JBConstants.NATIVE_TOKEN});
@@ -293,6 +310,17 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 memo: "Minted from Croptop",
                 metadata: mintMetadata
             });
+
+            uint256 expectedBalance = balanceBefore + mintCount;
+            uint256 balanceAfter = hook.STORE().balanceOf({hook: address(hook), owner: nftBeneficiary});
+            if (balanceAfter < expectedBalance) {
+                revert CTPublisher_MintNotDelivered({
+                    hook: address(hook),
+                    beneficiary: nftBeneficiary,
+                    expectedBalance: expectedBalance,
+                    actualBalance: balanceAfter
+                });
+            }
         }
 
         // Reuse payValue to hold the pre-computed fee amount, avoiding reliance on address(this).balance

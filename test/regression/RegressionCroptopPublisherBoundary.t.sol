@@ -11,6 +11,7 @@ import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -41,11 +42,19 @@ contract RegressionMockPermissions is IJBPermissions {
 contract RegressionMockTerminal {
     mapping(uint256 projectId => uint256 amount) public paidToProject;
 
+    RegressionMockStore internal _store;
+    address internal _hook;
+
+    function configure(RegressionMockStore store_, address hook_) external {
+        _store = store_;
+        _hook = hook_;
+    }
+
     function pay(
         uint256 projectId,
         address,
         uint256,
-        address,
+        address beneficiary,
         uint256,
         string calldata,
         bytes calldata
@@ -55,6 +64,7 @@ contract RegressionMockTerminal {
         returns (uint256)
     {
         paidToProject[projectId] += msg.value;
+        _store.mint({hook: _hook, owner: beneficiary, count: 1});
         return 0;
     }
 }
@@ -81,6 +91,7 @@ contract RegressionMockStore {
     }
 
     uint256 public maxTierId;
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
     mapping(uint256 tierId => StoredTier) public tierData;
 
     function encodedUriOf(uint256 tierId) external view returns (bytes32) {
@@ -108,6 +119,10 @@ contract RegressionMockStore {
 
     function isTierRemoved(address, uint256 tierId) external view returns (bool) {
         return tierData[tierId].removed;
+    }
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
     }
 
     function tierOf(address, uint256 tierId, bool) external view returns (JB721Tier memory tier) {
@@ -154,6 +169,10 @@ contract RegressionMutableHook {
 
     function owner() external view returns (address) {
         return ownerAddress;
+    }
+
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
     }
 
     function METADATA_ID_TARGET() external view returns (address) {
@@ -208,6 +227,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         hook = new RegressionMutableHook(PROJECT_ID, IJB721TiersHookStore(address(store)), hookOwner);
         projectTerminal = new RegressionMockTerminal();
         feeTerminal = new RegressionMockTerminal();
+        projectTerminal.configure({store_: store, hook_: address(hook)});
+        feeTerminal.configure({store_: store, hook_: address(hook)});
         publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, FEE_PROJECT_ID, address(0));
 
         directory.setTerminal(PROJECT_ID, address(projectTerminal));

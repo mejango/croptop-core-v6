@@ -11,6 +11,7 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -40,6 +41,8 @@ contract BlackholeMockPermissions is IJBPermissions {
 }
 
 contract BlackholeMockStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
     function maxTierIdOf(address) external pure returns (uint256) {
         return 0;
     }
@@ -50,6 +53,10 @@ contract BlackholeMockStore {
 
     function tierOf(address, uint256, bool) external pure returns (JB721Tier memory tier) {
         return tier;
+    }
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
     }
 }
 
@@ -77,16 +84,28 @@ contract BlackholeMockHook {
     function owner() external view returns (address) {
         return OWNER;
     }
+
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
+    }
 }
 
 contract AcceptingProjectTerminal {
     uint256 public totalReceived;
 
+    BlackholeMockStore internal _store;
+    address internal _hook;
+
+    function configure(BlackholeMockStore store_, address hook_) external {
+        _store = store_;
+        _hook = hook_;
+    }
+
     function pay(
         uint256,
         address,
         uint256,
-        address,
+        address beneficiary,
         uint256,
         string calldata,
         bytes calldata
@@ -96,6 +115,7 @@ contract AcceptingProjectTerminal {
         returns (uint256)
     {
         totalReceived += msg.value;
+        _store.mint({hook: _hook, owner: beneficiary, count: 1});
         return 0;
     }
 }
@@ -194,6 +214,7 @@ contract FeeFallbackBlackholeTest is Test {
         store = new BlackholeMockStore();
         hook = new BlackholeMockHook(2, IJB721TiersHookStore(address(store)), address(this));
         projectTerminal = new AcceptingProjectTerminal();
+        projectTerminal.configure({store_: store, hook_: address(hook)});
         feeTerminal = new RevertingFeeTerminal();
         feeBeneficiary = new RejectingFeeBeneficiary();
         caller = new RejectingMintCaller();

@@ -10,6 +10,7 @@ import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -17,6 +18,54 @@ import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
+
+contract StaleTierStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
+    uint256 public maxTierId;
+
+    function maxTierIdOf(address) external view returns (uint256) {
+        return maxTierId;
+    }
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
+    }
+
+    function setMaxTierId(uint256 value) external {
+        maxTierId = value;
+    }
+}
+
+contract StaleTierTerminal {
+    StaleTierStore public store;
+
+    address public hook;
+    uint256 public mintCount;
+
+    function configure(StaleTierStore store_, address hook_, uint256 mintCount_) external {
+        store = store_;
+        hook = hook_;
+        mintCount = mintCount_;
+    }
+
+    function pay(
+        uint256,
+        address,
+        uint256,
+        address beneficiary,
+        uint256,
+        string calldata,
+        bytes calldata
+    )
+        external
+        payable
+        returns (uint256)
+    {
+        if (mintCount != 0) store.mint({hook: hook, owner: beneficiary, count: mintCount});
+        return 0;
+    }
+}
 
 /// @title StaleTierIdMappingRegression
 /// @notice Stale tierIdForEncodedIpfsUriOf mapping after external tier removal.
@@ -30,8 +79,8 @@ contract StaleTierIdMappingRegression is Test {
 
     address hookOwner = makeAddr("hookOwner");
     address hookAddr = makeAddr("hook");
-    address hookStoreAddr = makeAddr("hookStore");
-    address terminalAddr = makeAddr("terminal");
+    address hookStoreAddr;
+    address terminalAddr;
     address poster = makeAddr("poster");
 
     uint256 feeProjectId = 1;
@@ -39,8 +88,16 @@ contract StaleTierIdMappingRegression is Test {
 
     bytes32 constant TEST_URI = keccak256("removable-content");
 
+    StaleTierStore hookStore;
+    StaleTierTerminal terminal;
+
     function setUp() public {
         publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+
+        hookStore = new StaleTierStore();
+        terminal = new StaleTierTerminal();
+        hookStoreAddr = address(hookStore);
+        terminalAddr = address(terminal);
 
         // Mock hook.owner().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
@@ -48,6 +105,12 @@ contract StaleTierIdMappingRegression is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
+        // Mock hook.pricingContext().
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.ETH), uint256(18))
+        );
 
         // Mock permissions to return true by default.
         vm.mockCall(
@@ -75,9 +138,8 @@ contract StaleTierIdMappingRegression is Test {
     }
 
     function _setupMintMocks(uint256 maxTierId) internal {
-        vm.mockCall(
-            hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(maxTierId)
-        );
+        hookStore.setMaxTierId(maxTierId);
+        terminal.configure({store_: hookStore, hook_: hookAddr, mintCount_: 100});
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
         vm.mockCall(hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
         vm.mockCall(
@@ -85,7 +147,6 @@ contract StaleTierIdMappingRegression is Test {
             abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector),
             abi.encode(terminalAddr)
         );
-        vm.mockCall(terminalAddr, "", abi.encode(uint256(0)));
     }
 
     /// @notice After a tier is removed externally, the stale mapping should be cleared

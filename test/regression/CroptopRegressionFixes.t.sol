@@ -11,6 +11,7 @@ import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -24,11 +25,21 @@ import {CTPost} from "../../src/structs/CTPost.sol";
 // ---------------------------------------------------------------------------
 
 contract P12MockTerminal {
+    // forge-lint: disable-start(screaming-snake-case-immutable)
+    P12MockStore internal _store;
+    address internal _hook;
+    // forge-lint: disable-end(screaming-snake-case-immutable)
+
+    function configure(P12MockStore store_, address hook_) external {
+        _store = store_;
+        _hook = hook_;
+    }
+
     function pay(
         uint256,
         address,
         uint256,
-        address,
+        address beneficiary,
         uint256,
         string calldata,
         bytes calldata
@@ -37,6 +48,7 @@ contract P12MockTerminal {
         payable
         returns (uint256)
     {
+        _store.mint({hook: _hook, owner: beneficiary, count: 1});
         return 0;
     }
 }
@@ -55,6 +67,8 @@ contract P12MockDirectory {
 }
 
 contract P12MockStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
     struct TierData {
         bytes32 uri;
         uint104 price;
@@ -111,6 +125,10 @@ contract P12MockStore {
         });
     }
 
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
+    }
+
     // forge-lint: disable-next-line(mixed-case-function)
     function setEncodedIPFSUriOf(uint256 tierId, bytes32 uri) external {
         _tiers[tierId].uri = uri;
@@ -143,6 +161,10 @@ contract P12MockHook {
 
     function owner() external view returns (address) {
         return _owner;
+    }
+
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
     }
 
     // forge-lint: disable-next-line(mixed-case-function)
@@ -206,6 +228,7 @@ contract CroptopRegressionFixesTest is Test {
         directory = new P12MockDirectory(IJBTerminal(address(terminal)));
         store = new P12MockStore();
         hook = new P12MockHook(hookOwner, PROJECT_ID, store);
+        terminal.configure({store_: store, hook_: address(hook)});
         publisher = new CTPublisher(
             IJBDirectory(address(directory)), IJBPermissions(address(permissions)), FEE_PROJECT_ID, address(0)
         );

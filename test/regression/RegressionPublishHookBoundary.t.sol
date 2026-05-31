@@ -11,6 +11,7 @@ import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -80,6 +81,10 @@ contract PublishBoundaryStore {
     uint256 public maxTierId;
     mapping(uint256 tierId => JB721Tier tier) internal _tierOf;
 
+    function balanceOf(address, address) external pure returns (uint256) {
+        return 0;
+    }
+
     function addTier(JB721TierConfig calldata config) external {
         maxTierId++;
         _tierOf[maxTierId] = JB721Tier({
@@ -136,6 +141,10 @@ contract PublishBoundaryHook {
         return PROJECT_ID;
     }
 
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
+    }
+
     function METADATA_ID_TARGET() external view returns (address) {
         return address(this);
     }
@@ -149,7 +158,7 @@ contract PublishBoundaryHook {
 }
 
 contract RegressionPublishHookBoundaryTest is Test {
-    function testMintFromCanPayProjectAndFeeWithoutMintingWhenTerminalDoesNotInvokeHook() external {
+    function testMintFromRevertsWhenTerminalDoesNotInvokeHook() external {
         uint256 projectId = 2;
         uint256 feeProjectId = 1;
         uint256 price = 1 ether;
@@ -196,14 +205,16 @@ contract RegressionPublishHookBoundaryTest is Test {
             splits: new JBSplit[](0)
         });
 
+        vm.expectRevert(
+            abi.encodeWithSelector(CTPublisher.CTPublisher_MintNotDelivered.selector, address(hook), beneficiary, 1, 0)
+        );
         publisher.mintFrom{value: price + fee}(
             IJB721TiersHook(address(hook)), posts, beneficiary, address(0xFEE), bytes("")
         );
 
-        assertEq(hook.adjustedTiers(), 1, "tier was created");
-        assertEq(projectTerminal.paidValue(), price, "project payment succeeded");
-        assertEq(feeTerminal.paidValue(), fee, "fee payment succeeded");
-        assertEq(projectTerminal.paidBeneficiary(), beneficiary, "beneficiary was only passed to terminal");
-        assertEq(hook.mintedNfts(), 0, "Croptop did not verify an NFT mint happened");
+        assertEq(hook.adjustedTiers(), 0, "tier creation rolled back");
+        assertEq(projectTerminal.paidValue(), 0, "project payment rolled back");
+        assertEq(feeTerminal.paidValue(), 0, "fee payment was never attempted");
+        assertEq(hook.mintedNfts(), 0, "terminal never invoked hook minting");
     }
 }

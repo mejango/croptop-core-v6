@@ -13,6 +13,7 @@ import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
@@ -23,6 +24,54 @@ import {CTPublisher} from "../src/CTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../src/structs/CTPost.sol";
 
+contract MockCroptopHookStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
+    uint256 public maxTierId;
+
+    function maxTierIdOf(address) external view returns (uint256) {
+        return maxTierId;
+    }
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
+    }
+
+    function setMaxTierId(uint256 value) external {
+        maxTierId = value;
+    }
+}
+
+contract MockCroptopTerminal {
+    MockCroptopHookStore public store;
+
+    address public hook;
+    uint256 public mintCount;
+
+    function configure(MockCroptopHookStore store_, address hook_, uint256 mintCount_) external {
+        store = store_;
+        hook = hook_;
+        mintCount = mintCount_;
+    }
+
+    function pay(
+        uint256,
+        address,
+        uint256,
+        address beneficiary,
+        uint256,
+        string calldata,
+        bytes calldata
+    )
+        external
+        payable
+        returns (uint256)
+    {
+        if (mintCount != 0) store.mint({hook: hook, owner: beneficiary, count: mintCount});
+        return 0;
+    }
+}
+
 /// @notice Unit tests for CTPublisher.
 contract TestCTPublisher is Test {
     CTPublisher publisher;
@@ -32,15 +81,22 @@ contract TestCTPublisher is Test {
 
     address hookOwner = makeAddr("hookOwner");
     address hookAddr = makeAddr("hook");
-    address hookStoreAddr = makeAddr("hookStore");
+    address hookStoreAddr;
     address poster = makeAddr("poster");
     address unauthorized = makeAddr("unauthorized");
 
     uint256 feeProjectId = 1;
     uint256 hookProjectId = 42;
 
+    MockCroptopHookStore hookStore;
+    MockCroptopTerminal terminal;
+
     function setUp() public {
         publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+
+        hookStore = new MockCroptopHookStore();
+        hookStoreAddr = address(hookStore);
+        terminal = new MockCroptopTerminal();
 
         // Mock hook.owner() for permission checks.
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
@@ -50,6 +106,13 @@ contract TestCTPublisher is Test {
 
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
+
+        // Mock hook.pricingContext().
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.ETH), uint256(18))
+        );
 
         // Mock permissions to return true by default.
         vm.mockCall(
@@ -415,19 +478,16 @@ contract TestCTPublisher is Test {
 
     /// @dev Set up mocks for a successful mintFrom path (up to adjustTiers call).
     function _setupMintMocks() internal {
-        vm.mockCall(
-            hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(uint256(0))
-        );
+        hookStore.setMaxTierId(0);
+        terminal.configure({store_: hookStore, hook_: hookAddr, mintCount_: 100});
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
         // METADATA_ID_TARGET() selector.
         vm.mockCall(hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
         vm.mockCall(
             address(directory),
             abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector),
-            abi.encode(makeAddr("terminal"))
+            abi.encode(address(terminal))
         );
-        // Mock terminal.pay() — use a broad mock for the terminal address.
-        vm.mockCall(makeAddr("terminal"), "", abi.encode(uint256(0)));
     }
 
     function test_mintFrom_splitPercentExceedsLimit_reverts() public {
@@ -758,21 +818,23 @@ contract TestCTPublisher is Test {
     function test_mintFrom_feeProject_noFeeDeducted() public {
         // Configure a category on a hook whose PROJECT_ID == FEE_PROJECT_ID (1).
         address feeHook = makeAddr("feeHook");
-        address feeHookStore = makeAddr("feeHookStore");
         vm.mockCall(feeHook, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
         vm.mockCall(feeHook, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(feeProjectId));
-        vm.mockCall(feeHook, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(feeHookStore));
+        vm.mockCall(feeHook, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(address(hookStore)));
         vm.mockCall(
-            feeHookStore, abi.encodeWithSelector(IJB721TiersHookStore.maxTierIdOf.selector), abi.encode(uint256(0))
+            feeHook,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.ETH), uint256(18))
         );
+        hookStore.setMaxTierId(0);
+        terminal.configure({store_: hookStore, hook_: feeHook, mintCount_: 100});
         vm.mockCall(feeHook, abi.encodeWithSelector(IJB721TiersHook.adjustTiers.selector), abi.encode());
         vm.mockCall(feeHook, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
         vm.mockCall(
             address(directory),
             abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector),
-            abi.encode(makeAddr("terminal"))
+            abi.encode(address(terminal))
         );
-        vm.mockCall(makeAddr("terminal"), "", abi.encode(uint256(0)));
 
         CTAllowedPost[] memory allowed = new CTAllowedPost[](1);
         allowed[0] = CTAllowedPost({
@@ -807,6 +869,77 @@ contract TestCTPublisher is Test {
                 "fee project should not charge fee"
             );
         }
+    }
+
+    function test_mintFrom_revertsForNonEthPricingContext() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.USD), uint256(6))
+        );
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("usd-priced"),
+            totalSupply: 10,
+            price: 1_000_000,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        vm.prank(poster);
+        vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InvalidPricingContext.selector, 2, 6));
+        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+    }
+
+    function test_mintFrom_supportsNativeTokenPricingAlias() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            // forge-lint: disable-next-line(unsafe-typecast)
+            abi.encode(uint256(uint32(uint160(JBConstants.NATIVE_TOKEN))), uint256(18))
+        );
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("native-priced"),
+            totalSupply: 10,
+            price: 0.1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        uint256 fee = 0.1 ether / 20;
+        vm.prank(poster);
+        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+    }
+
+    function test_mintFrom_revertsWhenPaymentDoesNotMintRequestedNfts() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+        terminal.configure({store_: hookStore, hook_: hookAddr, mintCount_: 0});
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("no-delivery"),
+            totalSupply: 10,
+            price: 0.1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        uint256 fee = 0.1 ether / 20;
+        vm.prank(poster);
+        vm.expectRevert(
+            abi.encodeWithSelector(CTPublisher.CTPublisher_MintNotDelivered.selector, hookAddr, poster, 1, 0)
+        );
+        publisher.mintFrom{value: 0.1 ether + fee}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
     }
 
     //*********************************************************************//
@@ -956,7 +1089,7 @@ contract TestCTPublisher is Test {
         }
 
         vm.expectCall(
-            makeAddr("terminal"),
+            address(terminal),
             0.2 ether,
             abi.encodeWithSelector(
                 IJBTerminal.pay.selector,

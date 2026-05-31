@@ -10,6 +10,7 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
@@ -67,6 +68,10 @@ contract MetadataShadowHook {
 
     function projectId() external pure returns (uint256) {
         return PROJECT_ID;
+    }
+
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
     }
 
     function adjustTiers(JB721TierConfig[] calldata, uint256[] calldata) external {}

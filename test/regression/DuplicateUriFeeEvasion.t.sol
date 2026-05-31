@@ -10,6 +10,7 @@ import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTPublisher} from "../../src/CTPublisher.sol";
@@ -45,6 +46,12 @@ contract DuplicateUriFeeEvasionRegression is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
+        // Mock hook.pricingContext().
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.ETH), uint256(18))
+        );
 
         // Mock permissions to return true by default.
         vm.mockCall(
