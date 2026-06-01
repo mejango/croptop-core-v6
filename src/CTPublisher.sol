@@ -350,25 +350,35 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         internal
         returns (uint256 acceptedAmount)
     {
+        // Native-token payments arrive as msg.value, so they never need ERC-20 pulls or Permit2 handling.
         if (token == JBConstants.NATIVE_TOKEN) {
+            // Keep the explicit `amount` aligned with msg.value because downstream fee math uses `amount`.
             if (amount != msg.value) {
                 revert CTPublisher_NativeTokenAmountMismatch({amount: amount, msgValue: msg.value});
             }
 
+            // ETH cannot be fee-on-transfer, so the accepted amount is exactly the supplied value.
             return amount;
         }
 
+        // ERC-20 payments must not also carry ETH, otherwise the native value would be trapped in this contract.
         if (msg.value != 0) revert CTPublisher_MsgValueNotAllowed({value: msg.value});
 
+        // Permit2 data is optional and lives in the caller's pay metadata so `mintFrom` can keep one public signature.
         (bool hasPermit2Allowance, bytes memory permit2Data) =
             JBMetadataResolver.getDataFor({id: JBMetadataResolver.getId("permit2"), metadata: metadata});
 
         if (hasPermit2Allowance) {
+            // Decode only when present so ordinary ERC-20 approvals and native payments do not need dummy structs.
             JBSingleAllowance memory permit2Allowance = abi.decode(permit2Data, (JBSingleAllowance));
+            // The signed allowance must cover the requested pull; otherwise Permit2 could approve less than this
+            // publish path is about to try to collect.
             if (amount > permit2Allowance.amount) {
                 revert CTPublisher_PermitAllowanceNotEnough({amount: amount, allowance: permit2Allowance.amount});
             }
 
+            // Rebuild Permit2's expected struct with this token and this publisher as spender. This prevents metadata
+            // for a different token or spender from being replayed through the publisher.
             IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
                 details: IAllowanceTransfer.PermitDetails({
                     token: token,
@@ -380,24 +390,33 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 sigDeadline: permit2Allowance.sigDeadline
             });
 
+            // Submit the Permit2 approval for the ERC-2771-aware caller before the pull. If it has already been used or
+            // otherwise fails, continue so an existing ERC-20 approval or Permit2 allowance can still satisfy the pull.
             try PERMIT2.permit({
                 owner: _msgSender(), permitSingle: permitSingle, signature: permit2Allowance.signature
             }) {}
             catch (bytes memory reason) {
+                // Surface failed permit setup without masking the later transfer failure or success path.
                 emit Permit2AllowanceFailed({token: token, owner: _msgSender(), reason: reason});
             }
         }
 
+        // Measure the actual ERC-20 balance delta so fee-on-transfer or otherwise nonstandard tokens cannot overstate
+        // how much the publisher received.
         uint256 balanceBefore = _balanceOf(token);
 
         // Prevent callback-capable tokens from nesting another incoming ERC-20 transfer inside this balance-delta
         // measurement.
         if (_acceptingToken) revert CTPublisher_ReentrantTokenTransfer(token);
+        // The flag is transient, so it only protects the current transaction's balance-delta measurement.
         _acceptingToken = true;
 
+        // Pull from the ERC-2771-aware caller using either direct ERC-20 approval or Permit2 fallback.
         _transferFrom({from: _msgSender(), to: payable(address(this)), token: token, amount: amount});
 
+        // Return what arrived rather than what was requested; downstream pricing and fee math use the real receipt.
         acceptedAmount = _balanceOf(token) - balanceBefore;
+        // Clear the transient guard once the balance-delta measurement has finished.
         _acceptingToken = false;
     }
 
