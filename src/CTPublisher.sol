@@ -118,6 +118,10 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @custom:param category The category for which the allowance applies.
     mapping(address hook => mapping(uint256 category => uint256)) internal _packedAllowanceFor;
 
+    //*********************************************************************//
+    // ------------------- transient stored properties ------------------- //
+    //*********************************************************************//
+
     /// @notice Whether this publisher is currently measuring an incoming ERC-20 balance delta.
     bool internal transient _acceptingToken;
 
