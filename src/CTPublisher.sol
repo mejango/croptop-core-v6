@@ -730,12 +730,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param amount The amount to refund.
     function _refundFee(address token, uint256 amount) internal {
         if (token == JBConstants.NATIVE_TOKEN) {
+            // Native fees are held as ETH, so refund the ERC-2771-aware caller with a raw value transfer.
             (bool success,) = _msgSender().call{value: amount}("");
+            // If the caller cannot receive ETH, revert instead of leaving the fee stranded in this contract.
             if (!success) revert CTPublisher_FeePaymentFailed(amount);
 
+            // The ERC-20 refund path below is only for tokenized terminal tokens.
             return;
         }
 
+        // ERC-20 fees are already held by this contract, so return the token balance directly to the caller.
         IERC20(token).safeTransfer({to: _msgSender(), value: amount});
     }
 
@@ -743,8 +747,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param token The token whose allowance was temporarily granted.
     /// @param spender The terminal expected to consume the allowance.
     function _requireTemporaryAllowanceConsumed(address token, address spender) internal view {
+        // Native payments never grant ERC-20 allowance, so there is nothing to verify.
         if (token == JBConstants.NATIVE_TOKEN) return;
 
+        // The publisher grants exact-use allowances before external terminal calls; any remainder would leave token
+        // spend authority live after the payment is complete.
         uint256 allowance = IERC20(token).allowance({owner: address(this), spender: spender});
         if (allowance != 0) {
             revert CTPublisher_TemporaryAllowanceNotConsumed({token: token, spender: spender, allowance: allowance});
@@ -777,9 +784,14 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         pure
         returns (uint256 scaledAmount)
     {
+        // Equal decimal domains need no conversion, preserving the exact caller-supplied amount.
         if (fromDecimals == toDecimals) return amount;
+
+        // Scaling into more decimals is exact: each source unit maps to a whole number of destination units.
         if (fromDecimals < toDecimals) return amount * (10 ** (toDecimals - fromDecimals));
 
+        // Scaling into fewer decimals can leave a fractional destination unit; round up so the payer cannot underpay
+        // a tier by truncating precision.
         uint256 denominator = 10 ** (fromDecimals - toDecimals);
         return Math.mulDiv({x: amount, y: 1, denominator: denominator, rounding: Math.Rounding.Ceil});
     }
@@ -1014,12 +1026,15 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param token The token to transfer.
     /// @param amount The number of tokens to transfer.
     function _transferFrom(address from, address payable to, address token, uint256 amount) internal {
+        // Prefer ordinary ERC-20 approval when present so existing approval flows do not need Permit2 metadata.
         if (IERC20(token).allowance({owner: from, spender: address(this)}) >= amount) {
             return IERC20(token).safeTransferFrom({from: from, to: to, value: amount});
         }
 
+        // Permit2 stores transfer amounts as uint160, so reject values that would truncate before calling it.
         if (amount > type(uint160).max) revert CTPublisher_OverflowAlert({value: amount, limit: type(uint160).max});
 
+        // Direct approval was insufficient; fall back to Permit2, which enforces the submitted allowance/signature.
         // forge-lint: disable-next-line(unsafe-typecast)
         PERMIT2.transferFrom({from: from, to: to, amount: uint160(amount), token: token});
     }
