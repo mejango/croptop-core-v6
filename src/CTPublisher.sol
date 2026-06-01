@@ -81,9 +81,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @dev This is equal to 100 divided by the fee percent.
     uint256 public constant override FEE_DIVISOR = 20;
 
-    /// @notice The canonical Permit2 utility used to pull ERC-20 payments from posters.
-    IPermit2 public constant override PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
-
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
@@ -93,6 +90,9 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
     /// @notice The ID of the project to which fees will be routed.
     uint256 public immutable override FEE_PROJECT_ID;
+
+    /// @notice The Permit2 utility used to pull ERC-20 payments from posters.
+    IPermit2 public immutable override PERMIT2;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -119,7 +119,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     mapping(address hook => mapping(uint256 category => uint256)) internal _packedAllowanceFor;
 
     /// @notice Whether this publisher is currently measuring an incoming ERC-20 balance delta.
-    bool internal _acceptingToken;
+    bool internal transient _acceptingToken;
 
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
@@ -128,11 +128,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param directory The directory that contains the projects to post to.
     /// @param permissions A contract storing permissions.
     /// @param feeProjectId The ID of the project to which fees will be routed.
+    /// @param permit2 The Permit2 utility used to pull ERC-20 payments from posters.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBDirectory directory,
         IJBPermissions permissions,
         uint256 feeProjectId,
+        IPermit2 permit2,
         address trustedForwarder
     )
         JBPermissioned(permissions)
@@ -140,6 +142,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     {
         DIRECTORY = directory;
         FEE_PROJECT_ID = feeProjectId;
+        PERMIT2 = permit2;
     }
 
     //*********************************************************************//
@@ -221,6 +224,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param nftBeneficiary The beneficiary of the NFT mints.
     /// @param feeBeneficiary The beneficiary of the fee project's token.
     /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
+    /// Include a Permit2 entry targeted to this publisher to pay ERC-20s without a direct publisher approval.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
@@ -234,45 +238,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         payable
         override
     {
-        JBSingleAllowance memory permit2Allowance;
-        uint256 acceptedAmount = _acceptFundsFor({token: token, amount: amount, permit2Allowance: permit2Allowance});
-
-        _mintFrom({
-            hook: hook,
-            posts: posts,
-            token: token,
-            amount: acceptedAmount,
-            nftBeneficiary: nftBeneficiary,
-            feeBeneficiary: feeBeneficiary,
-            additionalPayMetadata: additionalPayMetadata
-        });
-    }
-
-    /// @notice Publish posts using a Permit2 allowance to pull ERC-20 payment tokens.
-    /// @dev Native-token payments ignore `permit2Allowance`.
-    /// @param hook The hook to mint from.
-    /// @param posts An array of posts that should be published as NFTs to the specified project.
-    /// @param token The terminal token to pay with.
-    /// @param amount The total token amount supplied for the post payment and Croptop fee.
-    /// @param nftBeneficiary The beneficiary of the NFT mints.
-    /// @param feeBeneficiary The beneficiary of the fee project's token.
-    /// @param permit2Allowance The Permit2 allowance authorizing this publisher to pull `token`.
-    /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
-    function mintFrom(
-        IJB721TiersHook hook,
-        CTPost[] calldata posts,
-        address token,
-        uint256 amount,
-        address nftBeneficiary,
-        address feeBeneficiary,
-        JBSingleAllowance calldata permit2Allowance,
-        bytes calldata additionalPayMetadata
-    )
-        external
-        payable
-        override
-    {
-        uint256 acceptedAmount = _acceptFundsFor({token: token, amount: amount, permit2Allowance: permit2Allowance});
+        uint256 acceptedAmount = _acceptFundsFor({token: token, amount: amount, metadata: additionalPayMetadata});
 
         _mintFrom({
             hook: hook,
@@ -374,12 +340,12 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @notice Accept incoming native or ERC-20 funds from the caller.
     /// @param token The token to accept.
     /// @param amount The number of tokens to accept.
-    /// @param permit2Allowance The optional Permit2 allowance for ERC-20 pulls.
+    /// @param metadata The metadata in which optional Permit2 context is provided.
     /// @return acceptedAmount The number of tokens that were received.
     function _acceptFundsFor(
         address token,
         uint256 amount,
-        JBSingleAllowance memory permit2Allowance
+        bytes calldata metadata
     )
         internal
         returns (uint256 acceptedAmount)
@@ -394,7 +360,11 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         if (msg.value != 0) revert CTPublisher_MsgValueNotAllowed({value: msg.value});
 
-        if (permit2Allowance.amount != 0) {
+        (bool hasPermit2Allowance, bytes memory permit2Data) =
+            JBMetadataResolver.getDataFor({id: JBMetadataResolver.getId("permit2"), metadata: metadata});
+
+        if (hasPermit2Allowance) {
+            JBSingleAllowance memory permit2Allowance = abi.decode(permit2Data, (JBSingleAllowance));
             if (amount > permit2Allowance.amount) {
                 revert CTPublisher_PermitAllowanceNotEnough({amount: amount, allowance: permit2Allowance.amount});
             }
@@ -420,6 +390,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         uint256 balanceBefore = _balanceOf(token);
 
+        // Prevent callback-capable tokens from nesting another incoming ERC-20 transfer inside this balance-delta
+        // measurement.
         if (_acceptingToken) revert CTPublisher_ReentrantTokenTransfer(token);
         _acceptingToken = true;
 

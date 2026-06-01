@@ -25,6 +25,7 @@ import {DeployPermit2} from "@uniswap/permit2/test/utils/DeployPermit2.sol";
 import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfig.sol";
 import {JB721TierConfigFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierConfigFlags.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../src/CTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../src/structs/CTPost.sol";
@@ -168,6 +169,8 @@ contract MockCroptopTerminal {
 
 /// @notice Unit tests for CTPublisher.
 contract TestCTPublisher is Test, DeployPermit2 {
+    IPermit2 public constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
         keccak256("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)");
     bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
@@ -192,7 +195,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
     MockCroptopTerminal terminal;
 
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(directory, permissions, feeProjectId, _PERMIT2, address(0));
 
         hookStore = new MockCroptopHookStore();
         hookStoreAddr = address(hookStore);
@@ -1216,17 +1219,11 @@ contract TestCTPublisher is Test, DeployPermit2 {
 
         JBSingleAllowance memory permit2Allowance =
             _permit2AllowanceFor({token: address(token), amount: totalAmount, privateKey: permitPosterKey});
+        bytes memory permit2Metadata = _permit2MetadataFor(permit2Allowance);
 
         vm.prank(permitPoster);
         publisher.mintFrom(
-            IJB721TiersHook(hookAddr),
-            posts,
-            address(token),
-            totalAmount,
-            permitPoster,
-            permitPoster,
-            permit2Allowance,
-            ""
+            IJB721TiersHook(hookAddr), posts, address(token), totalAmount, permitPoster, permitPoster, permit2Metadata
         );
 
         assertEq(token.allowance(permitPoster, address(publisher)), 0, "publisher should not need ERC-20 approval");
@@ -1329,6 +1326,16 @@ contract TestCTPublisher is Test, DeployPermit2 {
             nonce: 0,
             signature: bytes.concat(r, s, bytes1(v))
         });
+    }
+
+    function _permit2MetadataFor(JBSingleAllowance memory permit2Allowance) internal view returns (bytes memory) {
+        bytes4[] memory ids = new bytes4[](1);
+        bytes[] memory datas = new bytes[](1);
+
+        ids[0] = JBMetadataResolver.getId({purpose: "permit2", target: address(publisher)});
+        datas[0] = abi.encode(permit2Allowance);
+
+        return JBMetadataResolver.createMetadata({ids: ids, datas: datas});
     }
 
     function test_mintFrom_revertsWhenPaymentDoesNotMintRequestedNfts() public {

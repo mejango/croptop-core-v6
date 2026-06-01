@@ -17,6 +17,7 @@ import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol"
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
@@ -86,7 +87,7 @@ contract FeeEvasionRegression is Test {
     FeeEvasionMockStore hookStore;
 
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(directory, permissions, feeProjectId, IPermit2(address(0)), address(0));
         hookStore = new FeeEvasionMockStore();
         hookStoreAddr = address(hookStore);
         terminalAddr = address(new FeeEvasionMockTerminal(hookStore, hookAddr));

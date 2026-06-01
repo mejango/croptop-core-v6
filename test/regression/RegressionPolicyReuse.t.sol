@@ -19,6 +19,7 @@ import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 
 contract PolicyReuseMockStore {
@@ -82,7 +83,7 @@ contract RegressionPolicyReuseTest is Test {
     PolicyReuseMockStore internal hookStore;
 
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, FEE_PROJECT_ID, address(0));
+        publisher = new CTPublisher(directory, permissions, FEE_PROJECT_ID, IPermit2(address(0)), address(0));
         hookStore = new PolicyReuseMockStore();
         hookStoreAddr = address(hookStore);
         projectTerminal = address(new PolicyReuseMockTerminal(hookStore, hookAddr));

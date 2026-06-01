@@ -17,6 +17,7 @@ import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataRes
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
@@ -236,7 +237,11 @@ contract CroptopRegressionFixesTest is Test {
         hook = new P12MockHook(hookOwner, PROJECT_ID, store);
         terminal.configure({store_: store, hook_: address(hook)});
         publisher = new CTPublisher(
-            IJBDirectory(address(directory)), IJBPermissions(address(permissions)), FEE_PROJECT_ID, address(0)
+            IJBDirectory(address(directory)),
+            IJBPermissions(address(permissions)),
+            FEE_PROJECT_ID,
+            IPermit2(address(0)),
+            address(0)
         );
 
         vm.deal(poster, 100 ether);

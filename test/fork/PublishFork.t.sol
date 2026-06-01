@@ -20,6 +20,7 @@ import {JBTerminalStore} from "@bananapus/core-v6/src/JBTerminalStore.sol";
 import {JBFeelessAddresses} from "@bananapus/core-v6/src/JBFeelessAddresses.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 
@@ -116,7 +117,7 @@ contract ForkPermit2Wallet {
         return ERC1271_MAGIC_VALUE;
     }
 
-    function mintFrom(
+    function publishWithPermit2(
         CTPublisher publisher,
         IJB721TiersHook hook,
         CTPost[] calldata posts,
@@ -124,14 +125,17 @@ contract ForkPermit2Wallet {
         uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
-        JBSingleAllowance calldata permit2Allowance,
+        JBSingleAllowance memory permit2Allowance,
         bytes calldata additionalPayMetadata
     )
         external
     {
-        publisher.mintFrom(
-            hook, posts, token, amount, nftBeneficiary, feeBeneficiary, permit2Allowance, additionalPayMetadata
-        );
+        bytes4 permit2Id = JBMetadataResolver.getId({purpose: "permit2", target: address(publisher)});
+        bytes memory metadata = JBMetadataResolver.addToMetadata({
+            originalMetadata: additionalPayMetadata, idToAdd: permit2Id, dataToAdd: abi.encode(permit2Allowance)
+        });
+
+        publisher.mintFrom(hook, posts, token, amount, nftBeneficiary, feeBeneficiary, metadata);
     }
 }
 
@@ -238,7 +242,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         _deploySuckers();
 
         // Deploy the croptop contracts.
-        publisher = new CTPublisher(jbDirectory, jbPermissions, 1, trustedForwarder);
+        publisher = new CTPublisher(jbDirectory, jbPermissions, 1, permit2, trustedForwarder);
         deployer = new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, trustedForwarder);
 
         // Launch the fee project (project 1) with a terminal that accepts ETH.
@@ -314,7 +318,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         uint256 projectBalanceBefore = jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(usdc));
         CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
 
-        permitPoster.mintFrom(
+        permitPoster.publishWithPermit2(
             publisher, hook, posts, address(usdc), totalAmount, nftBeneficiary, feeBeneficiary, permit2Allowance, ""
         );
 

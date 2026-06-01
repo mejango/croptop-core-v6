@@ -25,6 +25,7 @@ import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {JBTokenAmount} from "@bananapus/core-v6/src/structs/JBTokenAmount.sol";
 
 import {CTDeployer} from "../src/CTDeployer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../src/CTPublisher.sol";
 import {ICTPublisher} from "../src/interfaces/ICTPublisher.sol";
 import {CTAllowedPost} from "../src/structs/CTAllowedPost.sol";
@@ -146,7 +147,7 @@ contract TestRegressionGaps is Test {
         );
 
         // Deploy the publisher.
-        publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(directory, permissions, feeProjectId, IPermit2(address(0)), address(0));
 
         // Deploy the CTDeployer.
         deployer = new CTDeployer(

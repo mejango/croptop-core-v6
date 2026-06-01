@@ -22,6 +22,7 @@ import {JBSuckerRegistry} from "@bananapus/suckers-v6/src/JBSuckerRegistry.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
 
 import {CTDeployer} from "../../src/CTDeployer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {ICTPublisher} from "../../src/interfaces/ICTPublisher.sol";
 import {CTDeployerAllowedPost} from "../../src/structs/CTDeployerAllowedPost.sol";
@@ -172,7 +173,8 @@ contract RegressionRegressions is Test {
         projects.setCount(5);
 
         hookDeployer = new RegressionMockHookDeployer();
-        publisher = new CTPublisher(IJBDirectory(makeAddr("directory")), permissions, 1, address(0));
+        publisher =
+            new CTPublisher(IJBDirectory(makeAddr("directory")), permissions, 1, IPermit2(address(0)), address(0));
         deployer = new CTDeployer(
             permissions,
             IJBProjects(address(projects)),

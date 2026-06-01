@@ -17,6 +17,7 @@ import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingCo
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
@@ -229,7 +230,7 @@ contract FeeFallbackBlackholeTest is Test {
         feeBeneficiary = new RejectingFeeBeneficiary();
         caller = new RejectingMintCaller();
         acceptingCaller = new AcceptingMintCaller();
-        publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, address(0));
+        publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, IPermit2(address(0)), address(0));
 
         directory.setTerminals(address(projectTerminal), address(feeTerminal));
 

@@ -100,7 +100,8 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             useDataHookForCashOut: false
         });
 
-        CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
+        CTPublisher publisher =
+            new CTPublisher(jbDirectory, jbPermissions, feeProjectId, IPermit2(address(0)), address(0));
         CTDeployer deployer =
             new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, address(0));
 
@@ -143,7 +144,8 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             useDataHookForCashOut: false
         });
 
-        CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
+        CTPublisher publisher =
+            new CTPublisher(jbDirectory, jbPermissions, feeProjectId, IPermit2(address(0)), address(0));
 
         (uint256 projectId, IJB721TiersHook hook) = _launchDirectProjectWithHook({
             publisher: publisher, owner: PROJECT_OWNER, baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN))
@@ -190,7 +192,8 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             useDataHookForCashOut: false
         });
 
-        CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
+        CTPublisher publisher =
+            new CTPublisher(jbDirectory, jbPermissions, feeProjectId, IPermit2(address(0)), address(0));
         CTDeployer deployer =
             new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, address(0));
 

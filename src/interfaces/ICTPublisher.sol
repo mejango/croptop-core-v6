@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
-import {JBSingleAllowance} from "@bananapus/core-v6/src/structs/JBSingleAllowance.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTAllowedPost} from "../structs/CTAllowedPost.sol";
 import {CTPost} from "../structs/CTPost.sol";
@@ -108,7 +107,8 @@ interface ICTPublisher {
     /// @param amount The total token amount supplied for the post payment and Croptop fee.
     /// @param nftBeneficiary The beneficiary of the NFT mints.
     /// @param feeBeneficiary The beneficiary of the fee project's tokens.
-    /// @param additionalPayMetadata Extra metadata bytes to include in the payment.
+    /// @param additionalPayMetadata Extra metadata bytes to include in the payment. Include a Permit2 entry targeted
+    /// to this publisher to pay ERC-20s without a direct publisher approval.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
@@ -116,28 +116,6 @@ interface ICTPublisher {
         uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
-        bytes calldata additionalPayMetadata
-    )
-        external
-        payable;
-
-    /// @notice Publish NFT posts and mint a first copy of each using Permit2 for the ERC-20 pull.
-    /// @param hook The hook to mint from.
-    /// @param posts An array of posts to publish as NFTs.
-    /// @param token The terminal token to pay with.
-    /// @param amount The total token amount supplied for the post payment and Croptop fee.
-    /// @param nftBeneficiary The beneficiary of the NFT mints.
-    /// @param feeBeneficiary The beneficiary of the fee project's tokens.
-    /// @param permit2Allowance The Permit2 allowance authorizing this publisher to pull `token`.
-    /// @param additionalPayMetadata Extra metadata bytes to include in the payment.
-    function mintFrom(
-        IJB721TiersHook hook,
-        CTPost[] calldata posts,
-        address token,
-        uint256 amount,
-        address nftBeneficiary,
-        address feeBeneficiary,
-        JBSingleAllowance calldata permit2Allowance,
         bytes calldata additionalPayMetadata
     )
         external

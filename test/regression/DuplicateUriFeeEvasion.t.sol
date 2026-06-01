@@ -16,6 +16,7 @@ import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol"
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
@@ -41,7 +42,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
     uint256 hookProjectId = 42;
 
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(directory, permissions, feeProjectId, IPermit2(address(0)), address(0));
 
         // Mock hook.owner().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));

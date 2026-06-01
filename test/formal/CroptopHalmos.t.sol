@@ -16,6 +16,7 @@ import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 import {JBTokenAmount} from "@bananapus/core-v6/src/structs/JBTokenAmount.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 import {CTDeployer} from "../../src/CTDeployer.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
@@ -54,7 +55,11 @@ contract CroptopHalmos {
         _store = new Mock721Store();
         _hook = new Mock721Hook({store: _store, owner_: address(77), projectId_: 42});
         _publisher = new CTPublisherHarness({
-            directory: address(1), permissions: permissions, feeProjectId: 1, trustedForwarder: address(0)
+            directory: address(1),
+            permissions: permissions,
+            feeProjectId: 1,
+            permit2: IPermit2(address(0)),
+            trustedForwarder: address(0)
         });
         _suckerRegistry = new MockSuckerRegistry();
 
@@ -466,9 +471,12 @@ contract CTPublisherHarness is CTPublisher {
         address directory,
         MockPermissions permissions,
         uint256 feeProjectId,
+        IPermit2 permit2,
         address trustedForwarder
     )
-        CTPublisher(IJBDirectory(directory), IJBPermissions(address(permissions)), feeProjectId, trustedForwarder)
+        CTPublisher(
+            IJBDirectory(directory), IJBPermissions(address(permissions)), feeProjectId, permit2, trustedForwarder
+        )
     {}
 
     //*********************************************************************//

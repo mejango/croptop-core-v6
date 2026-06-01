@@ -19,6 +19,7 @@ import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 
 contract RegressionMockPermissions is IJBPermissions {
@@ -235,7 +236,9 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
         feeTerminal = new RegressionMockTerminal();
         projectTerminal.configure({store_: store, hook_: address(hook)});
         feeTerminal.configure({store_: store, hook_: address(hook)});
-        publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, FEE_PROJECT_ID, address(0));
+        publisher = new CTPublisher(
+            IJBDirectory(address(directory)), permissions, FEE_PROJECT_ID, IPermit2(address(0)), address(0)
+        );
 
         directory.setTerminal(PROJECT_ID, address(projectTerminal));
         directory.setTerminal(FEE_PROJECT_ID, address(feeTerminal));

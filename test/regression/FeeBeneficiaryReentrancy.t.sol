@@ -17,6 +17,7 @@ import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingCo
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
@@ -234,7 +235,7 @@ contract FeeBeneficiaryReentrancyTest is Test {
         directory = new MockDirectory();
         store = new MockStore();
         hook = new MockHook(2, IJB721TiersHookStore(address(store)), address(this));
-        publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, address(0));
+        publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, IPermit2(address(0)), address(0));
         feeTerminal = new FeeTerminalRecorder();
         projectTerminal =
             new ReentrantProjectTerminal(publisher, IJB721TiersHook(address(hook)), store, attackerFeeBeneficiary);

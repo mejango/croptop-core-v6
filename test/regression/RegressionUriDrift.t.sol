@@ -11,6 +11,7 @@ import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol"
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
@@ -45,7 +46,11 @@ contract RegressionUriDriftTest is Test {
         hook = new MockHook(hookOwner, PROJECT_ID, store);
         terminal.configure({store_: store, hook_: address(hook)});
         publisher = new CTPublisher(
-            IJBDirectory(address(directory)), IJBPermissions(address(permissions)), FEE_PROJECT_ID, address(0)
+            IJBDirectory(address(directory)),
+            IJBPermissions(address(permissions)),
+            FEE_PROJECT_ID,
+            IPermit2(address(0)),
+            address(0)
         );
 
         vm.deal(poster, 10 ether);

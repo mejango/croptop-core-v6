@@ -15,7 +15,7 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 
 ## 0.0.64 — Add Permit2 publisher payments and cross-currency pricing
 
-- Added a `CTPublisher.mintFrom` overload that accepts a `JBSingleAllowance`, allowing ERC-20 publish payments to be pulled through Permit2 without a direct publisher approval.
+- `CTPublisher.mintFrom` now accepts a publisher-targeted Permit2 metadata entry, allowing ERC-20 publish payments to be pulled through Permit2 without a direct publisher approval.
 - `CTPublisher.mintFrom` now prices hook tiers into the selected payment token's terminal accounting units. Same-currency payments scale decimals directly; different-currency payments use the hook's `PRICES` oracle and revert if no nonzero price is available.
 - ETH and the native-token currency alias are treated as the same currency for native-token payments, preserving existing ETH-priced collection behavior without requiring an identity price feed.
 - The project terminal remains the source of truth for whether a payment token is accepted. Croptop validates the selected token's accounting context, then the terminal payment and post-payment NFT delivery check complete the mint.

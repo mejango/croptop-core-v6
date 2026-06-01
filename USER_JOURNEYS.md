@@ -58,7 +58,7 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 **Main Flow**
 
-1. Call `mintFrom(...)` with the content URI, pricing data, payment token, and amount. ERC-20 payments can use either direct approval or the Permit2 overload.
+1. Call `mintFrom(...)` with the content URI, pricing data, payment token, and amount. ERC-20 payments can use either direct approval or publisher-targeted Permit2 metadata.
 2. `CTPublisher` validates the post against category and fee policy.
 3. It converts the tier price into payment-token units, creates or reuses the underlying tier, mints the first copy, and routes project revenue plus the Croptop fee.
 
