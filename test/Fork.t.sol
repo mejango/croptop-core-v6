@@ -40,6 +40,7 @@ import {JBTerminalConfig} from "@bananapus/core-v6/src/structs/JBTerminalConfig.
 // Croptop — wildcard import pulls in all structs (CTProjectConfig, CTDeployerAllowedPost, etc.).
 // forge-lint: disable-next-line(unaliased-plain-import)
 import "./../src/CTDeployer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "./../src/CTPublisher.sol";
 
 /// @notice Fork tests for Croptop. Deploys all JB infrastructure fresh within a mainnet fork.
@@ -98,7 +99,7 @@ contract ForkTest is Test {
         _deploySuckers();
 
         // Deploy the croptop contracts.
-        publisher = new CTPublisher(jbDirectory, jbPermissions, 1, trustedForwarder);
+        publisher = new CTPublisher(jbDirectory, jbPermissions, 1, IPermit2(address(0)), trustedForwarder);
         deployer = new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, trustedForwarder);
     }
 

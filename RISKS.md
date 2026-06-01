@@ -12,7 +12,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 
 | Priority | Risk | Why it matters | Primary controls |
 |----------|------|----------------|------------------|
-| P0 | Hook/store and terminal trust | `mintFrom` depends on hook storage and directory terminal resolution; a bad integration can misprice posts or redirect value. | Review integration assumptions, verify hook/store pairings, and monitor terminal configuration. |
+| P0 | Hook/store and terminal trust | `mintFrom` depends on hook storage, hook pricing, price feeds, and directory terminal resolution; a bad integration can misprice posts or redirect value. | Payment-token accounting context guard, price-feed availability checks, post-payment NFT delivery check, review integration assumptions, verify hook/store pairings, and monitor terminal configuration. |
 | P1 | Tier ID race during concurrent posting | `_setupPosts` predicts future tier IDs before `adjustTiers`; concurrent writes can shift those IDs and break the batch. | Application-layer ordering, atomic reverts on mismatch, and operator awareness. |
 | P1 | Fee-path degradation without mint failure | The fee terminal is fail-open via try/catch, so publishing continues even if the fee project temporarily stops receiving revenue. | Terminal health monitoring, fallback-beneficiary handling, and explicit fee-routing checks. |
 | P1 | Launch-time hook permissions persist until claim | `CTDeployer` grants the deploy-time `owner` four direct-hook permissions (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`) that persist on the deployer's permission table until `claimCollectionOwnershipOf` is called. A subsequent project NFT transfer does not revoke these — the original recipient can still act on the hook during the pre-claim window. | Project NFT sellers should call `claimCollectionOwnershipOf` before transfer; buyers of pre-claim NFTs should call it immediately on receipt. Marketplaces should surface claim status. |
@@ -27,14 +27,15 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Sucker deployment is fail-open at launch time.** Launch can continue on chains where the configured sucker deployer cascade cannot complete.
 - **CTProjectOwner as burn target.** Projects transferred to `CTProjectOwner` cannot be recovered.
 - **JBDirectory / terminal resolution.** `CTPublisher.mintFrom` trusts `DIRECTORY.primaryTerminalOf()`.
-- **721 hook store.** `_setupPosts` trusts the hook store for tier state, removal checks, and prices.
+- **721 hook store.** `_setupPosts` trusts the hook store for tier state, removal checks, prices, and the post-payment balance check.
 
 ## 2. Economic And Manipulation Risks
 
 - **Fee evasion via duplicate posts across hooks.** Duplicate-content checks are keyed per hook, so the same URI can be reused across different hooks.
 - **Fee calculation rounding.** Fee is `totalPrice / 20`, so integer division truncates small amounts.
-- **Fee is computed from `msg.value`.** Force-sent ETH does not affect the fee calculation.
-- **Fee terminal fallback refunds the caller.** If the fee project cannot accept the fee, Croptop refunds `_msgSender()`. Relayers or contracts that cannot receive ETH will make the mint revert.
+- **Fee settlement uses the converted tier price.** Force-sent ETH, force-sent tokens, or caller overpayment do not increase the fee calculation or fee refund path.
+- **Payment token is terminal-selected, then priced into terminal units.** The project terminal must expose an accounting context for the selected `token`. If that context uses a different currency than the hook's tier pricing, the hook's `PRICES` oracle must provide a nonzero conversion into the payment currency. Missing terminal support or missing price feeds revert before value can be stranded.
+- **Fee terminal fallback refunds the caller.** If the fee project has no terminal for the selected token or cannot accept the fee, Croptop refunds `_msgSender()`. Native refunds to relayers or contracts that cannot receive ETH will make the mint revert.
 - **Split percent manipulation.** Posters can direct large shares of tier revenue away from the project if `maximumSplitPercent` is configured high.
 
 ## 3. Access Control
@@ -42,7 +43,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Allowlist is O(n).** `_isAllowed` linearly scans the full allowlist.
 - **Categories cannot be disabled cleanly.** Once configured, a category can only be made impractical through stricter bounds.
 - **CTDeployer grants broad permissions.** Wildcard permissions to the sucker registry and publisher apply to all projects deployed by that deployer instance.
-- **Launch-time grants to `owner` persist until `claimCollectionOwnershipOf` is called.** `CTDeployer.deployProjectFor` grants the deploy-time `owner` four collection-control permissions on the deployer's permission table — `ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT` (`src/CTDeployer.sol:281-298`). These grants are keyed on the deploy-time recipient's address, not on "whoever currently owns the project NFT." They stay live until `claimCollectionOwnershipOf` revokes the caller's row and migrates hook ownership to the project NFT. The dangerous window is between transferring the project NFT to a new owner and the new owner calling claim — during that window, the original deploy-time recipient can still call hook-gated functions (add tiers with owner-mint, mint to themselves, mutate metadata, set discounts) even though they no longer own the project. See Accepted Behavior 7.6 for the operator runbook for both sellers and buyers, and INVARIANTS.md Section E.3 for the full reasoning.
+- **Launch-time grants to `owner` persist until `claimCollectionOwnershipOf` is called.** `CTDeployer.deployProjectFor` grants the deploy-time `owner` four collection-control permissions on the deployer's permission table — `ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT` (`src/CTDeployer.sol`). These grants are keyed on the deploy-time recipient's address, not on "whoever currently owns the project NFT." They stay live until `claimCollectionOwnershipOf` revokes the caller's row and migrates hook ownership to the project NFT. The dangerous window is between transferring the project NFT to a new owner and the new owner calling claim — during that window, the original deploy-time recipient can still call hook-gated functions (add tiers with owner-mint, mint to themselves, mutate metadata, set discounts) even though they no longer own the project. See Accepted Behavior 7.6 for the operator runbook for both sellers and buyers, and INVARIANTS.md Section E.3 for the full reasoning.
 - **Explicit sucker peers require peer-setting authority.** `CTDeployer.deploySuckersFor` mirrors the sucker registry's
   rule: default same-address peering only needs `DEPLOY_SUCKERS`, but non-default explicit peers also require
   `SET_SUCKER_PEER` from the original caller.
@@ -59,7 +60,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 ## 5. Reentrancy Surface
 
 - **`mintFrom` external call chain.** The function calls into the hook and terminals. It currently relies on local-call state isolation rather than a `ReentrancyGuard`.
-- **Fee payment ordering.** The fee is sent after the main payment. This is safe under the current `msg.value`-based accounting model, but future mutable storage in the publisher would make the surface riskier.
+- **Fee payment ordering.** The fee is sent after the main payment. This is safe under the current `amount`-based accounting model, but future mutable storage in the publisher would make the surface riskier.
 
 ## 6. Integration Risks
 
@@ -117,7 +118,7 @@ Frontends and marketplaces listing Croptop-launched project NFTs should surface 
 
 `CTProjectOwner.onERC721Received` (line 52) checks `msg.sender == address(PROJECTS)` but explicitly discards the `from` argument (`from;` at line 63). It then calls `PERMISSIONS.setPermissionsFor` to grant `ADJUST_721_TIERS` to the `PUBLISHER` for the received `tokenId`, regardless of whether the transfer was a mint or a stray transfer of an existing project NFT.
 
-Anyone holding any project NFT can `safeTransferFrom` it to this contract and trigger a real on-chain permission grant: the PUBLISHER address gains `ADJUST_721_TIERS` authority on whatever projectId was transferred. The grant is dormant in current code because `CTPublisher` only invokes `ADJUST_721_TIERS` against project NFTs that the publisher actually administers via the Croptop deployer flow, and stray transfers do not bring the publisher's deployer state along. But the on-chain grant is real and would activate if any future publisher code path acts on caller-supplied project IDs. The same shape exists in `DefifaProjectOwner` for the `SET_SPLIT_GROUPS` permission and was previously fixed for `JBOmnichainDeployer.onERC721Received` (ecosystem AUDIT_REPORT finding 72).
+Anyone holding any project NFT can `safeTransferFrom` it to this contract and trigger a real on-chain permission grant: the PUBLISHER address gains `ADJUST_721_TIERS` authority on whatever projectId was transferred. The grant is dormant in current code because `CTPublisher` only invokes `ADJUST_721_TIERS` against project NFTs that the publisher actually administers via the Croptop deployer flow, and stray transfers do not bring the publisher's deployer state along. But the on-chain grant is real and would activate if any future publisher code path acts on caller-supplied project IDs. The same shape exists in `DefifaProjectOwner` for the `SET_SPLIT_GROUPS` permission.
 
 Accepted because the grants are dormant against the current publisher surface and the contract is not the recipient of hostile transfers in canonical flows. Anyone integrating `CTProjectOwner` into a publisher / deployer pair that operates on arbitrary projectIds must add the `require(from == address(0))` guard before relying on it.
 

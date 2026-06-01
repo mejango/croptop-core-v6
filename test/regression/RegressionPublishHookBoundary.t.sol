@@ -11,8 +11,12 @@ import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
@@ -55,6 +59,10 @@ contract PublishBoundaryTerminal {
     uint256 public paidProjectId;
     address public paidBeneficiary;
 
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
+    }
+
     function pay(
         uint256 projectId,
         address,
@@ -79,6 +87,10 @@ contract PublishBoundaryTerminal {
 contract PublishBoundaryStore {
     uint256 public maxTierId;
     mapping(uint256 tierId => JB721Tier tier) internal _tierOf;
+
+    function balanceOf(address, address) external pure returns (uint256) {
+        return 0;
+    }
 
     function addTier(JB721TierConfig calldata config) external {
         maxTierId++;
@@ -136,6 +148,10 @@ contract PublishBoundaryHook {
         return PROJECT_ID;
     }
 
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
+    }
+
     function METADATA_ID_TARGET() external view returns (address) {
         return address(this);
     }
@@ -149,7 +165,7 @@ contract PublishBoundaryHook {
 }
 
 contract RegressionPublishHookBoundaryTest is Test {
-    function testMintFromCanPayProjectAndFeeWithoutMintingWhenTerminalDoesNotInvokeHook() external {
+    function testMintFromRevertsWhenTerminalDoesNotInvokeHook() external {
         uint256 projectId = 2;
         uint256 feeProjectId = 1;
         uint256 price = 1 ether;
@@ -168,7 +184,11 @@ contract RegressionPublishHookBoundaryTest is Test {
         directory.setTerminal(feeProjectId, IJBTerminal(address(feeTerminal)));
 
         CTPublisher publisher = new CTPublisher(
-            IJBDirectory(address(directory)), IJBPermissions(address(permissions)), feeProjectId, address(0)
+            IJBDirectory(address(directory)),
+            IJBPermissions(address(permissions)),
+            feeProjectId,
+            IPermit2(address(0)),
+            address(0)
         );
 
         CTAllowedPost[] memory allowedPosts = new CTAllowedPost[](1);
@@ -196,14 +216,22 @@ contract RegressionPublishHookBoundaryTest is Test {
             splits: new JBSplit[](0)
         });
 
+        vm.expectRevert(
+            abi.encodeWithSelector(CTPublisher.CTPublisher_MintNotDelivered.selector, address(hook), beneficiary, 1, 0)
+        );
         publisher.mintFrom{value: price + fee}(
-            IJB721TiersHook(address(hook)), posts, beneficiary, address(0xFEE), bytes("")
+            IJB721TiersHook(address(hook)),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            price + fee,
+            beneficiary,
+            address(0xFEE),
+            bytes("")
         );
 
-        assertEq(hook.adjustedTiers(), 1, "tier was created");
-        assertEq(projectTerminal.paidValue(), price, "project payment succeeded");
-        assertEq(feeTerminal.paidValue(), fee, "fee payment succeeded");
-        assertEq(projectTerminal.paidBeneficiary(), beneficiary, "beneficiary was only passed to terminal");
-        assertEq(hook.mintedNfts(), 0, "Croptop did not verify an NFT mint happened");
+        assertEq(hook.adjustedTiers(), 0, "tier creation rolled back");
+        assertEq(projectTerminal.paidValue(), 0, "project payment rolled back");
+        assertEq(feeTerminal.paidValue(), 0, "fee payment was never attempted");
+        assertEq(hook.mintedNfts(), 0, "terminal never invoked hook minting");
     }
 }

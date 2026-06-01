@@ -11,9 +11,13 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
@@ -42,6 +46,8 @@ contract ZBMockPermissions is IJBPermissions {
 }
 
 contract ZBMockStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
     function maxTierIdOf(address) external pure returns (uint256) {
         return 0;
     }
@@ -52,6 +58,10 @@ contract ZBMockStore {
 
     function tierOf(address, uint256, bool) external pure returns (JB721Tier memory tier) {
         return tier;
+    }
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
     }
 }
 
@@ -79,16 +89,32 @@ contract ZBMockHook {
     function owner() external view returns (address) {
         return OWNER;
     }
+
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
+    }
 }
 
 contract ZBAcceptingTerminal {
     uint256 public totalReceived;
 
+    ZBMockStore internal _store;
+    address internal _hook;
+
+    function configure(ZBMockStore store_, address hook_) external {
+        _store = store_;
+        _hook = hook_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
+    }
+
     function pay(
         uint256,
         address,
         uint256,
-        address,
+        address beneficiary,
         uint256,
         string calldata,
         bytes calldata
@@ -98,6 +124,7 @@ contract ZBAcceptingTerminal {
         returns (uint256)
     {
         totalReceived += msg.value;
+        _store.mint({hook: _hook, owner: beneficiary, count: 1});
         return 0;
     }
 }
@@ -134,7 +161,9 @@ contract ZeroAddressFeeBeneficiaryTest is Test {
         hook = new ZBMockHook(2, IJB721TiersHookStore(address(store)), address(this));
         projectTerminal = new ZBAcceptingTerminal();
         feeTerminal = new ZBAcceptingTerminal();
-        publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, address(0));
+        projectTerminal.configure({store_: store, hook_: address(hook)});
+        feeTerminal.configure({store_: store, hook_: address(hook)});
+        publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, IPermit2(address(0)), address(0));
 
         directory.setTerminals(address(projectTerminal), address(feeTerminal));
 
@@ -169,6 +198,8 @@ contract ZeroAddressFeeBeneficiaryTest is Test {
         publisher.mintFrom{value: 105}(
             IJB721TiersHook(address(hook)),
             posts,
+            JBConstants.NATIVE_TOKEN,
+            105,
             address(this),
             address(0), // zero address fee beneficiary
             bytes("")
@@ -192,6 +223,8 @@ contract ZeroAddressFeeBeneficiaryTest is Test {
         publisher.mintFrom{value: 105}(
             IJB721TiersHook(address(hook)),
             posts,
+            JBConstants.NATIVE_TOKEN,
+            105,
             address(this),
             address(0xBEEF), // valid fee beneficiary
             bytes("")

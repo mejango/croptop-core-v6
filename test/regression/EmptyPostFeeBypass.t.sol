@@ -7,7 +7,9 @@ import "forge-std/Test.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
 
@@ -25,7 +27,7 @@ contract EmptyPostFeeBypassRegression is Test {
     uint256 feeProjectId = 1;
 
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(directory, permissions, feeProjectId, IPermit2(address(0)), address(0));
         vm.deal(poster, 10 ether);
     }
 
@@ -35,7 +37,9 @@ contract EmptyPostFeeBypassRegression is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, "");
+        publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), emptyPosts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        );
     }
 
     /// @notice mintFrom with empty posts and crafted additionalPayMetadata should still revert.
@@ -48,6 +52,8 @@ contract EmptyPostFeeBypassRegression is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), emptyPosts, poster, poster, craftedMetadata);
+        publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), emptyPosts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, craftedMetadata
+        );
     }
 }

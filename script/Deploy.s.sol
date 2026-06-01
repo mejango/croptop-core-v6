@@ -6,6 +6,7 @@ import {SuckerDeployment, SuckerDeploymentLib} from "@bananapus/suckers-v6/scrip
 
 import {Sphinx} from "@sphinx-labs/contracts/contracts/foundry/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 import {CTDeployer} from "./../src/CTDeployer.sol";
 import {CTProjectOwner} from "./../src/CTProjectOwner.sol";
@@ -27,6 +28,7 @@ contract DeployScript is Script, Sphinx {
     bytes32 private constant _PUBLISHER_SALT = "_PUBLISHER_SALTV6_";
     bytes32 private constant _DEPLOYER_SALT = "_DEPLOYER_SALTV6_";
     bytes32 private constant _PROJECT_OWNER_SALT = "_PROJECT_OWNER_SALTV6_";
+    IPermit2 private constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     address private trustedForwarder;
 
     function configureSphinx() public override {
@@ -69,7 +71,7 @@ contract DeployScript is Script, Sphinx {
             (address _publisher, bool _publisherIsDeployed) = _isDeployed({
                 salt: _PUBLISHER_SALT,
                 creationCode: type(CTPublisher).creationCode,
-                arguments: abi.encode(core.directory, core.permissions, feeProjectId, trustedForwarder)
+                arguments: abi.encode(core.directory, core.permissions, feeProjectId, _PERMIT2, trustedForwarder)
             });
 
             // Deploy it if it has not been deployed yet.
@@ -78,6 +80,7 @@ contract DeployScript is Script, Sphinx {
                     directory: core.directory,
                     permissions: core.permissions,
                     feeProjectId: feeProjectId,
+                    permit2: _PERMIT2,
                     trustedForwarder: trustedForwarder
                 })
                 : CTPublisher(_publisher);

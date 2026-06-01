@@ -100,7 +100,8 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             useDataHookForCashOut: false
         });
 
-        CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
+        CTPublisher publisher =
+            new CTPublisher(jbDirectory, jbPermissions, feeProjectId, IPermit2(address(0)), address(0));
         CTDeployer deployer =
             new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, address(0));
 
@@ -111,7 +112,9 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
 
         vm.prank(POSTER);
         vm.expectRevert();
-        publisher.mintFrom{value: _totalValue()}(hook, _singlePost(), NFT_BENEFICIARY, FEE_BENEFICIARY, "");
+        publisher.mintFrom{value: _totalValue()}(
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+        );
 
         MockPriceFeed identityFeed = new MockPriceFeed(1e18, 18);
         vm.prank(MULTISIG);
@@ -123,7 +126,9 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
         });
 
         vm.prank(POSTER);
-        publisher.mintFrom{value: _totalValue()}(hook, _singlePost(), NFT_BENEFICIARY, FEE_BENEFICIARY, "");
+        publisher.mintFrom{value: _totalValue()}(
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+        );
     }
 
     function test_misconfiguredFeeProjectRefundsAllCroptopFees() public {
@@ -139,7 +144,8 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             useDataHookForCashOut: false
         });
 
-        CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
+        CTPublisher publisher =
+            new CTPublisher(jbDirectory, jbPermissions, feeProjectId, IPermit2(address(0)), address(0));
 
         (uint256 projectId, IJB721TiersHook hook) = _launchDirectProjectWithHook({
             publisher: publisher, owner: PROJECT_OWNER, baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN))
@@ -154,7 +160,9 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, JBConstants.NATIVE_TOKEN);
 
         vm.prank(POSTER);
-        publisher.mintFrom{value: _totalValue()}(hook, _singlePost(), NFT_BENEFICIARY, FEE_BENEFICIARY, "");
+        publisher.mintFrom{value: _totalValue()}(
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+        );
 
         uint256 feeProjectBalanceAfter =
             jbTerminalStore.balanceOf(address(jbMultiTerminal), feeProjectId, JBConstants.NATIVE_TOKEN);
@@ -184,7 +192,8 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
             useDataHookForCashOut: false
         });
 
-        CTPublisher publisher = new CTPublisher(jbDirectory, jbPermissions, feeProjectId, address(0));
+        CTPublisher publisher =
+            new CTPublisher(jbDirectory, jbPermissions, feeProjectId, IPermit2(address(0)), address(0));
         CTDeployer deployer =
             new CTDeployer(jbPermissions, jbProjects, hookDeployer, publisher, suckerRegistry, address(0));
 

@@ -6,12 +6,17 @@ import "forge-std/Test.sol";
 
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {IJBOwnable} from "@bananapus/ownable-v6/src/interfaces/IJBOwnable.sol";
 import {IJB721Hook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Hook.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
@@ -37,7 +42,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
     uint256 hookProjectId = 42;
 
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(directory, permissions, feeProjectId, IPermit2(address(0)), address(0));
 
         // Mock hook.owner().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
@@ -45,6 +50,12 @@ contract DuplicateUriFeeEvasionRegression is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
+        // Mock hook.pricingContext().
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.ETH), uint256(18))
+        );
 
         // Mock permissions to return true by default.
         vm.mockCall(
@@ -79,13 +90,31 @@ contract DuplicateUriFeeEvasionRegression is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(bytes4(keccak256("METADATA_ID_TARGET()"))), abi.encode(address(0)));
         vm.mockCall(
             address(directory),
-            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, hookProjectId),
+            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, hookProjectId, JBConstants.NATIVE_TOKEN),
             abi.encode(terminalAddr)
         );
         vm.mockCall(
             address(directory),
-            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, feeProjectId),
+            abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, feeProjectId, JBConstants.NATIVE_TOKEN),
             abi.encode(feeTerminalAddr)
+        );
+        vm.mockCall(
+            terminalAddr,
+            abi.encodeWithSelector(
+                IJBTerminal.accountingContextForTokenOf.selector, hookProjectId, JBConstants.NATIVE_TOKEN
+            ),
+            abi.encode(
+                JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: JBCurrencyIds.ETH})
+            )
+        );
+        vm.mockCall(
+            feeTerminalAddr,
+            abi.encodeWithSelector(
+                IJBTerminal.accountingContextForTokenOf.selector, feeProjectId, JBConstants.NATIVE_TOKEN
+            ),
+            abi.encode(
+                JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: 18, currency: JBCurrencyIds.ETH})
+            )
         );
         vm.mockCall(terminalAddr, "", abi.encode(uint256(0)));
         vm.mockCall(feeTerminalAddr, "", abi.encode(uint256(0)));
@@ -122,7 +151,9 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, duplicateUri));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -164,7 +195,9 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, duplicateUri));
-        publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        );
     }
 
     // =========================================================================
@@ -197,7 +230,9 @@ contract DuplicateUriFeeEvasionRegression is Test {
         // Should not revert with CTPublisher_DuplicatePost.
         // May succeed fully or revert downstream in mocks, but never with the duplicate error.
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             // Ensure it did NOT revert with CTPublisher_DuplicatePost.
             assertTrue(
@@ -236,7 +271,9 @@ contract DuplicateUriFeeEvasionRegression is Test {
         });
 
         vm.prank(poster);
-        try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+        try publisher.mintFrom{value: 1 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+        ) {}
         catch (bytes memory reason) {
             assertTrue(
                 keccak256(reason)
@@ -286,12 +323,16 @@ contract DuplicateUriFeeEvasionRegression is Test {
             // Must revert with duplicate error.
             vm.prank(poster);
             vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, uri1));
-            publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+            publisher.mintFrom{value: 1 ether}(
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            );
         } else {
             // Must NOT revert with duplicate error. May still revert for other reasons
             // (e.g. mocked terminal behavior), but not CTPublisher_DuplicatePost.
             vm.prank(poster);
-            try publisher.mintFrom{value: 1 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "") {}
+            try publisher.mintFrom{value: 1 ether}(
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            ) {}
             catch (bytes memory reason) {
                 assertTrue(
                     keccak256(reason)

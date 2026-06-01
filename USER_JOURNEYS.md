@@ -52,18 +52,20 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 **Preconditions**
 
 - the post satisfies the target project's category policy
+- the project terminal accepts the selected payment token, and any needed hook price feed is configured
 - the caller can receive ETH if the fee refund fallback is needed
 - duplicate-content and stale-tier implications are understood
 
 **Main Flow**
 
-1. Call `mintFrom(...)` with the content URI and pricing data.
+1. Call `mintFrom(...)` with the content URI, pricing data, payment token, and amount. ERC-20 payments can use either direct approval or publisher-targeted Permit2 metadata.
 2. `CTPublisher` validates the post against category and fee policy.
-3. It creates or reuses the underlying tier, mints the first copy, and routes project revenue plus the Croptop fee.
+3. It converts the tier price into payment-token units, creates or reuses the underlying tier, mints the first copy, and routes project revenue plus the Croptop fee.
 
 **Failure Modes**
 
 - duplicate URIs or stale tier mappings
+- the project terminal does not accept the selected token or the required price feed is missing
 - publisher inputs satisfy the base 721 hook but violate Croptop's stricter rules
 - the fee terminal rejects the fee payment and `_msgSender()` cannot receive the refund
 

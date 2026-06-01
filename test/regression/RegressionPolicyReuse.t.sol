@@ -12,11 +12,54 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
+
+contract PolicyReuseMockStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
+    }
+}
+
+contract PolicyReuseMockTerminal {
+    PolicyReuseMockStore internal _store;
+    address internal _hook;
+
+    constructor(PolicyReuseMockStore store_, address hook_) {
+        _store = store_;
+        _hook = hook_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
+    }
+
+    function pay(
+        uint256,
+        address,
+        uint256,
+        address beneficiary,
+        uint256,
+        string calldata,
+        bytes calldata
+    )
+        external
+        payable
+        returns (uint256)
+    {
+        _store.mint({hook: _hook, owner: beneficiary, count: 1});
+        return 0;
+    }
+}
 
 contract RegressionPolicyReuseTest is Test {
     CTPublisher internal publisher;
@@ -26,9 +69,9 @@ contract RegressionPolicyReuseTest is Test {
 
     address internal hookOwner = makeAddr("hookOwner");
     address internal hookAddr = makeAddr("hook");
-    address internal hookStoreAddr = makeAddr("hookStore");
-    address internal projectTerminal = makeAddr("projectTerminal");
-    address internal feeTerminal = makeAddr("feeTerminal");
+    address internal hookStoreAddr;
+    address internal projectTerminal;
+    address internal feeTerminal;
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
@@ -37,12 +80,23 @@ contract RegressionPolicyReuseTest is Test {
     bytes32 internal constant URI = keccak256("stale-policy-uri");
     uint104 internal constant PRICE = 1 ether;
 
+    PolicyReuseMockStore internal hookStore;
+
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, FEE_PROJECT_ID, address(0));
+        publisher = new CTPublisher(directory, permissions, FEE_PROJECT_ID, IPermit2(address(0)), address(0));
+        hookStore = new PolicyReuseMockStore();
+        hookStoreAddr = address(hookStore);
+        projectTerminal = address(new PolicyReuseMockTerminal(hookStore, hookAddr));
+        feeTerminal = address(new PolicyReuseMockTerminal(hookStore, hookAddr));
 
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(PROJECT_ID));
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.ETH), uint256(18))
+        );
 
         vm.mockCall(
             address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(true)
@@ -58,8 +112,6 @@ contract RegressionPolicyReuseTest is Test {
             abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, FEE_PROJECT_ID),
             abi.encode(feeTerminal)
         );
-        vm.mockCall(projectTerminal, "", abi.encode(uint256(0)));
-        vm.mockCall(feeTerminal, "", abi.encode(uint256(0)));
         vm.mockCall(
             hookStoreAddr, abi.encodeWithSelector(IJB721TiersHookStore.isTierRemoved.selector), abi.encode(false)
         );
@@ -82,7 +134,9 @@ contract RegressionPolicyReuseTest is Test {
         CTPost[] memory initialPosts = _singlePost();
 
         vm.prank(alice);
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "");
+        publisher.mintFrom{value: mintValue}(
+            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+        );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, URI), 1, "initial publish should store tier id");
 
@@ -104,7 +158,9 @@ contract RegressionPolicyReuseTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NotInAllowList.selector, alice, _asArray(bob)));
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), blockedNewUri, alice, alice, "");
+        publisher.mintFrom{value: mintValue}(
+            IJB721TiersHook(hookAddr), blockedNewUri, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+        );
 
         JB721Tier memory existingTier = JB721Tier({
             id: 1,
@@ -135,7 +191,9 @@ contract RegressionPolicyReuseTest is Test {
         );
 
         vm.prank(alice);
-        publisher.mintFrom{value: mintValue}(IJB721TiersHook(hookAddr), initialPosts, alice, alice, "");
+        publisher.mintFrom{value: mintValue}(
+            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+        );
     }
 
     function _configureAllowlist(address allowedPoster) internal {

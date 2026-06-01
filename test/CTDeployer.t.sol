@@ -30,6 +30,7 @@ import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
 
 import {CTDeployer} from "../src/CTDeployer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../src/CTPublisher.sol";
 import {ICTDeployer} from "../src/interfaces/ICTDeployer.sol";
 import {ICTPublisher} from "../src/interfaces/ICTPublisher.sol";
@@ -121,7 +122,9 @@ contract TestCTDeployer is Test {
         );
 
         // Deploy publisher.
-        publisher = new CTPublisher(IJBDirectory(makeAddr("directory")), permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(
+            IJBDirectory(makeAddr("directory")), permissions, feeProjectId, IPermit2(address(0)), address(0)
+        );
 
         // Deploy the CTDeployer.
         deployer = new CTDeployer(

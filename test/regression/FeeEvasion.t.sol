@@ -12,11 +12,54 @@ import {IJB721TiersHook} from "@bananapus/721-hook-v6/src/interfaces/IJB721Tiers
 import {IJB721TiersHookStore} from "@bananapus/721-hook-v6/src/interfaces/IJB721TiersHookStore.sol";
 import {JB721Tier} from "@bananapus/721-hook-v6/src/structs/JB721Tier.sol";
 import {JB721TierFlags} from "@bananapus/721-hook-v6/src/structs/JB721TierFlags.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
+
+contract FeeEvasionMockStore {
+    mapping(address hook => mapping(address owner => uint256 balance)) public balanceOf;
+
+    function mint(address hook, address owner, uint256 count) external {
+        balanceOf[hook][owner] += count;
+    }
+}
+
+contract FeeEvasionMockTerminal {
+    FeeEvasionMockStore internal _store;
+    address internal _hook;
+
+    constructor(FeeEvasionMockStore store_, address hook_) {
+        _store = store_;
+        _hook = hook_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
+    }
+
+    function pay(
+        uint256,
+        address,
+        uint256,
+        address beneficiary,
+        uint256,
+        string calldata,
+        bytes calldata
+    )
+        external
+        payable
+        returns (uint256)
+    {
+        _store.mint({hook: _hook, owner: beneficiary, count: 1});
+        return 0;
+    }
+}
 
 /// @title FeeEvasionRegression
 /// @notice Fee evasion for existing tier mints.
@@ -30,9 +73,9 @@ contract FeeEvasionRegression is Test {
 
     address hookOwner = makeAddr("hookOwner");
     address hookAddr = makeAddr("hook");
-    address hookStoreAddr = makeAddr("hookStore");
-    address terminalAddr = makeAddr("terminal");
-    address feeTerminalAddr = makeAddr("feeTerminal");
+    address hookStoreAddr;
+    address terminalAddr;
+    address feeTerminalAddr;
     address poster = makeAddr("poster");
 
     uint256 feeProjectId = 1;
@@ -41,8 +84,14 @@ contract FeeEvasionRegression is Test {
     bytes32 constant TEST_URI = keccak256("existing-tier-content");
     uint104 constant TIER_PRICE = 1 ether;
 
+    FeeEvasionMockStore hookStore;
+
     function setUp() public {
-        publisher = new CTPublisher(directory, permissions, feeProjectId, address(0));
+        publisher = new CTPublisher(directory, permissions, feeProjectId, IPermit2(address(0)), address(0));
+        hookStore = new FeeEvasionMockStore();
+        hookStoreAddr = address(hookStore);
+        terminalAddr = address(new FeeEvasionMockTerminal(hookStore, hookAddr));
+        feeTerminalAddr = address(new FeeEvasionMockTerminal(hookStore, hookAddr));
 
         // Mock hook.owner().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJBOwnable.owner.selector), abi.encode(hookOwner));
@@ -50,6 +99,12 @@ contract FeeEvasionRegression is Test {
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721Hook.projectId.selector), abi.encode(hookProjectId));
         // Mock hook.STORE().
         vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.STORE.selector), abi.encode(hookStoreAddr));
+        // Mock hook.pricingContext().
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.ETH), uint256(18))
+        );
 
         // Mock isTierRemoved to return false by default (tier exists).
         vm.mockCall(
@@ -136,10 +191,6 @@ contract FeeEvasionRegression is Test {
             abi.encode(feeTerminalAddr)
         );
 
-        // Mock terminal.pay() to succeed and record the value sent.
-        vm.mockCall(terminalAddr, "", abi.encode(uint256(0)));
-        vm.mockCall(feeTerminalAddr, "", abi.encode(uint256(0)));
-
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
             encodedIpfsUri: TEST_URI,
@@ -152,7 +203,9 @@ contract FeeEvasionRegression is Test {
 
         // First mint to create the tier and populate the mapping.
         vm.prank(poster);
-        publisher.mintFrom{value: 2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+        );
 
         // Verify the mapping was set.
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1, "tier ID should be stored");
@@ -180,11 +233,15 @@ contract FeeEvasionRegression is Test {
         // not the attacker's 0.
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 0}(IJB721TiersHook(hookAddr), attackPosts, poster, poster, "");
+        publisher.mintFrom{value: 0}(
+            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 0, poster, poster, ""
+        );
 
         // Sending the correct amount should succeed.
         vm.prank(poster);
-        publisher.mintFrom{value: 2 ether}(IJB721TiersHook(hookAddr), attackPosts, poster, poster, "");
+        publisher.mintFrom{value: 2 ether}(
+            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+        );
     }
 
     /// @notice Test that the correct fee amount is deducted for existing tier mints.
@@ -234,9 +291,6 @@ contract FeeEvasionRegression is Test {
             abi.encodeWithSelector(IJBDirectory.primaryTerminalOf.selector, feeProjectId),
             abi.encode(feeTerminalAddr)
         );
-        vm.mockCall(terminalAddr, "", abi.encode(uint256(0)));
-        vm.mockCall(feeTerminalAddr, "", abi.encode(uint256(0)));
-
         // First mint to create the tier.
         CTPost[] memory posts = new CTPost[](1);
         posts[0] = CTPost({
@@ -249,7 +303,9 @@ contract FeeEvasionRegression is Test {
         });
 
         vm.prank(poster);
-        publisher.mintFrom{value: 2 ether}(IJB721TiersHook(hookAddr), posts, poster, poster, "");
+        publisher.mintFrom{value: 2 ether}(
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+        );
 
         // Second mint with the existing tier. Even with post.price = 0, the fee
         // should be based on the actual price (1 ether).
@@ -273,11 +329,15 @@ contract FeeEvasionRegression is Test {
 
         // Sending exactly 1.05 ether should succeed.
         vm.prank(poster);
-        publisher.mintFrom{value: 1.05 ether}(IJB721TiersHook(hookAddr), existingPosts, poster, poster, "");
+        publisher.mintFrom{value: 1.05 ether}(
+            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+        );
 
         // Sending 1.04 ether should fail (1.04 - 0.05 = 0.99 < 1 ether totalPrice).
         vm.prank(poster);
         vm.expectRevert();
-        publisher.mintFrom{value: 1.04 ether}(IJB721TiersHook(hookAddr), existingPosts, poster, poster, "");
+        publisher.mintFrom{value: 1.04 ether}(
+            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.04 ether, poster, poster, ""
+        );
     }
 }

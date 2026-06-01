@@ -32,6 +32,7 @@ import {JBSuckerState} from "@bananapus/suckers-v6/src/enums/JBSuckerState.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import {CTDeployer} from "../../src/CTDeployer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {ICTPublisher} from "../../src/interfaces/ICTPublisher.sol";
 import {CTProjectConfig} from "../../src/structs/CTProjectConfig.sol";
@@ -364,7 +365,7 @@ contract RegressionFreshRoundTest is Test {
         hookDeployer.setHook(IJB721TiersHook(address(hook)));
         MockController controller = new MockController(projects, 1);
         MockDirectory directory = new MockDirectory(IJBProjects(address(projects)));
-        CTPublisher publisher = new CTPublisher(directory, permissions, 1, address(0));
+        CTPublisher publisher = new CTPublisher(directory, permissions, 1, IPermit2(address(0)), address(0));
         CTDeployer deployer = new CTDeployer(
             permissions,
             IJBProjects(address(projects)),
@@ -396,7 +397,7 @@ contract RegressionFreshRoundTest is Test {
         MockHook hook = new MockHook(1);
         hookDeployer.setHook(IJB721TiersHook(address(hook)));
         MockController controller = new MockController(projects, 1);
-        CTPublisher publisher = new CTPublisher(directory, permissions, 999, address(0));
+        CTPublisher publisher = new CTPublisher(directory, permissions, 999, IPermit2(address(0)), address(0));
         CTDeployer deployer = new CTDeployer(
             permissions,
             IJBProjects(address(projects)),

@@ -10,10 +10,14 @@ import {JB721TierConfig} from "@bananapus/721-hook-v6/src/structs/JB721TierConfi
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
+import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBPermissionsData} from "@bananapus/core-v6/src/structs/JBPermissionsData.sol";
 import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../../src/CTPublisher.sol";
 import {CTAllowedPost} from "../../src/structs/CTAllowedPost.sol";
 import {CTPost} from "../../src/structs/CTPost.sol";
@@ -69,6 +73,10 @@ contract MetadataShadowHook {
         return PROJECT_ID;
     }
 
+    function pricingContext() external pure returns (uint256, uint256) {
+        return (JBCurrencyIds.ETH, 18);
+    }
+
     function adjustTiers(JB721TierConfig[] calldata, uint256[] calldata) external {}
 
     function owner() external view returns (address) {
@@ -86,6 +94,10 @@ contract MetadataCapturingTerminal {
 
     constructor(address metadataIdTarget_) {
         METADATA_ID_TARGET = metadataIdTarget_;
+    }
+
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
     }
 
     function pay(
@@ -116,6 +128,10 @@ contract MetadataCapturingTerminal {
 }
 
 contract MetadataNoopTerminal {
+    function accountingContextForTokenOf(uint256, address token) external pure returns (JBAccountingContext memory) {
+        return JBAccountingContext({token: token, decimals: 18, currency: JBCurrencyIds.ETH});
+    }
+
     function pay(
         uint256,
         address,
@@ -159,7 +175,8 @@ contract RegressionMetadataShadowTest is Test {
         MetadataNoopTerminal feeTerminal = new MetadataNoopTerminal();
         directory.setTerminals(IJBTerminal(address(projectTerminal)), IJBTerminal(address(feeTerminal)));
 
-        CTPublisher publisher = new CTPublisher(IJBDirectory(address(directory)), permissions, 1, address(0));
+        CTPublisher publisher =
+            new CTPublisher(IJBDirectory(address(directory)), permissions, 1, IPermit2(address(0)), address(0));
 
         CTAllowedPost[] memory allowedPosts = new CTAllowedPost[](1);
         allowedPosts[0] = CTAllowedPost({
@@ -195,7 +212,13 @@ contract RegressionMetadataShadowTest is Test {
         // Metadata shadowing reverts instead of minting forged tier IDs.
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePayMetadata.selector, duplicatePayId));
         publisher.mintFrom{value: 105}(
-            IJB721TiersHook(address(hook)), posts, address(this), address(this), shadowingMetadata
+            IJB721TiersHook(address(hook)),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            105,
+            address(this),
+            address(this),
+            shadowingMetadata
         );
     }
 }
