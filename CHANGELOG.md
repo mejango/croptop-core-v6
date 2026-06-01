@@ -13,6 +13,11 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 - `CTDeployerAllowedPost`
 - `CTPost`
 
+## 0.0.65 — Raise dependency floors and expand the style guide
+
+- Raise dependency floors to the latest published versions.
+- Document NatSpec, comment, and lint conventions in `STYLE_GUIDE.md`.
+
 ## 0.0.64 — Add Permit2 publisher payments and cross-currency pricing
 
 - `CTPublisher.mintFrom` now accepts a publisher-targeted Permit2 metadata entry, allowing ERC-20 publish payments to be pulled through Permit2 without a direct publisher approval.
