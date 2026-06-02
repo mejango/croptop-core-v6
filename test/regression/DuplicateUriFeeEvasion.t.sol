@@ -152,7 +152,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, duplicateUri));
         publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         );
     }
 
@@ -196,7 +196,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, duplicateUri));
         publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         );
     }
 
@@ -231,7 +231,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
         // May succeed fully or revert downstream in mocks, but never with the duplicate error.
         vm.prank(poster);
         try publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             // Ensure it did NOT revert with CTPublisher_DuplicatePost.
@@ -272,7 +272,7 @@ contract DuplicateUriFeeEvasionRegression is Test {
 
         vm.prank(poster);
         try publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             assertTrue(
@@ -324,14 +324,14 @@ contract DuplicateUriFeeEvasionRegression is Test {
             vm.prank(poster);
             vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_DuplicatePost.selector, uri1));
             publisher.mintFrom{value: 1 ether}(
-                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
             );
         } else {
             // Must NOT revert with duplicate error. May still revert for other reasons
             // (e.g. mocked terminal behavior), but not CTPublisher_DuplicatePost.
             vm.prank(poster);
             try publisher.mintFrom{value: 1 ether}(
-                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
             ) {}
             catch (bytes memory reason) {
                 assertTrue(

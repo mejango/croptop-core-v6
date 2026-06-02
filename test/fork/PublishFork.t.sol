@@ -135,7 +135,7 @@ contract ForkPermit2Wallet {
             originalMetadata: additionalPayMetadata, idToAdd: permit2Id, dataToAdd: abi.encode(permit2Allowance)
         });
 
-        publisher.mintFrom(hook, posts, token, amount, nftBeneficiary, feeBeneficiary, metadata);
+        publisher.mintFrom(hook, posts, token, amount, nftBeneficiary, feeBeneficiary, metadata, 0);
     }
 }
 
@@ -273,7 +273,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         // Mint.
         vm.prank(poster);
         publisher.mintFrom{value: totalValue}(
-            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, "", 0
         );
 
         // Verify NFT was minted to the beneficiary.
@@ -361,7 +361,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
 
         vm.prank(poster);
-        publisher.mintFrom(hook, posts, address(weth), totalAmount, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom(hook, posts, address(weth), totalAmount, nftBeneficiary, feeBeneficiary, "", 0);
 
         assertEq(IERC721(address(hook)).balanceOf(nftBeneficiary), balanceBefore + 1, "NFT should mint");
         assertEq(
@@ -394,7 +394,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
 
         vm.prank(poster);
-        publisher.mintFrom(hook, posts, address(usdc), totalAmount, nftBeneficiary, feeBeneficiary, "");
+        publisher.mintFrom(hook, posts, address(usdc), totalAmount, nftBeneficiary, feeBeneficiary, "", 0);
 
         assertEq(IERC721(address(hook)).balanceOf(nftBeneficiary), balanceBefore + 1, "NFT should mint");
         assertEq(
@@ -440,7 +440,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         // Mint.
         vm.prank(poster);
         publisher.mintFrom{value: totalValue}(
-            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, "", 0
         );
 
         // Verify fee project terminal balance increased by the fee amount.
@@ -472,7 +472,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         vm.prank(poster);
         vm.expectRevert();
         publisher.mintFrom{value: insufficientValue}(
-            testHook, posts, JBConstants.NATIVE_TOKEN, insufficientValue, nftBeneficiary, feeBeneficiary, ""
+            testHook, posts, JBConstants.NATIVE_TOKEN, insufficientValue, nftBeneficiary, feeBeneficiary, "", 0
         );
     }
 
@@ -486,7 +486,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         // First mint.
         vm.prank(poster);
         publisher.mintFrom{value: totalValue}(
-            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, "", 0
         );
 
         // Record the tier ID assigned to this URI after the first mint.
@@ -496,7 +496,7 @@ contract PublishForkTest is Test, DeployPermit2 {
         // Second mint with the same URI. The existing tier should be reused.
         vm.prank(poster);
         publisher.mintFrom{value: totalValue}(
-            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, ""
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalValue, nftBeneficiary, feeBeneficiary, "", 0
         );
 
         // Verify the tier ID is unchanged — no new tier was created.
@@ -534,7 +534,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         vm.prank(poster);
         publisher.mintFrom{value: totalPrice + fee}(
-            testHook, posts, JBConstants.NATIVE_TOKEN, totalPrice + fee, nftBeneficiary, feeBeneficiary, ""
+            testHook, posts, JBConstants.NATIVE_TOKEN, totalPrice + fee, nftBeneficiary, feeBeneficiary, "", 0
         );
 
         assertEq(IERC721(address(testHook)).balanceOf(nftBeneficiary), balanceBefore + 2, "both NFTs should mint");

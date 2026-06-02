@@ -135,7 +135,7 @@ contract RegressionPolicyReuseTest is Test {
 
         vm.prank(alice);
         publisher.mintFrom{value: mintValue}(
-            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, "", 0
         );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, URI), 1, "initial publish should store tier id");
@@ -159,7 +159,7 @@ contract RegressionPolicyReuseTest is Test {
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NotInAllowList.selector, alice, _asArray(bob)));
         publisher.mintFrom{value: mintValue}(
-            IJB721TiersHook(hookAddr), blockedNewUri, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+            IJB721TiersHook(hookAddr), blockedNewUri, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, "", 0
         );
 
         JB721Tier memory existingTier = JB721Tier({
@@ -192,7 +192,7 @@ contract RegressionPolicyReuseTest is Test {
 
         vm.prank(alice);
         publisher.mintFrom{value: mintValue}(
-            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, ""
+            IJB721TiersHook(hookAddr), initialPosts, JBConstants.NATIVE_TOKEN, mintValue, alice, alice, "", 0
         );
     }
 

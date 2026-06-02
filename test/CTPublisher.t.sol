@@ -87,7 +87,7 @@ contract MockCroptopReentrantERC20 is MockCroptopERC20 {
                 splits: new JBSplit[](0)
             });
 
-            publisher.mintFrom(hook, posts, address(this), 1, from, from, "");
+            publisher.mintFrom(hook, posts, address(this), 1, from, from, "", 0);
         }
 
         return super.transferFrom({from: from, to: to, amount: amount});
@@ -615,7 +615,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
             )
         );
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         );
     }
 
@@ -636,7 +636,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         // Should pass validation. May revert downstream in mock, but NOT with split percent error.
         vm.prank(poster);
         try publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             assertTrue(
@@ -669,7 +669,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         // splitPercent=0 should always be allowed (0 <= 0).
         vm.prank(poster);
         try publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             assertTrue(
@@ -700,7 +700,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_SplitPercentExceedsMaximum.selector, 1, 0));
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         );
     }
 
@@ -731,7 +731,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         // Should pass split validation.
         vm.prank(poster);
         try publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             assertTrue(
@@ -762,7 +762,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
 
         vm.prank(poster);
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         );
     }
 
@@ -794,12 +794,12 @@ contract TestCTPublisher is Test, DeployPermit2 {
                 )
             );
             publisher.mintFrom{value: 0.02 ether}(
-                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, ""
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, "", 0
             );
         } else {
             vm.prank(poster);
             try publisher.mintFrom{value: 0.02 ether}(
-                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, ""
+                IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, "", 0
             ) {}
             catch (bytes memory reason) {
                 assertTrue(
@@ -885,7 +885,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
             abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether + fee, 0.04 ether)
         );
         publisher.mintFrom{value: 0.04 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.04 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.04 ether, poster, poster, "", 0
         );
     }
 
@@ -908,7 +908,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InsufficientEthSent.selector, 1 ether, 1 ether));
         publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         );
     }
 
@@ -930,7 +930,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         uint256 fee = 1 ether / 20;
         vm.prank(poster);
         try publisher.mintFrom{value: 1 ether + fee}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether + fee, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether + fee, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             assertTrue(
@@ -939,6 +939,121 @@ contract TestCTPublisher is Test, DeployPermit2 {
                 "should not revert with InsufficientEthSent"
             );
         }
+        assertEq(publisher.totalFeeVolume(), 0, "zero referral should not credit referrals");
+    }
+
+    function test_mintFrom_referralCreditTracksCpnFee() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("referral-fee"),
+            totalSupply: 10,
+            price: 1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        uint256 fee = 1 ether / 20;
+        uint256 referralProjectId = 7;
+
+        vm.prank(poster);
+        publisher.mintFrom{value: 1 ether + fee}(
+            IJB721TiersHook(hookAddr),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            1 ether + fee,
+            poster,
+            poster,
+            "",
+            referralProjectId
+        );
+
+        assertEq(publisher.feeVolumeByReferralOf(block.chainid, referralProjectId), fee, "referral fee volume");
+        assertEq(publisher.totalFeeVolume(), fee, "total fee volume");
+    }
+
+    function test_mintFrom_referralCreditSupportsPackedCrossChainProjectId() public {
+        _configureCategoryWithSplits(5, 0.01 ether, 1, 100, 0);
+        _setupMintMocks();
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("cross-chain-referral-fee"),
+            totalSupply: 10,
+            price: 1 ether,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        uint256 fee = 1 ether / 20;
+        uint256 referralChainId = 42_161;
+        uint256 referralProjectId = 9;
+        uint256 packedReferralProjectId = (referralChainId << 48) | referralProjectId;
+
+        vm.prank(poster);
+        publisher.mintFrom{value: 1 ether + fee}(
+            IJB721TiersHook(hookAddr),
+            posts,
+            JBConstants.NATIVE_TOKEN,
+            1 ether + fee,
+            poster,
+            poster,
+            "",
+            packedReferralProjectId
+        );
+
+        assertEq(publisher.feeVolumeByReferralOf(referralChainId, referralProjectId), fee, "packed referral volume");
+        assertEq(publisher.feeVolumeByReferralOf(block.chainid, referralProjectId), 0, "no current-chain credit");
+        assertEq(publisher.totalFeeVolume(), fee, "total fee volume");
+    }
+
+    function test_mintFrom_referralCreditNormalizesErc20CpnFee() public {
+        _configureCategoryWithSplits(5, 1_000_000, 1, 100, 0);
+        _setupMintMocks();
+        vm.mockCall(
+            hookAddr,
+            abi.encodeWithSelector(IJB721TiersHook.pricingContext.selector),
+            abi.encode(uint256(JBCurrencyIds.USD), uint256(6))
+        );
+
+        MockCroptopERC20 token = new MockCroptopERC20();
+        token.mint(poster, 1_050_000);
+        terminal.setAccountingContext({token: address(token), decimals: 6, currency: JBCurrencyIds.USD});
+
+        MockCroptopPrices prices = new MockCroptopPrices();
+        prices.setPrice(2e3 ether);
+        vm.mockCall(hookAddr, abi.encodeWithSelector(IJB721TiersHook.PRICES.selector), abi.encode(address(prices)));
+
+        CTPost[] memory posts = new CTPost[](1);
+        posts[0] = CTPost({
+            encodedIpfsUri: keccak256("erc20-referral-fee"),
+            totalSupply: 10,
+            price: 1_000_000,
+            category: 5,
+            splitPercent: 0,
+            splits: new JBSplit[](0)
+        });
+
+        uint256 referralProjectId = 7;
+
+        vm.prank(poster);
+        token.approve(address(publisher), 1_050_000);
+
+        vm.prank(poster);
+        publisher.mintFrom(
+            IJB721TiersHook(hookAddr), posts, address(token), 1_050_000, poster, poster, "", referralProjectId
+        );
+
+        assertEq(
+            publisher.feeVolumeByReferralOf(block.chainid, referralProjectId),
+            25_000_000_000_000,
+            "normalized referral fee volume"
+        );
+        assertEq(publisher.totalFeeVolume(), 25_000_000_000_000, "total fee volume");
     }
 
     function test_mintFrom_feeProject_noFeeDeducted() public {
@@ -989,7 +1104,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         // Send exactly the price with no fee. Should not revert with InsufficientEthSent.
         vm.prank(poster);
         try publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(feeHook), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(feeHook), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             assertTrue(
@@ -1031,7 +1146,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
             )
         );
         publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         );
     }
 
@@ -1069,7 +1184,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
 
         vm.prank(poster);
         publisher.mintFrom(
-            IJB721TiersHook(hookAddr), posts, address(token), convertedPrice + convertedFee, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, address(token), convertedPrice + convertedFee, poster, poster, "", 0
         );
 
         assertEq(
@@ -1104,7 +1219,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         token.approve(address(publisher), 1_050_000);
 
         vm.prank(poster);
-        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), 1_050_000, poster, poster, "");
+        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), 1_050_000, poster, poster, "", 0);
 
         assertEq(token.balanceOf(address(terminal)), 1_050_000, "terminal should receive price plus fee");
         assertEq(token.allowance(address(publisher), address(terminal)), 0, "temporary allowance consumed");
@@ -1130,7 +1245,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
 
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_ReentrantTokenTransfer.selector, address(token)));
-        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), 1 ether, poster, poster, "");
+        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), 1 ether, poster, poster, "", 0);
     }
 
     function test_mintFrom_refundsErc20FeeWhenFeeTerminalMissing() public {
@@ -1177,7 +1292,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         token.approve(address(publisher), price + fee);
 
         vm.prank(poster);
-        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), price + fee, poster, poster, "");
+        publisher.mintFrom(IJB721TiersHook(hookAddr), posts, address(token), price + fee, poster, poster, "", 0);
 
         assertEq(token.balanceOf(address(terminal)), price, "project terminal should receive price only");
         assertEq(token.balanceOf(poster), fee, "fee should be refunded");
@@ -1223,7 +1338,14 @@ contract TestCTPublisher is Test, DeployPermit2 {
 
         vm.prank(permitPoster);
         publisher.mintFrom(
-            IJB721TiersHook(hookAddr), posts, address(token), totalAmount, permitPoster, permitPoster, permit2Metadata
+            IJB721TiersHook(hookAddr),
+            posts,
+            address(token),
+            totalAmount,
+            permitPoster,
+            permitPoster,
+            permit2Metadata,
+            0
         );
 
         assertEq(token.allowance(permitPoster, address(publisher)), 0, "publisher should not need ERC-20 approval");
@@ -1256,7 +1378,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         uint256 fee = 0.1 ether / 20;
         vm.prank(poster);
         publisher.mintFrom{value: 0.1 ether + fee}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, "", 0
         );
     }
 
@@ -1280,7 +1402,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         uint256 fee = 0.1 ether / 20;
         vm.prank(poster);
         publisher.mintFrom{value: 0.1 ether + fee}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, "", 0
         );
     }
 
@@ -1359,7 +1481,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
             abi.encodeWithSelector(CTPublisher.CTPublisher_MintNotDelivered.selector, hookAddr, poster, 1, 0)
         );
         publisher.mintFrom{value: 0.1 ether + fee}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, "", 0
         );
     }
 
@@ -1425,7 +1547,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         uint256 fee = 0.1 ether / 20;
         vm.prank(poster);
         publisher.mintFrom{value: 0.1 ether + fee}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.1 ether + fee, poster, poster, "", 0
         );
     }
 
@@ -1461,7 +1583,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
             )
         );
         publisher.mintFrom{value: 0.4 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.4 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.4 ether, poster, poster, "", 0
         );
     }
 
@@ -1530,7 +1652,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
 
         vm.prank(poster);
         publisher.mintFrom{value: 0.21 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.21 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.21 ether, poster, poster, "", 0
         );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, categoryOneUri), 1);
@@ -1558,7 +1680,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_InvalidFeeBeneficiary.selector));
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, address(0), ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, address(0), "", 0
         );
     }
 
@@ -1580,7 +1702,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         // InvalidFeeBeneficiary.
         vm.prank(poster);
         try publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         ) {}
         catch (bytes memory reason) {
             assertTrue(

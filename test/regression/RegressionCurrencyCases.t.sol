@@ -113,7 +113,7 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
         vm.prank(POSTER);
         vm.expectRevert();
         publisher.mintFrom{value: _totalValue()}(
-            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, "", 0
         );
 
         MockPriceFeed identityFeed = new MockPriceFeed(1e18, 18);
@@ -127,7 +127,7 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
 
         vm.prank(POSTER);
         publisher.mintFrom{value: _totalValue()}(
-            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, "", 0
         );
     }
 
@@ -161,7 +161,7 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
 
         vm.prank(POSTER);
         publisher.mintFrom{value: _totalValue()}(
-            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, ""
+            hook, _singlePost(), JBConstants.NATIVE_TOKEN, _totalValue(), NFT_BENEFICIARY, FEE_BENEFICIARY, "", 0
         );
 
         uint256 feeProjectBalanceAfter =

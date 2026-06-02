@@ -513,7 +513,7 @@ contract TestRegressionGaps is Test {
             // This may revert downstream (mock terminal), but the allowlist check happens before that.
             // We use try-catch to capture the gas used for the allowlist check path.
             try publisher.mintFrom{value: 0.02 ether}(
-                IJB721TiersHook(hookAddr), mintPosts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, ""
+                IJB721TiersHook(hookAddr), mintPosts, JBConstants.NATIVE_TOKEN, 0.02 ether, poster, poster, "", 0
             ) {}
                 catch {}
             uint256 gasUsed = gasBefore - gasleft();
@@ -562,7 +562,14 @@ contract TestRegressionGaps is Test {
         // The call may revert downstream in mocked terminal calls, but NOT with NotInAllowList.
         vm.prank(unauthorized);
         try publisher.mintFrom{value: 0.02 ether}(
-            IJB721TiersHook(hookAddr), mintPosts, JBConstants.NATIVE_TOKEN, 0.02 ether, unauthorized, unauthorized, ""
+            IJB721TiersHook(hookAddr),
+            mintPosts,
+            JBConstants.NATIVE_TOKEN,
+            0.02 ether,
+            unauthorized,
+            unauthorized,
+            "",
+            0
         ) {}
         catch (bytes memory reason) {
             // Make sure it did NOT revert with CTPublisher_NotInAllowList.
@@ -608,7 +615,14 @@ contract TestRegressionGaps is Test {
         vm.prank(unauthorized);
         vm.expectRevert();
         publisher.mintFrom{value: 0.02 ether}(
-            IJB721TiersHook(hookAddr), mintPosts, JBConstants.NATIVE_TOKEN, 0.02 ether, unauthorized, unauthorized, ""
+            IJB721TiersHook(hookAddr),
+            mintPosts,
+            JBConstants.NATIVE_TOKEN,
+            0.02 ether,
+            unauthorized,
+            unauthorized,
+            "",
+            0
         );
     }
 

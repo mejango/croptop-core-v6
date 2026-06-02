@@ -38,7 +38,7 @@ contract EmptyPostFeeBypassRegression is Test {
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
         publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), emptyPosts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), emptyPosts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, "", 0
         );
     }
 
@@ -53,7 +53,7 @@ contract EmptyPostFeeBypassRegression is Test {
         vm.prank(poster);
         vm.expectRevert(abi.encodeWithSelector(CTPublisher.CTPublisher_NoPosts.selector, poster));
         publisher.mintFrom{value: 1 ether}(
-            IJB721TiersHook(hookAddr), emptyPosts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, craftedMetadata
+            IJB721TiersHook(hookAddr), emptyPosts, JBConstants.NATIVE_TOKEN, 1 ether, poster, poster, craftedMetadata, 0
         );
     }
 }

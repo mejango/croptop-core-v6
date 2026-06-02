@@ -44,6 +44,21 @@ interface ICTPublisher {
     /// @param reason The low-level revert reason returned by Permit2.
     event Permit2AllowanceFailed(address indexed token, address indexed owner, bytes reason);
 
+    /// @notice Emitted when a referrer is credited with a Croptop fee payment amount.
+    /// @dev Amounts are normalized to native-token units with 18 decimals.
+    /// @param referralChainId The EIP-155 chain ID of the referrer's home chain.
+    /// @param referralProjectId The referrer's bare project ID on `referralChainId`.
+    /// @param amount The normalized Croptop fee amount credited.
+    /// @param total The cumulative normalized Croptop fee volume after the credit.
+    /// @param caller The address that minted the posts.
+    event ReferralCredit(
+        uint256 indexed referralChainId,
+        uint256 indexed referralProjectId,
+        uint256 amount,
+        uint256 total,
+        address caller
+    );
+
     /// @notice The post allowance for a particular category on a particular hook.
     /// @param hook The hook contract for which this allowance applies.
     /// @param category The category for which this allowance applies.
@@ -82,6 +97,12 @@ interface ICTPublisher {
     /// @return The Permit2 contract.
     function PERMIT2() external view returns (IPermit2);
 
+    /// @notice Cumulative normalized Croptop fee amount credited to a referrer.
+    /// @param referralChainId The EIP-155 chain ID of the referrer's home chain.
+    /// @param referralProjectId The referrer's bare project ID on `referralChainId`.
+    /// @return The cumulative normalized Croptop fee amount credited.
+    function feeVolumeByReferralOf(uint256 referralChainId, uint256 referralProjectId) external view returns (uint256);
+
     /// @notice The tier ID that an IPFS metadata URI has been saved to for a given hook.
     /// @param hook The hook for which the tier ID applies.
     /// @param encodedIpfsUri The encoded IPFS URI to look up.
@@ -96,11 +117,15 @@ interface ICTPublisher {
     /// without a tier.
     function tiersFor(address hook, bytes32[] memory encodedIpfsUris) external view returns (JB721Tier[] memory tiers);
 
+    /// @notice Cumulative normalized Croptop fee amount credited across all referrers.
+    /// @return The cumulative normalized Croptop fee amount.
+    function totalFeeVolume() external view returns (uint256);
+
     /// @notice Configure the allowed criteria for publishing new NFTs to a hook.
     /// @param allowedPosts An array of criteria for allowed posts.
     function configurePostingCriteriaFor(CTAllowedPost[] memory allowedPosts) external;
 
-    /// @notice Publish NFT posts and mint a first copy of each. A fee is taken for the fee project.
+    /// @notice Publish NFT posts and mint a first copy of each, crediting a referrer for the Croptop fee.
     /// @param hook The hook to mint from.
     /// @param posts An array of posts to publish as NFTs.
     /// @param token The terminal token to pay with.
@@ -109,6 +134,8 @@ interface ICTPublisher {
     /// @param feeBeneficiary The beneficiary of the fee project's tokens.
     /// @param additionalPayMetadata Extra metadata bytes to include in the payment. Include a Permit2 entry targeted
     /// to this publisher to pay ERC-20s without a direct publisher approval.
+    /// @param referralProjectId Optional referrer reference to credit with the Croptop fee paid by this mint, encoded
+    /// as `(referralChainId << 48) | referralProjectId`. A bare project ID is resolved to the current chain.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
@@ -116,7 +143,8 @@ interface ICTPublisher {
         uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
-        bytes calldata additionalPayMetadata
+        bytes calldata additionalPayMetadata,
+        uint256 referralProjectId
     )
         external
         payable;

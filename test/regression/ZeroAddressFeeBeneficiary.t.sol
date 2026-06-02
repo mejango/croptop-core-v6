@@ -202,7 +202,8 @@ contract ZeroAddressFeeBeneficiaryTest is Test {
             105,
             address(this),
             address(0), // zero address fee beneficiary
-            bytes("")
+            bytes(""),
+            0
         );
     }
 
@@ -227,7 +228,8 @@ contract ZeroAddressFeeBeneficiaryTest is Test {
             105,
             address(this),
             address(0xBEEF), // valid fee beneficiary
-            bytes("")
+            bytes(""),
+            0
         );
 
         assertEq(projectTerminal.totalReceived(), 100, "project terminal should receive the main payment");

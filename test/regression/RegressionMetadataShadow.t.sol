@@ -218,7 +218,8 @@ contract RegressionMetadataShadowTest is Test {
             105,
             address(this),
             address(this),
-            shadowingMetadata
+            shadowingMetadata,
+            0
         );
     }
 }

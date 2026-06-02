@@ -13,6 +13,7 @@ import {IJBPrices} from "@bananapus/core-v6/src/interfaces/IJBPrices.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBFixedPointNumber} from "@bananapus/core-v6/src/libraries/JBFixedPointNumber.sol";
 import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
 import {JBAccountingContext} from "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
 import {JBSingleAllowance} from "@bananapus/core-v6/src/structs/JBSingleAllowance.sol";
@@ -102,6 +103,16 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @custom:param hook The hook for which the tier ID applies.
     /// @custom:param encodedIpfsUri The IPFS URI.
     mapping(address hook => mapping(bytes32 encodedIpfsUri => uint256)) public override tierIdForEncodedIpfsUriOf;
+
+    /// @notice Cumulative normalized Croptop fee amount credited to a referrer.
+    /// @custom:param referralChainId The EIP-155 chain ID of the referrer's home chain.
+    /// @custom:param referralProjectId The referrer's bare project ID on `referralChainId`.
+    mapping(uint256 referralChainId => mapping(uint256 referralProjectId => uint256))
+        public
+        override feeVolumeByReferralOf;
+
+    /// @notice Cumulative normalized Croptop fee amount credited across all referrers.
+    uint256 public override totalFeeVolume;
 
     //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
@@ -217,9 +228,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         }
     }
 
-    /// @notice Publish one or more NFT posts to a project's 721 hook and mint a first copy of each. For each new post,
-    /// a tier is created on the hook. A 5% fee (1/FEE_DIVISOR) is taken from the total tier prices and routed to the
-    /// fee project; the remainder is paid into the project's terminal, minting NFTs for the beneficiary.
+    /// @notice Publish one or more NFT posts to a project's 721 hook and mint a first copy of each, crediting a
+    /// referrer for the Croptop fee.
     /// @dev Reverts if any post violates the category's configured allowance (price, supply, split, allowlist).
     /// @param hook The hook to mint from.
     /// @param posts An array of posts that should be published as NFTs to the specified project.
@@ -229,6 +239,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param feeBeneficiary The beneficiary of the fee project's token.
     /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
     /// Include a Permit2 entry targeted to this publisher to pay ERC-20s without a direct publisher approval.
+    /// @param referralProjectId Optional referrer reference to credit with the Croptop fee paid by this mint, encoded
+    /// as `(referralChainId << 48) | referralProjectId`. A bare project ID is resolved to the current chain.
     function mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
@@ -236,7 +248,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
-        bytes calldata additionalPayMetadata
+        bytes calldata additionalPayMetadata,
+        uint256 referralProjectId
     )
         external
         payable
@@ -251,7 +264,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             amount: acceptedAmount,
             nftBeneficiary: nftBeneficiary,
             feeBeneficiary: feeBeneficiary,
-            additionalPayMetadata: additionalPayMetadata
+            additionalPayMetadata: additionalPayMetadata,
+            referralProjectId: referralProjectId
         });
     }
 
@@ -432,6 +446,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @param nftBeneficiary The beneficiary of the NFT mints.
     /// @param feeBeneficiary The beneficiary of the fee project's token.
     /// @param additionalPayMetadata Metadata bytes to include in the payment after Croptop prepends NFT mint metadata.
+    /// @param referralProjectId Optional referrer reference to credit with the Croptop fee paid by this mint, encoded
+    /// as `(referralChainId << 48) | referralProjectId`. A bare project ID is resolved to the current chain.
     function _mintFrom(
         IJB721TiersHook hook,
         CTPost[] calldata posts,
@@ -439,7 +455,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         uint256 amount,
         address nftBeneficiary,
         address feeBeneficiary,
-        bytes calldata additionalPayMetadata
+        bytes calldata additionalPayMetadata,
+        uint256 referralProjectId
     )
         internal
     {
@@ -596,6 +613,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 metadata: ""
             }) {
                 _requireTemporaryAllowanceConsumed({token: token, spender: address(feeTerminal)});
+                _creditFeeReferralFor({
+                    hook: hook,
+                    feeTerminal: feeTerminal,
+                    token: token,
+                    amount: payValue,
+                    referralProjectId: referralProjectId
+                });
             } catch {
                 _clearAllowanceFor({token: token, spender: address(feeTerminal)});
                 _refundFee({token: token, amount: payValue});
@@ -623,6 +647,48 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         if (token == JBConstants.NATIVE_TOKEN) return;
 
         IERC20(token).forceApprove({spender: spender, value: 0});
+    }
+
+    /// @notice Credit a referrer with a successfully paid Croptop fee.
+    /// @param hook The hook whose price oracle should be used when normalizing non-native fee tokens.
+    /// @param feeTerminal The terminal that received the Croptop fee.
+    /// @param token The token the Croptop fee was paid in.
+    /// @param amount The Croptop fee amount paid.
+    /// @param referralProjectId The packed `(chainId << 48) | projectId` referrer reference to credit.
+    function _creditFeeReferralFor(
+        IJB721TiersHook hook,
+        IJBTerminal feeTerminal,
+        address token,
+        uint256 amount,
+        uint256 referralProjectId
+    )
+        internal
+    {
+        if (referralProjectId == 0 || amount == 0) return;
+
+        if (referralProjectId >> 48 == 0) {
+            referralProjectId |= block.chainid << 48;
+        }
+
+        uint256 referralChainId = referralProjectId >> 48;
+        uint256 bareProjectId = referralProjectId & ((1 << 48) - 1);
+        if (bareProjectId == 0) return;
+
+        uint256 normalizedAmount =
+            _normalizedFeeAmountFrom({hook: hook, feeTerminal: feeTerminal, token: token, amount: amount});
+        if (normalizedAmount == 0) return;
+
+        feeVolumeByReferralOf[referralChainId][bareProjectId] += normalizedAmount;
+        uint256 total = totalFeeVolume + normalizedAmount;
+        totalFeeVolume = total;
+
+        emit ReferralCredit({
+            referralChainId: referralChainId,
+            referralProjectId: bareProjectId,
+            amount: normalizedAmount,
+            total: total,
+            caller: _msgSender()
+        });
     }
 
     /// @notice Check if an address is included in an allow list.
@@ -655,6 +721,62 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
         return (currency == JBCurrencyIds.ETH || currency == nativeTokenCurrency)
             && (otherCurrency == JBCurrencyIds.ETH || otherCurrency == nativeTokenCurrency);
+    }
+
+    /// @notice Normalize a Croptop fee amount to native-token units with 18 decimals.
+    /// @param hook The hook whose price oracle should be used when currencies differ.
+    /// @param feeTerminal The terminal that received the Croptop fee.
+    /// @param token The token the Croptop fee was paid in.
+    /// @param amount The Croptop fee amount paid.
+    /// @return normalizedAmount The normalized amount, or 0 if the fee token cannot be priced.
+    function _normalizedFeeAmountFrom(
+        IJB721TiersHook hook,
+        IJBTerminal feeTerminal,
+        address token,
+        uint256 amount
+    )
+        internal
+        view
+        returns (uint256 normalizedAmount)
+    {
+        if (amount == 0) return 0;
+
+        JBAccountingContext memory context;
+        try feeTerminal.accountingContextForTokenOf({projectId: FEE_PROJECT_ID, token: token}) returns (
+            JBAccountingContext memory returnedContext
+        ) {
+            context = returnedContext;
+        } catch {
+            return 0;
+        }
+
+        if (context.token != token || context.currency == 0) return 0;
+
+        normalizedAmount =
+            JBFixedPointNumber.adjustDecimals({value: amount, decimals: context.decimals, targetDecimals: 18});
+        if (normalizedAmount == 0) return 0;
+
+        // Native ETH and the native-token accounting alias are treated as the same denomination.
+        if (_isNativeEthCurrencyPair({currency: context.currency, otherCurrency: JBCurrencyIds.ETH})) {
+            return normalizedAmount;
+        }
+
+        IJBPrices prices = hook.PRICES();
+        if (address(prices) == address(0)) return 0;
+
+        try prices.pricePerUnitOf({
+            projectId: FEE_PROJECT_ID,
+            pricingCurrency: context.currency,
+            unitCurrency: JBConstants.NATIVE_TOKEN_CURRENCY,
+            decimals: 18
+        }) returns (
+            uint256 price
+        ) {
+            if (price == 0) return 0;
+            return Math.mulDiv({x: normalizedAmount, y: 10 ** 18, denominator: price});
+        } catch {
+            return 0;
+        }
     }
 
     /// @notice Convert a hook pricing amount into the selected terminal token's accounting units.

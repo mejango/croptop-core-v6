@@ -109,7 +109,7 @@ contract RegressionUriDriftTest is Test {
 
         vm.prank(poster);
         publisher.mintFrom{value: 1.05 ether}(
-            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, "", 0
         );
     }
 }

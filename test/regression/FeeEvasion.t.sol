@@ -204,7 +204,7 @@ contract FeeEvasionRegression is Test {
         // First mint to create the tier and populate the mapping.
         vm.prank(poster);
         publisher.mintFrom{value: 2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, "", 0
         );
 
         // Verify the mapping was set.
@@ -234,13 +234,13 @@ contract FeeEvasionRegression is Test {
         vm.prank(poster);
         vm.expectRevert();
         publisher.mintFrom{value: 0}(
-            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 0, poster, poster, ""
+            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 0, poster, poster, "", 0
         );
 
         // Sending the correct amount should succeed.
         vm.prank(poster);
         publisher.mintFrom{value: 2 ether}(
-            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), attackPosts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, "", 0
         );
     }
 
@@ -304,7 +304,7 @@ contract FeeEvasionRegression is Test {
 
         vm.prank(poster);
         publisher.mintFrom{value: 2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 2 ether, poster, poster, "", 0
         );
 
         // Second mint with the existing tier. Even with post.price = 0, the fee
@@ -330,14 +330,14 @@ contract FeeEvasionRegression is Test {
         // Sending exactly 1.05 ether should succeed.
         vm.prank(poster);
         publisher.mintFrom{value: 1.05 ether}(
-            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, "", 0
         );
 
         // Sending 1.04 ether should fail (1.04 - 0.05 = 0.99 < 1 ether totalPrice).
         vm.prank(poster);
         vm.expectRevert();
         publisher.mintFrom{value: 1.04 ether}(
-            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.04 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), existingPosts, JBConstants.NATIVE_TOKEN, 1.04 ether, poster, poster, "", 0
         );
     }
 }

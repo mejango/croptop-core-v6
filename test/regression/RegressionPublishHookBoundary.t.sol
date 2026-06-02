@@ -226,7 +226,8 @@ contract RegressionPublishHookBoundaryTest is Test {
             price + fee,
             beneficiary,
             address(0xFEE),
-            bytes("")
+            bytes(""),
+            0
         );
 
         assertEq(hook.adjustedTiers(), 0, "tier creation rolled back");

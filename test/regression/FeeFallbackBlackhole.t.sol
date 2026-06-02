@@ -179,7 +179,7 @@ contract RejectingMintCaller {
         payable
     {
         publisher.mintFrom{value: msg.value}(
-            hook, posts, JBConstants.NATIVE_TOKEN, msg.value, nftBeneficiary, feeBeneficiary, bytes("")
+            hook, posts, JBConstants.NATIVE_TOKEN, msg.value, nftBeneficiary, feeBeneficiary, bytes(""), 0
         );
     }
 
@@ -200,7 +200,7 @@ contract AcceptingMintCaller {
         payable
     {
         publisher.mintFrom{value: msg.value}(
-            hook, posts, JBConstants.NATIVE_TOKEN, msg.value, nftBeneficiary, feeBeneficiary, bytes("")
+            hook, posts, JBConstants.NATIVE_TOKEN, msg.value, nftBeneficiary, feeBeneficiary, bytes(""), 0
         );
     }
 

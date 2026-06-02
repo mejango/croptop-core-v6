@@ -297,7 +297,8 @@ contract CroptopRegressionFixesTest is Test {
             1.05 ether,
             poster,
             poster,
-            shadowingMetadata
+            shadowingMetadata,
+            0
         );
     }
 
@@ -316,7 +317,7 @@ contract CroptopRegressionFixesTest is Test {
         // Empty metadata — should succeed.
         vm.prank(poster);
         publisher.mintFrom{value: 1.05 ether}(
-            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, "", 0
         );
 
         assertEq(
@@ -351,7 +352,8 @@ contract CroptopRegressionFixesTest is Test {
             1.05 ether,
             poster,
             poster,
-            unrelatedMetadata
+            unrelatedMetadata,
+            0
         );
 
         assertEq(
@@ -435,7 +437,7 @@ contract CroptopRegressionFixesTest is Test {
 
         vm.prank(poster);
         publisher.mintFrom{value: 1.05 ether}(
-            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, ""
+            IJB721TiersHook(address(hook)), posts, JBConstants.NATIVE_TOKEN, 1.05 ether, poster, poster, "", 0
         );
     }
 }

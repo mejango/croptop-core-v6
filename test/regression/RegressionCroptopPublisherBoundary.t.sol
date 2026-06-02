@@ -259,7 +259,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
             2 ether,
             unrestrictedPoster,
             unrestrictedPoster,
-            ""
+            "",
+            0
         );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "initial publish should cache tier 1");
@@ -275,7 +276,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
             2 ether,
             outsider,
             outsider,
-            ""
+            "",
+            0
         );
 
         // The outsider's second call succeeds because existing-tier reuse skips the allowlist and price checks.
@@ -303,7 +305,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
             2 ether,
             unrestrictedPoster,
             unrestrictedPoster,
-            ""
+            "",
+            0
         );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(address(hook), URI_A), 1, "publisher cache should point at tier 1");
@@ -328,7 +331,8 @@ contract RegressionCroptopPublisherBoundaryTest is Test {
             2 ether,
             unrestrictedPoster,
             unrestrictedPoster,
-            ""
+            "",
+            0
         );
 
         // Croptop creates a second tier for the same canonical URI because it never re-syncs against hook metadata.

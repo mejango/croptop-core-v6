@@ -207,7 +207,7 @@ contract ReentrantProjectTerminal {
             });
 
             publisher.mintFrom{value: 21}(
-                hook, posts, JBConstants.NATIVE_TOKEN, 21, address(this), attackerFeeBeneficiary, bytes("")
+                hook, posts, JBConstants.NATIVE_TOKEN, 21, address(this), attackerFeeBeneficiary, bytes(""), 0
             );
         }
 
@@ -272,7 +272,8 @@ contract FeeBeneficiaryReentrancyTest is Test {
             105,
             address(this),
             victimFeeBeneficiary,
-            bytes("")
+            bytes(""),
+            0
         );
 
         // Fee amounts are pinned before external calls, so both inner and outer fees are paid separately with correct

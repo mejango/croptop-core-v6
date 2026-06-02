@@ -183,7 +183,7 @@ contract StaleTierIdMappingRegression is Test {
 
         vm.prank(poster);
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         );
 
         // Verify tier ID 1 was stored in the mapping.
@@ -214,7 +214,7 @@ contract StaleTierIdMappingRegression is Test {
         // Second mint with the same URI should succeed by clearing the stale mapping and creating a new tier.
         vm.prank(poster);
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         );
 
         // Verify the mapping points to the new tier ID (2).
@@ -279,7 +279,7 @@ contract StaleTierIdMappingRegression is Test {
 
         vm.prank(poster);
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         );
 
         assertEq(publisher.tierIdForEncodedIpfsUriOf(hookAddr, TEST_URI), 1);
@@ -289,7 +289,7 @@ contract StaleTierIdMappingRegression is Test {
 
         vm.prank(poster);
         publisher.mintFrom{value: 0.2 ether}(
-            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, ""
+            IJB721TiersHook(hookAddr), posts, JBConstants.NATIVE_TOKEN, 0.2 ether, poster, poster, "", 0
         );
 
         // Mapping should still point to tier 1.
