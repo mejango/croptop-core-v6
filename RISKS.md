@@ -14,7 +14,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 |----------|------|----------------|------------------|
 | P0 | Hook/store and terminal trust | `mintFrom` depends on hook storage, hook pricing, price feeds, and directory terminal resolution; a bad integration can misprice posts or redirect value. | Payment-token accounting context guard, price-feed availability checks, post-payment NFT delivery check, review integration assumptions, verify hook/store pairings, and monitor terminal configuration. |
 | P1 | Tier ID race during concurrent posting | `_setupPosts` predicts future tier IDs before `adjustTiers`; concurrent writes can shift those IDs and break the batch. | Application-layer ordering, atomic reverts on mismatch, and operator awareness. |
-| P1 | Fee-path degradation without mint failure | The fee terminal is fail-open via try/catch, so publishing continues even if the fee project temporarily stops receiving revenue. | Terminal health monitoring, fallback-beneficiary handling, and explicit fee-routing checks. |
+| P1 | Fee-path degradation without mint failure | The fee terminal is fail-open via try/catch, so publishing continues even if the fee project temporarily stops receiving revenue or referral volume. | Terminal health monitoring, fallback-beneficiary handling, explicit fee-routing checks, and referral-volume monitoring. |
 | P1 | Launch-time hook permissions persist until claim | `CTDeployer` grants the deploy-time `owner` four direct-hook permissions (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`) that persist on the deployer's permission table until `claimCollectionOwnershipOf` is called. A subsequent project NFT transfer does not revoke these — the original recipient can still act on the hook during the pre-claim window. | Project NFT sellers should call `claimCollectionOwnershipOf` before transfer; buyers of pre-claim NFTs should call it immediately on receipt. Marketplaces should surface claim status. |
 
 ## 1. Trust Assumptions
@@ -36,6 +36,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Fee settlement uses the converted tier price.** Force-sent ETH, force-sent tokens, or caller overpayment do not increase the fee calculation or fee refund path.
 - **Payment token is terminal-selected, then priced into terminal units.** The project terminal must expose an accounting context for the selected `token`. If that context uses a different currency than the hook's tier pricing, the hook's `PRICES` oracle must provide a nonzero conversion into the payment currency. Missing terminal support or missing price feeds revert before value can be stranded.
 - **Fee terminal fallback refunds the caller.** If the fee project has no terminal for the selected token or cannot accept the fee, Croptop refunds `_msgSender()`. Native refunds to relayers or contracts that cannot receive ETH will make the mint revert.
+- **CPN referral volume only follows successful, normalized fee payments.** Missing fee terminals, fee-terminal reverts, missing token accounting context, missing price feeds, or zero prices prevent referral credit even when the publish itself can continue.
 - **Split percent manipulation.** Posters can direct large shares of tier revenue away from the project if `maximumSplitPercent` is configured high.
 
 ## 3. Access Control
@@ -70,6 +71,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Tier ID prediction.** `_setupPosts` predicts new tier IDs ahead of the actual `adjustTiers` call.
 - **CTProjectOwner accepts any project NFT.** Accidentally transferring a non-Croptop project there still grants publisher permissions.
 - **Fee payment destination.** If the fee project changes terminal behavior incompatibly, mints fall back to refund or revert.
+- **Referral accounting denomination.** Non-native fee credits depend on the fee terminal's token accounting context and the hook's price feed so the referral ledger can normalize to native-token units.
 
 ## 7. Accepted Behaviors
 
@@ -92,6 +94,8 @@ operate or transfer it.
 ### 7.4 The 5% Croptop fee only applies to new tier creation via `CTPublisher.mintFrom`
 
 Croptop's core value is allowing anyone to **post new items** (create new 721 tiers) to a project's collection by minting the first copy. This posting action can only happen through `CTPublisher.mintFrom`, which collects the 5% fee. Once a tier exists, anyone can mint additional copies of that tier by paying the project's terminal directly — these direct terminal payments do not go through CTPublisher and do not incur the Croptop fee. This is by design: the fee gates content creation (posting new tiers), not minting from existing tiers. Direct terminal payments to mint existing tiers are a standard Juicebox feature and are not restricted.
+
+When `mintFrom` includes a nonzero `referralProjectId`, Croptop credits referral volume only for the CPN fee that is actually paid to the fee project. If the fee is skipped, refunded, or cannot be normalized, the referral ledger is not credited.
 
 ### 7.5 EIP-7702 delegated EOAs can bypass allowlist restrictions
 

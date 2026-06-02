@@ -10,6 +10,7 @@ Suggestions of where to look:
 
 - let publishers create or mint posts outside configured criteria
 - let users evade Croptop fees or route them incorrectly
+- over-credit, under-credit, or mis-key CPN referral fee volume
 - grant fee-free or privileged cash-outs to the wrong actors
 - make tier reuse bypass stale-content, fee, or policy checks
 - leave a project in an unintended ownership or admin state
@@ -35,7 +36,7 @@ In scope:
 
 Croptop composes several subsystems:
 
-- `CTPublisher` enforces posting criteria, creates or adjusts tiers, and routes fees
+- `CTPublisher` enforces posting criteria, creates or adjusts tiers, routes fees, and records optional CPN referral volume
 - `CTDeployer` launches projects and wires hooks, criteria, and ownership helpers
 - `CTProjectOwner` lets a project follow Croptop-specific admin rules instead of a fixed EOA
 
@@ -50,7 +51,7 @@ Trust boundaries that matter:
 | Role | Powers | How constrained |
 |------|--------|-----------------|
 | Project owner | Choose policy and ownership mode | Must not bypass the active policy through helper paths |
-| `CTPublisher` | Create or reuse tiers and route fees | Must stay within configured criteria |
+| `CTPublisher` | Create or reuse tiers, route fees, and credit referral volume | Must stay within configured criteria |
 | `CTDeployer` | Launch projects and wire helpers | Must not retain unexpected post-launch authority |
 | Sucker integration | Access narrow omnichain-only paths | Must be backed by authentic registry state |
 
@@ -67,14 +68,16 @@ Trust boundaries that matter:
 
 1. Minimum price, supply bounds, split limits, category restrictions, and allowlists stay binding on every publish path.
 2. Every Croptop mint either pays the configured fee or takes the documented fallback path without underpaying Croptop.
-3. Existing tiers cannot be reused in a way that revives stale criteria or dodges fee collection.
-4. Sucker-only or fee-exempt paths cannot be reached through spoofed registry state or stale deployment wiring.
-5. Ownership handoff and burn-lock flows do not accidentally widen privileges or strand administration.
+3. CPN referral volume is credited only for successfully paid and normalized Croptop fees, under the intended `chainId:projectId` key.
+4. Existing tiers cannot be reused in a way that revives stale criteria or dodges fee collection.
+5. Sucker-only or fee-exempt paths cannot be reached through spoofed registry state or stale deployment wiring.
+6. Ownership handoff and burn-lock flows do not accidentally widen privileges or strand administration.
 
 ## Attack Surfaces
 
 - publish and mint entrypoints
 - fee computation from user input versus onchain state
+- referral project ID packing and normalized fee-volume accounting
 - tier creation, adjustment, and reuse logic
 - deployer-mediated pay or cash-out data-hook behavior
 - permission grants during deployment and ownership transfer

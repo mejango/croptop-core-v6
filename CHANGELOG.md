@@ -13,6 +13,14 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 - `CTDeployerAllowedPost`
 - `CTPost`
 
+## 0.0.66 — Track CPN fee referrals in publisher mints
+
+- `CTPublisher.mintFrom` now requires a `referralProjectId` argument. Pass `0` to skip referral credit, a bare project ID to credit a project on the current chain, or `(referralChainId << 48) | referralProjectId` to credit a project on another chain.
+- Successful Croptop fee payments to the CPN fee project now credit `feeVolumeByReferralOf[referralChainId][referralProjectId]` and `totalFeeVolume`.
+- Referral fee volume is normalized to native-token units with 18 decimals, using the fee terminal accounting context and the hook's `PRICES` oracle for non-native fee currencies.
+- Added the `ReferralCredit` event and referral-volume getters to `ICTPublisher`.
+- Added unit coverage for native-token referral credits, packed cross-chain referral IDs, ERC-20 fee normalization, and zero-referral mints.
+
 ## 0.0.65 — Raise dependency floors and expand the style guide
 
 - Raise dependency floors to the latest published versions.
@@ -65,17 +73,20 @@ This file describes the verified change from `croptop-core-v5` to the current `c
 
 ## Breaking ABI changes
 
+- `CTPublisher.mintFrom(...)` now includes a required `uint256 referralProjectId` argument.
 - `CTPost` is not v5-compatible because it now includes `splitPercent` and `splits`.
 - `CTAllowedPost` and `CTDeployerAllowedPost` are not v5-compatible because they now include `maximumSplitPercent`.
 - `ICTPublisher.allowanceFor(...)` return decoding changed because of the added field.
 
 ## Indexer impact
 
+- Indexers can read `ReferralCredit` or the `feeVolumeByReferralOf` / `totalFeeVolume` getters to track normalized CPN fee referral volume by `chainId:projectId`.
 - Any event or log decoding path that embeds `CTPost` or `CTAllowedPost` must be updated for the new struct layouts.
 - Post-publishing integrations should not assume the old "all payment goes to treasury" model once split-bearing posts are live.
 
 ## Migration notes
 
+- Update `mintFrom(...)` callsites to pass `referralProjectId`; use `0` when no CPN referral credit should be recorded.
 - Rebuild any ABI or indexer code that decodes `CTPost` or `CTAllowedPost`. Their layouts are not v5-compatible.
 - If you integrated the deployer as if the 721 hook were the direct data hook, update that assumption. The deployer is now part of the routing path.
 - Re-check any fee logic that trusted caller-supplied prices for existing tiers. That is not the v6 behavior.

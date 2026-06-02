@@ -2,7 +2,7 @@
 
 ## Use This File For
 
-- Use this file when the task touches Croptop publishing, project deployment, data-hook forwarding, fee routing, or burn-locked ownership.
+- Use this file when the task touches Croptop publishing, project deployment, data-hook forwarding, fee routing, CPN referral accounting, or burn-locked ownership.
 - Start here, then decide whether the issue is posting-policy validation, tier reuse and content identity, deployer-packaged project shape, or burn-locked ownership.
 
 ## Read This Next
@@ -28,17 +28,17 @@
 
 ## Purpose
 
-Permissioned publishing layer for Juicebox 721 projects. Project owners define posting rules, publishers mint content as tiers through a 721 hook, Croptop routes fees, and the deployer can package the whole project shape in one transaction.
+Permissioned publishing layer for Juicebox 721 projects. Project owners define posting rules, publishers mint content as tiers through a 721 hook, Croptop routes fees, optional CPN referral volume is accounted for, and the deployer can package the whole project shape in one transaction.
 
 ## Reference Files
 
-- Open [`references/runtime.md`](./references/runtime.md) for publisher behavior, fee routing, data-hook forwarding, and the main invariants around posting criteria and tier reuse.
+- Open [`references/runtime.md`](./references/runtime.md) for publisher behavior, fee routing, referral accounting, data-hook forwarding, and the main invariants around posting criteria and tier reuse.
 - Open [`references/operations.md`](./references/operations.md) for deployer behavior, burn-lock implications, script breadcrumbs, and common stale assumptions.
 
 ## Working Rules
 
-- Start in [`src/CTPublisher.sol`](./src/CTPublisher.sol) for posting-rule and fee behavior, but check [`src/CTDeployer.sol`](./src/CTDeployer.sol) when the bug might come from project shape or hook forwarding.
-- Treat posting criteria, fee routing, and duplicate-content handling as treasury-sensitive and product-sensitive at the same time.
+- Start in [`src/CTPublisher.sol`](./src/CTPublisher.sol) for posting-rule, fee, and referral-accounting behavior, but check [`src/CTDeployer.sol`](./src/CTDeployer.sol) when the bug might come from project shape or hook forwarding.
+- Treat posting criteria, fee routing, referral accounting, and duplicate-content handling as treasury-sensitive and product-sensitive at the same time.
 - Category policy is part of the product surface. Changes to allowlists, supply bounds, or split caps change what can be published.
 - If the task mentions project immutability or admin recovery, inspect [`src/CTProjectOwner.sol`](./src/CTProjectOwner.sol) before changing deployer or publisher code.
 - Metadata bugs can be publishing bugs, resolver-shape bugs, or duplicate-content bugs. Check all three before assuming a simple formatting issue.

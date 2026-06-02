@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`croptop-core-v6` turns a Juicebox project with a 721 tiers hook into a permissioned publishing market. Project owners define what posts are valid, third parties publish content by minting or reusing tiers, and Croptop routes a fixed publish fee to the canonical fee project.
+`croptop-core-v6` turns a Juicebox project with a 721 tiers hook into a permissioned publishing market. Project owners define what posts are valid, third parties publish content by minting or reusing tiers, and Croptop routes a fixed publish fee to the canonical fee project while optionally crediting CPN referral volume.
 
 ## System Overview
 
@@ -13,6 +13,7 @@
 - A post can only be published if it satisfies the configured category, pricing, supply, split, and allowlist rules.
 - Publish fees must be computed from the call value, not from ambient contract balance.
 - `CTPublisher` must not trap fee funds. If fee-project payment fails, the fee is refunded to `_msgSender()`, and if that refund fails the publish reverts.
+- CPN referral volume is credited only for successfully paid Croptop fees and is normalized to native-token units with 18 decimals.
 - Tier creation and minting must still respect `nana-721-hook-v6` invariants.
 - `CTDeployer` intentionally creates a temporary owner-bypass period before collection ownership is claimed away from the deployer.
 - `CTProjectOwner` is a burn-lock primitive, not a flexible admin panel.
@@ -21,7 +22,7 @@
 
 | Module | Responsibility | Notes |
 | --- | --- | --- |
-| `CTPublisher` | Post validation, tier reuse or creation, first-copy minting, fee routing | Main runtime contract |
+| `CTPublisher` | Post validation, tier reuse or creation, first-copy minting, fee routing, referral-volume accounting | Main runtime contract |
 | `CTDeployer` | Project launch, hook wiring, optional sucker setup, wrapper behavior | Launch-time and runtime wrapper |
 | `CTProjectOwner` | Irreversible ownership helper | Governance-sensitive |
 | `CTAllowedPost`, `CTPost`, related structs | Publishing policy and request encoding | Shared config surface |
@@ -43,6 +44,7 @@ poster
   -> publisher creates or reuses 721 tiers
   -> project terminal receives the publish payment
   -> fee project receives the fixed fee slice, or _msgSender() is refunded if that fee payment fails
+  -> successful fee payments credit the supplied CPN referral project, if any
   -> first copy of each post tier is minted to the poster
 ```
 
@@ -58,7 +60,7 @@ creator
 
 ## Accounting Model
 
-This repo does not define treasury accounting. Its critical economic logic is publish-fee routing and the mapping from valid post data to tier creation or reuse.
+This repo does not define treasury accounting. Its critical economic logic is publish-fee routing, optional CPN referral-volume accounting, and the mapping from valid post data to tier creation or reuse.
 
 `CTPublisher` also relies on duplicate-content and pricing checks to stop fee evasion through batch composition or tier reuse.
 
@@ -72,7 +74,7 @@ This repo does not define treasury accounting. Its critical economic logic is pu
 ## Safe Change Guide
 
 - Put generic tier logic in `nana-721-hook-v6`, not here.
-- If fee behavior changes, review payment ordering, fee-project fallback, and refund failure handling together.
+- If fee behavior changes, review payment ordering, fee-project fallback, referral-volume accounting, and refund failure handling together.
 - If deployer ownership or permission grants change, re-check the temporary bypass window and post-claim ownership behavior together.
 - If `CTDeployer` changes, test both project launch and any wrapped hook flow it participates in.
 - Treat `CTProjectOwner` changes as governance changes.

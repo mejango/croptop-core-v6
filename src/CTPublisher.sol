@@ -99,17 +99,17 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice The ID of the tier that an IPFS metadata has been saved to.
-    /// @custom:param hook The hook for which the tier ID applies.
-    /// @custom:param encodedIpfsUri The IPFS URI.
-    mapping(address hook => mapping(bytes32 encodedIpfsUri => uint256)) public override tierIdForEncodedIpfsUriOf;
-
     /// @notice Cumulative normalized Croptop fee amount credited to a referrer.
     /// @custom:param referralChainId The EIP-155 chain ID of the referrer's home chain.
     /// @custom:param referralProjectId The referrer's bare project ID on `referralChainId`.
     mapping(uint256 referralChainId => mapping(uint256 referralProjectId => uint256))
         public
         override feeVolumeByReferralOf;
+
+    /// @notice The ID of the tier that an IPFS metadata has been saved to.
+    /// @custom:param hook The hook for which the tier ID applies.
+    /// @custom:param encodedIpfsUri The IPFS URI.
+    mapping(address hook => mapping(bytes32 encodedIpfsUri => uint256)) public override tierIdForEncodedIpfsUriOf;
 
     /// @notice Cumulative normalized Croptop fee amount credited across all referrers.
     uint256 public override totalFeeVolume;
@@ -664,24 +664,36 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     )
         internal
     {
+        // A zero referrer opts out of referral credit, and a zero fee has no volume to record.
         if (referralProjectId == 0 || amount == 0) return;
 
+        // Bare project IDs refer to this chain, so pack `block.chainid` before splitting the ledger key.
         if (referralProjectId >> 48 == 0) {
             referralProjectId |= block.chainid << 48;
         }
 
+        // The high bits identify the referrer's chain, and the low 48 bits identify the project on that chain.
         uint256 referralChainId = referralProjectId >> 48;
         uint256 bareProjectId = referralProjectId & ((1 << 48) - 1);
+
+        // A packed value with no project ID is not a usable referral key.
         if (bareProjectId == 0) return;
 
+        // Referral volume is stored in one denomination so totals remain comparable across fee tokens.
         uint256 normalizedAmount =
             _normalizedFeeAmountFrom({hook: hook, feeTerminal: feeTerminal, token: token, amount: amount});
+
+        // Unpriceable or sub-unit fees are skipped because the ledger only records reliable normalized volume.
         if (normalizedAmount == 0) return;
 
+        // Credit the referrer's chain/project pair with the normalized fee that was actually paid to CPN.
         feeVolumeByReferralOf[referralChainId][bareProjectId] += normalizedAmount;
+
+        // Cache the aggregate after this credit so the event and stored total report the same value.
         uint256 total = totalFeeVolume + normalizedAmount;
         totalFeeVolume = total;
 
+        // Emit the unpacked referral key so indexers can aggregate without decoding the caller's packed input.
         emit ReferralCredit({
             referralChainId: referralChainId,
             referralProjectId: bareProjectId,
@@ -739,21 +751,31 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         view
         returns (uint256 normalizedAmount)
     {
+        // A zero fee has no referral volume to normalize.
         if (amount == 0) return 0;
 
+        // The fee terminal's accounting context defines the token decimals and currency used for the fee amount.
         JBAccountingContext memory context;
+
+        // Context lookup can fail for unsupported tokens, in which case the fee cannot be normalized reliably.
         try feeTerminal.accountingContextForTokenOf({projectId: FEE_PROJECT_ID, token: token}) returns (
             JBAccountingContext memory returnedContext
         ) {
+            // Copy the returned context outside the try scope so later validation and conversion share one value.
             context = returnedContext;
         } catch {
+            // Missing token accounting prevents reliable referral accounting, but should not undo a paid mint.
             return 0;
         }
 
+        // Reject missing or mismatched accounting metadata so unrelated terminal context cannot price this fee.
         if (context.token != token || context.currency == 0) return 0;
 
+        // Convert the fee amount into 18-decimal fixed point before comparing or converting currencies.
         normalizedAmount =
             JBFixedPointNumber.adjustDecimals({value: amount, decimals: context.decimals, targetDecimals: 18});
+
+        // If decimal adjustment removes all measurable volume, there is nothing reliable to credit.
         if (normalizedAmount == 0) return 0;
 
         // Native ETH and the native-token accounting alias are treated as the same denomination.
@@ -761,9 +783,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             return normalizedAmount;
         }
 
+        // Non-native fee currencies use the hook's price feed, matching the pricing source used for mint payments.
         IJBPrices prices = hook.PRICES();
+
+        // Without a price feed, non-native fee currencies cannot be converted into native-token units.
         if (address(prices) == address(0)) return 0;
 
+        // Price the fee currency in native-token units so all referral volume is stored in one denomination.
         try prices.pricePerUnitOf({
             projectId: FEE_PROJECT_ID,
             pricingCurrency: context.currency,
@@ -772,9 +798,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         }) returns (
             uint256 price
         ) {
+            // A zero price would make the currency conversion undefined.
             if (price == 0) return 0;
+
+            // Convert token-currency volume into native-token volume using the 18-decimal price.
             return Math.mulDiv({x: normalizedAmount, y: 10 ** 18, denominator: price});
         } catch {
+            // Pricing failures make the credit untrustworthy, but the paid mint itself should remain valid.
             return 0;
         }
     }

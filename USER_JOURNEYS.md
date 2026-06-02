@@ -2,17 +2,17 @@
 
 ## Repo Purpose
 
-This repo turns a Juicebox 721 project into a permissioned publishing system. It owns post validation, Croptop fee routing, and the deployment packaging that turns a project into a Croptop-managed publisher. It does not own base terminal accounting or the underlying 721 tier mechanics.
+This repo turns a Juicebox 721 project into a permissioned publishing system. It owns post validation, Croptop fee routing, CPN referral-volume accounting, and the deployment packaging that turns a project into a Croptop-managed publisher. It does not own base terminal accounting or the underlying 721 tier mechanics.
 
 ## Primary Actors
 
 - project owners creating a Croptop publishing surface
 - publishers minting posts into an existing Croptop project
-- auditors reviewing fee routing, posting policy, and owner-lock semantics
+- auditors reviewing fee routing, referral accounting, posting policy, and owner-lock semantics
 
 ## Key Surfaces
 
-- `CTPublisher`: validates posts, adjusts tiers, mints the first copy, and routes Croptop fees
+- `CTPublisher`: validates posts, adjusts tiers, mints the first copy, routes Croptop fees, and records optional CPN referral volume
 - `CTDeployer`: launches a Croptop-shaped project and can compose omnichain deployment
 - `CTProjectOwner`: owner helper that can burn-lock administration into Croptop
 - `mintFrom(...)`: main publishing entrypoint
@@ -53,14 +53,15 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 - the post satisfies the target project's category policy
 - the project terminal accepts the selected payment token, and any needed hook price feed is configured
+- the caller has a referral project ID to credit, or passes `0` to skip referral credit
 - the caller can receive ETH if the fee refund fallback is needed
 - duplicate-content and stale-tier implications are understood
 
 **Main Flow**
 
-1. Call `mintFrom(...)` with the content URI, pricing data, payment token, and amount. ERC-20 payments can use either direct approval or publisher-targeted Permit2 metadata.
+1. Call `mintFrom(...)` with the content URI, pricing data, payment token, amount, and `referralProjectId`. ERC-20 payments can use either direct approval or publisher-targeted Permit2 metadata.
 2. `CTPublisher` validates the post against category and fee policy.
-3. It converts the tier price into payment-token units, creates or reuses the underlying tier, mints the first copy, and routes project revenue plus the Croptop fee.
+3. It converts the tier price into payment-token units, creates or reuses the underlying tier, mints the first copy, routes project revenue plus the Croptop fee, and records normalized CPN referral volume when the fee succeeds.
 
 **Failure Modes**
 
@@ -68,10 +69,12 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 - the project terminal does not accept the selected token or the required price feed is missing
 - publisher inputs satisfy the base 721 hook but violate Croptop's stricter rules
 - the fee terminal rejects the fee payment and `_msgSender()` cannot receive the refund
+- the fee token cannot be normalized, in which case the mint can continue without referral credit
 
 **Postconditions**
 
 - the post is minted or reused as a tier under Croptop policy and the fee path is accounted for
+- any supplied CPN referral project is credited only for successfully paid, normalized fee volume
 
 ## Journey 3: Launch A New Croptop Project End To End
 
@@ -126,11 +129,11 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 ## Trust Boundaries
 
-- this repo is trusted for publishing policy and fee routing
+- this repo is trusted for publishing policy, fee routing, and CPN referral-volume accounting
 - the underlying 721 hook remains trusted for tier issuance and lower-level NFT accounting
-- Croptop fee behavior depends on the fee project and its terminal remaining correctly configured
+- Croptop fee behavior and CPN referral-volume accounting depend on the fee project and its terminal remaining correctly configured
 
 ## Hand-Offs
 
 - Use [nana-721-hook-v6](../nana-721-hook-v6/USER_JOURNEYS.md) for the underlying tier issuance behavior Croptop wraps.
-- Use [nana-core-v6](../nana-core-v6/USER_JOURNEYS.md) when the question is about base project accounting rather than post validation or fee routing.
+- Use [nana-core-v6](../nana-core-v6/USER_JOURNEYS.md) when the question is about base project accounting rather than post validation, fee routing, or referral attribution.

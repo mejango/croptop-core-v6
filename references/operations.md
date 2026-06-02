@@ -9,7 +9,7 @@
 ## Change Checklist
 
 - If you edit posting criteria, verify both direct publisher calls and deployer-created project flows.
-- If you edit fee behavior, check both the designated fee project path and any exemption behavior.
+- If you edit fee behavior, check the designated fee project path, referral-volume accounting, and any exemption behavior.
 - If you edit burn-lock ownership assumptions, confirm the intended irreversibility still holds.
 - If you edit data-hook forwarding, re-check sucker-related fee-free cash-out behavior.
 
@@ -18,6 +18,7 @@
 - Publishing bug is blamed on the publisher when the deployer packaged the project or hook incorrectly.
 - Immutable-owner expectations are missed after ownership moves into [`src/CTProjectOwner.sol`](../src/CTProjectOwner.sol).
 - Content reuse or duplicate-post behavior changes and silently alters user-facing publishing semantics.
+- Referral project ID handling changes and silently alters CPN fee-volume attribution.
 
 ## Useful Proof Points
 

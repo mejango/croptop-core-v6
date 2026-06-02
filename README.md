@@ -21,10 +21,10 @@ Site: <https://croptop.eth.limo>
 Croptop is built around three ideas:
 
 - project owners set category-level posting rules such as price floors, supply bounds, split limits, and optional allowlists
-- publishers call `mintFrom` to create or reuse 721 tiers that represent their post
+- publishers call `mintFrom` to create or reuse 721 tiers that represent their post, optionally crediting a CPN referral project
 - a one-click deployer can create a full Juicebox project, its 721 hook config, and its posting rules in one transaction
 
-Every mint collects a 5% Croptop fee unless the target project is itself the fee project. `CTPublisher.mintFrom` takes a terminal `token` and `amount`, like a Juicebox terminal payment: native-token mints use `msg.value`, while ERC-20 mints pull `amount` from `_msgSender()` using either direct approval or a publisher-targeted Permit2 metadata entry. Croptop converts the hook's tier price into the selected terminal token's accounting units, using the hook's `PRICES` oracle when the payment currency differs from the hook pricing currency. The project terminal still decides whether the token is accepted, and the transaction reverts if the project payment does not mint the requested NFTs to the beneficiary. If the fee terminal is missing or rejects the fee payment, Croptop refunds the fee portion to `_msgSender()` and still lets the publish continue. Native refunds can still revert if `_msgSender()` cannot receive ETH.
+Every mint collects a 5% Croptop fee unless the target project is itself the fee project. `CTPublisher.mintFrom` takes a terminal `token`, `amount`, and `referralProjectId`, like a Juicebox terminal payment with optional CPN referral credit: native-token mints use `msg.value`, while ERC-20 mints pull `amount` from `_msgSender()` using either direct approval or a publisher-targeted Permit2 metadata entry. Pass `0` for no referral, a bare project ID for a current-chain referral, or `(referralChainId << 48) | referralProjectId` for a cross-chain referral. Croptop converts the hook's tier price into the selected terminal token's accounting units, using the hook's `PRICES` oracle when the payment currency differs from the hook pricing currency. The project terminal still decides whether the token is accepted, and the transaction reverts if the project payment does not mint the requested NFTs to the beneficiary. If the fee terminal is missing or rejects the fee payment, Croptop refunds the fee portion to `_msgSender()` and still lets the publish continue. Native refunds can still revert if `_msgSender()` cannot receive ETH. When a CPN fee payment succeeds and a referral is supplied, Croptop records normalized native-token fee volume in `feeVolumeByReferralOf` and `totalFeeVolume`.
 
 Use this repo when the product is permissioned publishing on top of a Juicebox project. Do not use it for plain 721 tier sales.
 
@@ -32,7 +32,7 @@ Use this repo when the product is permissioned publishing on top of a Juicebox p
 
 | Contract | Role |
 | --- | --- |
-| `CTPublisher` | Validates posts, adjusts 721 tiers, mints the first copy, and routes protocol and project payments. |
+| `CTPublisher` | Validates posts, adjusts 721 tiers, mints the first copy, routes protocol and project payments, and records optional CPN referral fee volume. |
 | `CTDeployer` | Launches a project, configures Croptop posting rules, and can wire in omnichain sucker deployments. |
 | `CTProjectOwner` | Ownership sink that can permanently hold a project NFT while still delegating the posting permissions Croptop needs. |
 
@@ -64,13 +64,13 @@ Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not g
 ## Integration Traps
 
 - Croptop publishing policy is separate from ordinary 721 tier issuance
-- fee routing is part of the publish path and its fallback behavior matters
+- fee routing and CPN referral-volume accounting are part of the publish path and fallback behavior matters
 - `CTProjectOwner` intentionally changes the ownership model and should be reviewed as part of the trust model
 - duplicate-content, stale-tier, and fee-evasion edge cases are runtime behavior, not only UI concerns
 
 ## Where State Lives
 
-- posting criteria and publish-side enforcement live in `CTPublisher`
+- posting criteria, publish-side enforcement, and CPN referral-volume accounting live in `CTPublisher`
 - deployment-time project wiring lives in `CTDeployer`
 - ownership-sink behavior lives in `CTProjectOwner`
 - actual tier issuance and treasury accounting still live in sibling Juicebox repos
@@ -120,7 +120,7 @@ script/
 ## Risks And Notes
 
 - posting criteria are only as safe as the project owner configures them
-- fee routing depends on the fee project staying correctly configured
+- fee routing and CPN referral-volume accounting depend on the fee project staying correctly configured
 - parking a project in `CTProjectOwner` is effectively irreversible
 - after routing ownership into `CTProjectOwner`, the old owner no longer holds the project NFT directly
 - duplicate-content and stale-tier edge cases are economically relevant, not cosmetic
@@ -128,5 +128,5 @@ script/
 ## For AI Agents
 
 - Do not describe Croptop as a generic 721 marketplace.
-- Read `CTPublisher` before `CTDeployer` when the question is about publish eligibility or fee behavior.
+- Read `CTPublisher` before `CTDeployer` when the question is about publish eligibility, fee behavior, or CPN referral accounting.
 - If the issue is basic tier minting or accounting, move to `nana-721-hook-v6` or `nana-core-v6`.

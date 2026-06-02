@@ -41,7 +41,7 @@
 | `CTDeployer` | `claimCollectionOwnershipOf(...)` | Current project owner | Transfers hook ownership from the deployer path to the project |
 | `CTDeployer` | `deploySuckersFor(...)` | Project owner or `DEPLOY_SUCKERS` delegate | Extends a project with suckers |
 | `CTPublisher` | `configurePostingCriteriaFor(...)` | Hook owner or `ADJUST_721_TIERS` delegate | Changes posting policy for a hook and category |
-| `CTPublisher` | `mintFrom(...)` | Anyone subject to policy | Publishes posts, mints first copies, and routes the Croptop fee |
+| `CTPublisher` | `mintFrom(...)` | Anyone subject to policy | Publishes posts, mints first copies, routes the Croptop fee, and records optional CPN referral volume |
 | `CTProjectOwner` | `onERC721Received(...)` | Any project NFT transfer into it | Locks the project into the Croptop owner helper and grants `CTPublisher` tier-adjust authority |
 
 Important nuance:
@@ -55,6 +55,7 @@ Important nuance:
 - `dataHookOf[projectId]` is write-once through deployment flow.
 - Sending a project NFT into `CTProjectOwner` is effectively irreversible.
 - `FEE_PROJECT_ID` in `CTPublisher` is constructor-immutable.
+- CPN referral volume in `CTPublisher` is append-only accounting keyed by `referralChainId:referralProjectId`.
 
 ## Operational Notes
 
@@ -80,6 +81,7 @@ Important nuance:
 
 - Neither project owners nor Croptop can change the fixed fee divisor in `CTPublisher`.
 - `CTPublisher` cannot trap fee ETH intentionally; failed fee-terminal payments refund `_msgSender()` or revert.
+- `CTPublisher` only credits referral volume when the CPN fee payment succeeds and can be normalized.
 - `CTProjectOwner` cannot return project ownership once it receives the NFT.
 - `CTDeployer` cannot later rewrite `dataHookOf[projectId]` through a setter.
 - `CTDeployer` does not stop the initial project owner from using the directly granted hook permissions before ownership is claimed away.
