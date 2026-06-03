@@ -90,7 +90,7 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
         _deployCore();
         _deployTerminal();
         _deployHookInfra();
-        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, MULTISIG, address(0));
+        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, jbPrices, MULTISIG, address(0));
 
         uint256 feeProjectId = _launchProject({
             owner: PROJECT_OWNER,
@@ -182,7 +182,7 @@ contract RegressionCurrencyRegressions is Test, DeployPermit2 {
         _deployCore();
         _deployTerminal();
         _deployHookInfra();
-        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, MULTISIG, address(0));
+        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, jbPrices, MULTISIG, address(0));
 
         uint256 feeProjectId = _launchProject({
             owner: PROJECT_OWNER,

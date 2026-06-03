@@ -1508,10 +1508,6 @@ contract TestCTPublisher is Test, DeployPermit2 {
             idToAdd: JBMetadataResolver.getId({purpose: "pay", target: address(0)}),
             dataToAdd: abi.encode(true, expectedTierIdsToMint)
         });
-        uint256 feeProjectIdForMetadata = feeProjectId;
-        assembly {
-            mstore(add(expectedMetadata, 32), feeProjectIdForMetadata)
-        }
 
         vm.expectCall(
             address(terminal),

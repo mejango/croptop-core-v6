@@ -605,7 +605,7 @@ contract PublishForkTest is Test, DeployPermit2 {
     }
 
     function _deploySuckers() internal {
-        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, multisig, trustedForwarder);
+        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, jbPrices, multisig, trustedForwarder);
 
         opSuckerDeployer =
             new JBOptimismSuckerDeployer(jbDirectory, jbPermissions, jbTokens, multisig, trustedForwarder);
@@ -617,7 +617,6 @@ contract PublishForkTest is Test, DeployPermit2 {
             deployer: opSuckerDeployer,
             directory: jbDirectory,
             permissions: jbPermissions,
-            prices: jbPrices,
             tokens: jbTokens,
             feeProjectId: 1,
             registry: suckerRegistry,

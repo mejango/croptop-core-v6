@@ -207,7 +207,7 @@ contract ForkTest is Test {
     }
 
     function _deploySuckers() internal {
-        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, multisig, trustedForwarder);
+        suckerRegistry = new JBSuckerRegistry(jbDirectory, jbPermissions, jbPrices, multisig, trustedForwarder);
 
         // Deploy the OP sucker deployer with `multisig` as the configurator.
         opSuckerDeployer =
@@ -222,7 +222,6 @@ contract ForkTest is Test {
             deployer: opSuckerDeployer,
             directory: jbDirectory,
             permissions: jbPermissions,
-            prices: jbPrices,
             tokens: jbTokens,
             feeProjectId: 1,
             registry: suckerRegistry,

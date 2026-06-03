@@ -37,10 +37,6 @@ contract Test_MetadataGeneration_Unit is Test {
 
         bytes memory _additionalPayMetadata = _resolverHelper.createMetadata(_ids, _datas);
 
-        // The referral project ID to include in the first 32 bytes of the metadata.
-        // forge-lint: disable-next-line(mixed-case-variable)
-        uint256 FEE_PROJECT_ID = 420;
-
         // The additional data hook metadata to include.
         bytes4 dataHookId = bytes4(bytes20(address(0xdeadbeef)));
         uint256[] memory tierIdsToMint = new uint256[](9);
@@ -53,11 +49,6 @@ contract Test_MetadataGeneration_Unit is Test {
         bytes memory mintMetadata = JBMetadataResolver.addToMetadata({
             originalMetadata: _additionalPayMetadata, idToAdd: dataHookId, dataToAdd: abi.encode(true, tierIdsToMint)
         });
-
-        // Add the referral project ID in the first 32 bytes.
-        assembly {
-            mstore(add(mintMetadata, 32), FEE_PROJECT_ID)
-        }
 
         bytes memory targetData;
         bool found;
@@ -72,8 +63,5 @@ contract Test_MetadataGeneration_Unit is Test {
         (found, targetData) = JBMetadataResolver.getDataFor(dataHookId, mintMetadata);
         assertTrue(found, "data hook metadata not found");
         assertEq(targetData, abi.encode(true, tierIdsToMint), "data hook not equal");
-
-        // forge-lint: disable-next-line(unsafe-typecast)
-        assertEq(uint256(bytes32(mintMetadata)), FEE_PROJECT_ID, "referral project ID not equal");
     }
 }

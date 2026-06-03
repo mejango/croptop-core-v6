@@ -12,6 +12,7 @@ import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol
 import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {IJBPrices} from "@bananapus/core-v6/src/interfaces/IJBPrices.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
 import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
@@ -23,7 +24,6 @@ import {IJBSuckerDeployer} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerD
 import {IJBSuckerRegistry} from "@bananapus/suckers-v6/src/interfaces/IJBSuckerRegistry.sol";
 import {JBSuckerRegistry} from "@bananapus/suckers-v6/src/JBSuckerRegistry.sol";
 import {JBTokenMapping} from "@bananapus/suckers-v6/src/structs/JBTokenMapping.sol";
-import {JBDenominatedAmount} from "@bananapus/suckers-v6/src/structs/JBDenominatedAmount.sol";
 import {JBOutboxTree} from "@bananapus/suckers-v6/src/structs/JBOutboxTree.sol";
 import {JBClaim} from "@bananapus/suckers-v6/src/structs/JBClaim.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
@@ -269,14 +269,6 @@ contract PermissionedMockSucker is JBPermissioned {
         revert("UNUSED");
     }
 
-    function peerChainBalanceOf(uint256, uint256) external pure returns (JBDenominatedAmount memory) {
-        revert("UNUSED");
-    }
-
-    function peerChainSurplusOf(uint256, uint256) external pure returns (JBDenominatedAmount memory) {
-        revert("UNUSED");
-    }
-
     function remoteTokenFor(address) external pure returns (JBRemoteToken memory) {
         revert("UNUSED");
     }
@@ -392,7 +384,8 @@ contract RegressionFreshRoundTest is Test {
         JBPermissions permissions = new JBPermissions(address(0));
         MockProjects projects = new MockProjects();
         MockDirectory directory = new MockDirectory(IJBProjects(address(projects)));
-        JBSuckerRegistry registry = new JBSuckerRegistry(directory, permissions, address(this), address(0));
+        JBSuckerRegistry registry =
+            new JBSuckerRegistry(directory, permissions, IJBPrices(address(0)), address(this), address(0));
         MockHookDeployer hookDeployer = new MockHookDeployer();
         MockHook hook = new MockHook(1);
         hookDeployer.setHook(IJB721TiersHook(address(hook)));

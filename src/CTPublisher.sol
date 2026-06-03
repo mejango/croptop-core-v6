@@ -521,13 +521,6 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 idToAdd: JBMetadataResolver.getId({purpose: "pay", target: metadataIdTarget}),
                 dataToAdd: abi.encode(true, tierIdsToMint)
             });
-
-            // Store the referral project ID in the first 32 bytes of the metadata.
-            uint256 feeProjectId = FEE_PROJECT_ID;
-
-            assembly {
-                mstore(add(mintMetadata, 32), feeProjectId)
-            }
         }
 
         emit Mint({
