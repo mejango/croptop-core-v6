@@ -12,6 +12,7 @@ import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol
 import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {IJBPrices} from "@bananapus/core-v6/src/interfaces/IJBPrices.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
 import {JBPermissions} from "@bananapus/core-v6/src/JBPermissions.sol";
 import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.sol";
@@ -223,8 +224,9 @@ contract RegressionRegressions is Test {
 
     function test_deploySuckersHelperRequiresOwnerToGrantCtDeployer() public {
         RegressionMockDirectory directory = new RegressionMockDirectory(IJBProjects(address(projects)));
-        JBSuckerRegistry registry =
-            new JBSuckerRegistry(IJBDirectory(address(directory)), permissions, address(this), address(0));
+        JBSuckerRegistry registry = new JBSuckerRegistry(
+            IJBDirectory(address(directory)), permissions, IJBPrices(address(0)), address(this), address(0)
+        );
 
         deployer = new CTDeployer(
             permissions,
