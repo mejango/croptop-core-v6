@@ -535,7 +535,7 @@ contract TestCTDeployer is Test {
         vm.mockCall(
             address(suckerRegistry),
             abi.encodeWithSelector(
-                IJBSuckerRegistry.remoteSurplusOf.selector, deployedProjectId, uint256(18), uint256(0)
+                IJBSuckerRegistry.totalRemoteSurplusOf.selector, deployedProjectId, uint256(18), uint256(0)
             ),
             abi.encode(3 ether)
         );
@@ -567,7 +567,7 @@ contract TestCTDeployer is Test {
         vm.mockCall(
             address(suckerRegistry),
             abi.encodeWithSelector(
-                IJBSuckerRegistry.remoteSurplusOf.selector, deployedProjectId, uint256(18), uint256(0)
+                IJBSuckerRegistry.totalRemoteSurplusOf.selector, deployedProjectId, uint256(18), uint256(0)
             ),
             abi.encode(3 ether)
         );
