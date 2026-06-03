@@ -2,7 +2,7 @@
 
 Croptop is a publishing layer on top of Juicebox projects and the tiered 721 stack. Audit it as a permissions, fee-routing, and project-launch system.
 
-## Audit Objective
+## Audit objective
 
 There is a billion dollars of well-meaning projects' money in the Juicebox Money Engine, growing exponentially. Your job is to hack it before anyone else. Whoever hacks it first saves/steals the money, and you are obsessed with being this winner, while also being a steward of the protocol and wanting it to keep growing safely.
 
@@ -25,13 +25,13 @@ In scope:
 - all structs in `src/structs/`
 - deployment helpers in `script/`
 
-## Start Here
+## Start here
 
 1. `src/CTPublisher.sol`
 2. `src/CTDeployer.sol`
 3. `src/CTProjectOwner.sol`
 
-## Security Model
+## Security model
 
 Croptop composes several subsystems:
 
@@ -45,7 +45,7 @@ Trust boundaries that matter:
 - fee recipients and external hooks may revert or reenter
 - sucker-based privileges must stay limited to genuine omnichain components
 
-## Roles And Privileges
+## Roles and privileges
 
 | Role | Powers | How constrained |
 |------|--------|-----------------|
@@ -54,7 +54,7 @@ Trust boundaries that matter:
 | `CTDeployer` | Launch projects and wire helpers | Must not retain unexpected post-launch authority |
 | Sucker integration | Access narrow omnichain-only paths | Must be backed by authentic registry state |
 
-## Integration Assumptions
+## Integration assumptions
 
 | Dependency | Assumption | What breaks if wrong |
 |------------|------------|----------------------|
@@ -63,7 +63,7 @@ Trust boundaries that matter:
 | `nana-ownable-v6` | Ownership helper resolves the intended admin | Projects can end up misowned or stranded |
 | `nana-suckers-v6` | Registry identifies genuine omnichain actors | Fee-free or privileged paths widen incorrectly |
 
-## Critical Invariants
+## Critical invariants
 
 1. Minimum price, supply bounds, split limits, category restrictions, and allowlists stay binding on every publish path.
 2. Every Croptop mint either pays the configured fee or takes the documented fallback path without underpaying Croptop.
@@ -71,7 +71,7 @@ Trust boundaries that matter:
 4. Sucker-only or fee-exempt paths cannot be reached through spoofed registry state or stale deployment wiring.
 5. Ownership handoff and burn-lock flows do not accidentally widen privileges or strand administration.
 
-## Attack Surfaces
+## Attack surfaces
 
 - publish and mint entrypoints
 - fee computation from user input versus onchain state
@@ -79,7 +79,7 @@ Trust boundaries that matter:
 - deployer-mediated pay or cash-out data-hook behavior
 - permission grants during deployment and ownership transfer
 
-## Accepted Risks Or Behaviors
+## Accepted risks or behaviors
 
 - Fee routing may degrade to a fallback path rather than block publishing entirely.
 

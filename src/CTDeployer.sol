@@ -48,6 +48,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
     /// @notice Thrown when a caller is not the Juicebox project owner for the hook being claimed.
     error CTDeployer_NotOwnerOfProject(uint256 projectId, address hook, address caller);
+
     //*********************************************************************//
     // ---------------------------- events -------------------------------- //
     //*********************************************************************//
@@ -83,7 +84,6 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
 
     /// @notice Each project's data hook provided on deployment.
     /// @custom:param projectId The ID of the project to get the data hook for.
-    /// @custom:param rulesetId The ID of the ruleset to get the data hook for.
     mapping(uint256 projectId => IJBRulesetDataHook) public dataHookOf;
 
     //*********************************************************************//
@@ -303,6 +303,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// explicit non-default peer also requires `SET_SUCKER_PEER`, matching the registry's direct-call rule.
     /// @param projectId The ID of the project to deploy suckers for.
     /// @param suckerDeploymentConfiguration The suckers to set up for the project.
+    /// @return suckers The addresses of the deployed suckers.
     function deploySuckersFor(
         uint256 projectId,
         CTSuckerDeploymentConfig calldata suckerDeploymentConfiguration
@@ -414,7 +415,14 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         return SUCKER_REGISTRY.isSuckerOf({projectId: projectId, addr: addr});
     }
 
-    /// @dev Make sure only mints can be received.
+    /// @notice Accepts only freshly minted project NFTs sent directly by `JBProjects`.
+    /// @dev Rejecting transfers from a non-zero `from` ensures the deployer cannot be handed a project after launch.
+    /// @param operator Unused; the transfer is authenticated by `msg.sender` and `from`, not the operator.
+    /// @param from Unused except to gate acceptance; a non-zero prior owner means this is not a fresh mint, so it
+    /// reverts.
+    /// @param tokenId Unused; any freshly minted project NFT is accepted.
+    /// @param data Unused; no payload is expected on a project mint.
+    /// @return magicValue The `IERC721Receiver.onERC721Received` selector that signals a successful receipt.
     function onERC721Received(
         address operator,
         address from,

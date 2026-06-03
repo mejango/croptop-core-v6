@@ -1,6 +1,6 @@
 # Administration
 
-## At A Glance
+## At a glance
 
 | Item | Details |
 | --- | --- |
@@ -13,7 +13,7 @@
 
 `croptop-core-v6` has two distinct control planes: project-local publishing control and deployer-level structural wiring. The high-risk surfaces are posting criteria, hook ownership, publisher permissions, and the irreversible `CTProjectOwner` burn-lock path.
 
-## Control Model
+## Control model
 
 - `CTPublisher` enforces publish policy but does not own the project.
 - `CTDeployer` is both a deployment helper and a live ruleset data-hook wrapper.
@@ -33,7 +33,7 @@
 | `CTProjectOwner` | Receives project NFT transfer | Per project | Burn-lock path with no return function |
 | `SUCKER_REGISTRY` | Immutable dependency | Global | Holds wildcard `MAP_SUCKER_TOKEN` from the deployer |
 
-## Privileged Surfaces
+## Privileged surfaces
 
 | Contract | Function | Who Can Call | Effect |
 | --- | --- | --- | --- |
@@ -49,14 +49,14 @@ Important nuance:
 - after `deployProjectFor(...)`, the initial project owner can directly manage tiers, metadata, minting, and discount percent through permissions granted from `CTDeployer`
 - that means the owner can bypass the publisher path until ownership is claimed away from `CTDeployer`
 
-## Immutable And One-Way
+## Immutable and one-way
 
 - `CTDeployer`'s wildcard permission grants to `SUCKER_REGISTRY` and `CTPublisher` are structural.
 - `dataHookOf[projectId]` is write-once through deployment flow.
 - Sending a project NFT into `CTProjectOwner` is effectively irreversible.
 - `FEE_PROJECT_ID` in `CTPublisher` is constructor-immutable.
 
-## Operational Notes
+## Operational notes
 
 - Validate posting criteria before broad publisher access.
 - Decide intentionally whether the project should keep the initial direct-management path or move to project-owned hook control with `claimCollectionOwnershipOf(...)`.
@@ -64,7 +64,7 @@ Important nuance:
 - Treat the burn-lock path as governance finality, not convenience.
 - Review Croptop deployer changes as both launch-time and runtime changes.
 
-## Machine Notes
+## Machine notes
 
 - Do not treat `CTDeployer` as a passive script helper; it is also part of the live runtime path.
 - Treat `src/CTPublisher.sol`, `src/CTDeployer.sol`, and `src/CTProjectOwner.sol` as the minimum source set for control-plane review.
@@ -76,7 +76,7 @@ Important nuance:
 - If the wrong hook path or burn-lock path was chosen, recovery usually means a new project or new hook arrangement.
 - `CTProjectOwner` is not a reversible safety valve.
 
-## Admin Boundaries
+## Admin boundaries
 
 - Neither project owners nor Croptop can change the fixed fee divisor in `CTPublisher`.
 - `CTPublisher` cannot trap fee ETH intentionally; failed fee-terminal payments refund `_msgSender()` or revert.
@@ -84,7 +84,7 @@ Important nuance:
 - `CTDeployer` cannot later rewrite `dataHookOf[projectId]` through a setter.
 - `CTDeployer` does not stop the initial project owner from using the directly granted hook permissions before ownership is claimed away.
 
-## Source Map
+## Source map
 
 - `src/CTPublisher.sol`
 - `src/CTDeployer.sol`

@@ -10,7 +10,7 @@ This file is the per-repo scoped invariants doc. The protocol-wide guarantees fo
 
 ---
 
-# Section A — Guarantees to Users (Posters / Minters)
+## Section A — Guarantees to users (posters / minters)
 
 "Users" here are anyone who calls `CTPublisher.mintFrom` to publish a new post and mint the first NFT, or who mints subsequent copies of an existing tier through the project's terminal. There is no separate "holder" surface in this repo — the 721 hook (in `nana-721-hook-v6`) governs holder-side cash-out / transfer mechanics.
 
@@ -59,7 +59,7 @@ This file is the per-repo scoped invariants doc. The protocol-wide guarantees fo
 
 ---
 
-# Section B — Guarantees to Operators (Project Owners / 721-Tier Admins)
+## Section B — Guarantees to operators (project owners / 721-tier admins)
 
 "Operator" here is the project NFT owner OR any address granted `ADJUST_721_TIERS` on that project's hook owner.
 
@@ -89,7 +89,7 @@ This file is the per-repo scoped invariants doc. The protocol-wide guarantees fo
 
 ---
 
-# Section C — Per-Contract Operation Inventory
+## Section C — Per-contract operation inventory
 
 ## C.1 `CTPublisher` — `src/CTPublisher.sol`
 
@@ -183,7 +183,7 @@ This file is the per-repo scoped invariants doc. The protocol-wide guarantees fo
 
 ---
 
-# Section D — Cross-Cutting Invariants
+## Section D — Cross-cutting invariants
 
 - **D.1 Tier-per-post creation.** Each new post produces exactly one new `JB721TierConfig` (price = poster's price, supply = poster's supply, splits = poster's splits, all `flags` fixed to non-privileged values, `allowOwnerMint=false`). The hook receives them sorted by ascending category, satisfying the 721 store's `InvalidCategorySortOrder` constraint without exposing that ordering quirk to the caller. (`src/CTPublisher.sol`.)
 - **D.2 Launch-time hook-permission grant to the project owner.** `CTDeployer.deployProjectFor` grants the `owner` parameter four direct-on-hook permissions (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`) on the deployer's own permission table for the duration of the deployer-owned-hook window (`src/CTDeployer.sol`). The documented trade-off: until `claimCollectionOwnershipOf` is called, the project owner can bypass `CTPublisher` to directly modify the collection. Once claimed, the deployer-scoped grants are revoked (`src/CTDeployer.sol`).
@@ -198,7 +198,7 @@ This file is the per-repo scoped invariants doc. The protocol-wide guarantees fo
 
 ---
 
-# Section E — Centralization Caveats
+## Section E — Centralization caveats
 
 These are powers held by privileged addresses outside any individual minter/poster's control. They are NOT third-party attack vectors but should be understood by integrators.
 
@@ -211,7 +211,7 @@ These are powers held by privileged addresses outside any individual minter/post
 
 ---
 
-# Section F — Key Code References
+## Section F — Key code references
 
 | Invariant | File |
 |---|---|
