@@ -1,11 +1,11 @@
 # Croptop Core
 
-## Use This File For
+## Use this file for
 
 - Use this file when the task touches Croptop publishing, project deployment, data-hook forwarding, fee routing, or burn-locked ownership.
 - Start here, then decide whether the issue is posting-policy validation, tier reuse and content identity, deployer-packaged project shape, or burn-locked ownership.
 
-## Read This Next
+## Read this next
 
 | If you need... | Open this next |
 |---|---|
@@ -17,7 +17,7 @@
 | Publishing, metadata, and attack coverage | [`test/CTPublisher.t.sol`](./test/CTPublisher.t.sol), [`test/Test_MetadataGeneration.t.sol`](./test/Test_MetadataGeneration.t.sol), [`test/CroptopAttacks.t.sol`](./test/CroptopAttacks.t.sol) |
 | Deployment, ownership, and fork coverage | [`test/CTDeployer.t.sol`](./test/CTDeployer.t.sol), [`test/CTProjectOwner.t.sol`](./test/CTProjectOwner.t.sol), [`test/ClaimCollectionOwnership.t.sol`](./test/ClaimCollectionOwnership.t.sol), [`test/Fork.t.sol`](./test/Fork.t.sol), [`test/TestRegressionGaps.sol`](./test/TestRegressionGaps.sol) |
 
-## Repo Map
+## Repo map
 
 | Area | Where to look |
 |---|---|
@@ -30,12 +30,12 @@
 
 Permissioned publishing layer for Juicebox 721 projects. Project owners define posting rules, publishers mint content as tiers through a 721 hook, Croptop routes fees, and the deployer can package the whole project shape in one transaction.
 
-## Reference Files
+## Reference files
 
 - Open [`references/runtime.md`](./references/runtime.md) for publisher behavior, fee routing, data-hook forwarding, and the main invariants around posting criteria and tier reuse.
 - Open [`references/operations.md`](./references/operations.md) for deployer behavior, burn-lock implications, script breadcrumbs, and common stale assumptions.
 
-## Working Rules
+## Working rules
 
 - Start in [`src/CTPublisher.sol`](./src/CTPublisher.sol) for posting-rule and fee behavior, but check [`src/CTDeployer.sol`](./src/CTDeployer.sol) when the bug might come from project shape or hook forwarding.
 - Treat posting criteria, fee routing, and duplicate-content handling as treasury-sensitive and product-sensitive at the same time.

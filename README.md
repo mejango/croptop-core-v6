@@ -1,6 +1,6 @@
 # Croptop Core
 
-Croptop turns a Juicebox project with a 721 hook into a permissioned publishing marketplace. Project owners define posting rules, then anyone who meets those rules can publish new NFT tiers and mint the first copy of each post.
+`@croptop/core-v6` turns a Juicebox project with a 721 hook into a permissioned publishing marketplace. Project owners define posting rules, then anyone who meets those rules can publish new NFT tiers and mint the first copy of each post.
 
 Site: <https://croptop.eth.limo>
 
@@ -28,7 +28,7 @@ Every mint collects a 5% Croptop fee unless the target project is itself the fee
 
 Use this repo when the product is permissioned publishing on top of a Juicebox project. Do not use it for plain 721 tier sales.
 
-## Key Contracts
+## Key contracts
 
 | Contract | Role |
 | --- | --- |
@@ -36,7 +36,7 @@ Use this repo when the product is permissioned publishing on top of a Juicebox p
 | `CTDeployer` | Launches a project, configures Croptop posting rules, and can wire in omnichain sucker deployments. |
 | `CTProjectOwner` | Ownership sink that can permanently hold a project NFT while still delegating the posting permissions Croptop needs. |
 
-## Mental Model
+## Mental model
 
 There are two separate concerns here:
 
@@ -45,7 +45,7 @@ There are two separate concerns here:
 
 Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not generic 721 bugs.
 
-## Read These Files First
+## Read these files first
 
 1. `src/CTPublisher.sol`
 2. `src/CTDeployer.sol`
@@ -53,7 +53,7 @@ Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not g
 4. `test/CTPublisher.t.sol`
 5. `test/ClaimCollectionOwnership.t.sol`
 
-## High-Signal Tests
+## High-signal tests
 
 1. `test/CTPublisher.t.sol`
 2. `test/CTDeployer.t.sol`
@@ -61,14 +61,14 @@ Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not g
 4. `test/regression/FeeFallbackBlackhole.t.sol`
 5. `test/regression/DuplicateUriFeeEvasion.t.sol`
 
-## Integration Traps
+## Integration traps
 
 - Croptop publishing policy is separate from ordinary 721 tier issuance
 - fee routing is part of the publish path and its fallback behavior matters
 - `CTProjectOwner` intentionally changes the ownership model and should be reviewed as part of the trust model
 - duplicate-content, stale-tier, and fee-evasion edge cases are runtime behavior, not only UI concerns
 
-## Where State Lives
+## Where state lives
 
 - posting criteria and publish-side enforcement live in `CTPublisher`
 - deployment-time project wiring lives in `CTDeployer`
@@ -96,11 +96,11 @@ Useful scripts:
 - `npm run deploy:mainnets:project`
 - `npm run deploy:testnets:project`
 
-## Deployment Notes
+## Deployment notes
 
 Deployments are handled through Sphinx. `CTDeployer` can also compose cross-chain sucker deployments when a nonzero sucker configuration is supplied. The deploy script expects an explicit nonzero `FEE_PROJECT_ID` for production-style deployments.
 
-## Repository Layout
+## Repository layout
 
 ```text
 src/
@@ -117,7 +117,7 @@ script/
   helpers/
 ```
 
-## Risks And Notes
+## Risks and notes
 
 - posting criteria are only as safe as the project owner configures them
 - fee routing depends on the fee project staying correctly configured
@@ -125,7 +125,7 @@ script/
 - after routing ownership into `CTProjectOwner`, the old owner no longer holds the project NFT directly
 - duplicate-content and stale-tier edge cases are economically relevant, not cosmetic
 
-## For AI Agents
+## For AI agents
 
 - Do not describe Croptop as a generic 721 marketplace.
 - Read `CTPublisher` before `CTDeployer` when the question is about publish eligibility or fee behavior.

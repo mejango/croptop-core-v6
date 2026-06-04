@@ -49,6 +49,11 @@ contract CTProjectOwner is IERC721Receiver, ICTProjectOwner {
 
     /// @notice Give the Croptop publisher permission to post to the project on this contract's behalf.
     /// @dev Configure posting criteria before transferring ownership here; this contract has no transfer-out function.
+    /// @param operator Unused; the transfer is authenticated by `msg.sender`, not the operator.
+    /// @param from Unused; any project NFT is accepted regardless of its prior owner.
+    /// @param tokenId The ID of the project NFT being received, used as the project ID the publisher is permitted on.
+    /// @param data Unused; no payload is expected on the transfer.
+    /// @return magicValue The `IERC721Receiver.onERC721Received` selector that signals a successful receipt.
     function onERC721Received(
         address operator,
         address from,

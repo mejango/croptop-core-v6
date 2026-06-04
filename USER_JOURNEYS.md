@@ -1,23 +1,23 @@
 # User Journeys
 
-## Repo Purpose
+## Repo purpose
 
 This repo turns a Juicebox 721 project into a permissioned publishing system. It owns post validation, Croptop fee routing, and the deployment packaging that turns a project into a Croptop-managed publisher. It does not own base terminal accounting or the underlying 721 tier mechanics.
 
-## Primary Actors
+## Primary actors
 
 - project owners creating a Croptop publishing surface
 - publishers minting posts into an existing Croptop project
 - auditors reviewing fee routing, posting policy, and owner-lock semantics
 
-## Key Surfaces
+## Key surfaces
 
 - `CTPublisher`: validates posts, adjusts tiers, mints the first copy, and routes Croptop fees
 - `CTDeployer`: launches a Croptop-shaped project and can compose omnichain deployment
 - `CTProjectOwner`: owner helper that can burn-lock administration into Croptop
 - `mintFrom(...)`: main publishing entrypoint
 
-## Journey 1: Turn A Project Into A Croptop Publisher
+## Journey 1: Turn a project into a Croptop publisher
 
 **Actor:** project owner.
 
@@ -43,7 +43,7 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 - the project routes publishing through Croptop policy instead of direct free-form tier creation
 
-## Journey 2: Publish Content Into An Existing Croptop Project
+## Journey 2: Publish content into an existing Croptop project
 
 **Actor:** publisher.
 
@@ -73,7 +73,7 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 - the post is minted or reused as a tier under Croptop policy and the fee path is accounted for
 
-## Journey 3: Launch A New Croptop Project End To End
+## Journey 3: Launch a new Croptop project end to end
 
 **Actor:** product team or deployer.
 
@@ -99,7 +99,7 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 - the project is ready for Croptop publishers without a post-launch wiring gap
 
-## Journey 4: Lock Administration Into Croptop's Owner Surface
+## Journey 4: Lock administration into Croptop's owner surface
 
 **Actor:** project owner.
 
@@ -124,13 +124,13 @@ This repo turns a Juicebox 721 project into a permissioned publishing system. It
 
 - future administration is constrained to the Croptop owner surface instead of ordinary owner discretion
 
-## Trust Boundaries
+## Trust boundaries
 
 - this repo is trusted for publishing policy and fee routing
 - the underlying 721 hook remains trusted for tier issuance and lower-level NFT accounting
 - Croptop fee behavior depends on the fee project and its terminal remaining correctly configured
 
-## Hand-Offs
+## Hand-offs
 
 - Use [nana-721-hook-v6](../nana-721-hook-v6/USER_JOURNEYS.md) for the underlying tier issuance behavior Croptop wraps.
 - Use [nana-core-v6](../nana-core-v6/USER_JOURNEYS.md) when the question is about base project accounting rather than post validation or fee routing.

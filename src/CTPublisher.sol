@@ -43,34 +43,84 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    /// @notice Thrown when the caller's additional pay metadata already contains a pay ID, which would shadow Croptop's
+    /// tier selection.
     error CTPublisher_DuplicatePayMetadata(bytes4 payMetadataId);
+
+    /// @notice Thrown when the same encoded IPFS URI appears more than once within a single mint batch.
     error CTPublisher_DuplicatePost(bytes32 encodedIpfsUri);
+
+    /// @notice Thrown when a post is supplied without an encoded IPFS URI.
     error CTPublisher_EmptyEncodedIpfsUri(uint256 postIndex);
+
+    /// @notice Thrown when refunding a native-token fee to the caller fails.
     error CTPublisher_FeePaymentFailed(uint256 feeAmount);
+
+    /// @notice Thrown when the native token sent is less than the required price plus fee.
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
+
+    /// @notice Thrown when the ERC-20 amount supplied is less than the required price plus fee.
     error CTPublisher_InsufficientPayment(uint256 expected, uint256 sent);
+
+    /// @notice Thrown when the fee beneficiary is the zero address.
     error CTPublisher_InvalidFeeBeneficiary();
+
+    /// @notice Thrown when the terminal's accounting context does not match the payment token or has no currency.
     error CTPublisher_InvalidPaymentTokenContext(
         address token, uint256 tokenCurrency, uint256 tokenDecimals, uint256 pricingCurrency, uint256 pricingDecimals
     );
+
+    /// @notice Thrown when a configured maximum total supply is below the minimum total supply.
     error CTPublisher_MaxTotalSupplyLessThanMin(uint256 min, uint256 max);
+
+    /// @notice Thrown when the beneficiary's NFT balance did not increase by the expected mint count after payment.
     error CTPublisher_MintNotDelivered(
         address hook, address beneficiary, uint256 expectedBalance, uint256 actualBalance
     );
+
+    /// @notice Thrown when native value is sent alongside an ERC-20 payment.
     error CTPublisher_MsgValueNotAllowed(uint256 value);
+
+    /// @notice Thrown when the supplied amount does not equal `msg.value` for a native-token payment.
     error CTPublisher_NativeTokenAmountMismatch(uint256 amount, uint256 msgValue);
+
+    /// @notice Thrown when no posts are supplied to publish.
     error CTPublisher_NoPosts(address caller);
+
+    /// @notice Thrown when the caller is not in the category's allowlist.
     error CTPublisher_NotInAllowList(address addr, address[] allowedAddresses);
+
+    /// @notice Thrown when the amount exceeds the `uint160` maximum that Permit2 can transfer.
     error CTPublisher_OverflowAlert(uint256 value, uint256 limit);
+
+    /// @notice Thrown when the amount to pull exceeds the signed Permit2 allowance.
     error CTPublisher_PermitAllowanceNotEnough(uint256 amount, uint256 allowance);
+
+    /// @notice Thrown when no price feed is available to convert between the payment and pricing currencies.
     error CTPublisher_PriceFeedUnavailable(uint256 paymentCurrency, uint256 pricingCurrency);
+
+    /// @notice Thrown when a post's price is below the category's minimum price.
     error CTPublisher_PriceTooSmall(uint256 price, uint256 minimumPrice);
+
+    /// @notice Thrown when a token transfer is nested inside an in-progress balance-delta measurement.
     error CTPublisher_ReentrantTokenTransfer(address token);
+
+    /// @notice Thrown when a post's split percent exceeds the category's maximum split percent.
     error CTPublisher_SplitPercentExceedsMaximum(uint256 splitPercent, uint256 maximumSplitPercent);
+
+    /// @notice Thrown when a downstream terminal did not consume the exact-use ERC-20 allowance it was granted.
     error CTPublisher_TemporaryAllowanceNotConsumed(address token, address spender, uint256 allowance);
+
+    /// @notice Thrown when a post's total supply exceeds the category's maximum total supply.
     error CTPublisher_TotalSupplyTooBig(uint256 totalSupply, uint256 maximumTotalSupply);
+
+    /// @notice Thrown when a post's total supply is below the category's minimum total supply.
     error CTPublisher_TotalSupplyTooSmall(uint256 totalSupply, uint256 minimumTotalSupply);
+
+    /// @notice Thrown when posting to a category that has not been configured to allow posts.
     error CTPublisher_UnauthorizedToPostInCategory(address hook, uint24 category);
+
+    /// @notice Thrown when a category is configured with a zero minimum total supply.
     error CTPublisher_ZeroTotalSupply(address hook, uint24 category);
 
     //*********************************************************************//
@@ -78,7 +128,8 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     //*********************************************************************//
 
     /// @notice The divisor that describes the fee that should be taken.
-    /// @dev This is equal to 100 divided by the fee percent.
+    /// @dev A divisor of 20 yields a 5% fee. Expressing the fee as an integer divisor keeps the deduction
+    /// (`totalPrice / FEE_DIVISOR`) exact and rounds any dust in the payer's favor.
     uint256 public constant override FEE_DIVISOR = 20;
 
     //*********************************************************************//

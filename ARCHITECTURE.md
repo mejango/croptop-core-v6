@@ -4,11 +4,11 @@
 
 `croptop-core-v6` turns a Juicebox project with a 721 tiers hook into a permissioned publishing market. Project owners define what posts are valid, third parties publish content by minting or reusing tiers, and Croptop routes a fixed publish fee to the canonical fee project.
 
-## System Overview
+## System overview
 
 `CTPublisher` is the runtime policy and fee-routing surface. `CTDeployer` is the launch wrapper that can package a project, its 721 hook config, posting rules, and optional omnichain setup in one transaction. `CTProjectOwner` is the irreversible ownership helper for projects that want Croptop-mediated administration instead of a plain owner EOA.
 
-## Core Invariants
+## Core invariants
 
 - A post can only be published if it satisfies the configured category, pricing, supply, split, and allowlist rules.
 - Publish fees must be computed from the call value, not from ambient contract balance.
@@ -26,13 +26,13 @@
 | `CTProjectOwner` | Irreversible ownership helper | Governance-sensitive |
 | `CTAllowedPost`, `CTPost`, related structs | Publishing policy and request encoding | Shared config surface |
 
-## Trust Boundaries
+## Trust boundaries
 
 - Tier storage and minting semantics live in `nana-721-hook-v6`.
 - Terminal accounting and project ownership live in `nana-core-v6`.
 - When omnichain setup is enabled, this repo composes patterns from `nana-suckers-v6` and `nana-omnichain-deployers-v6`.
 
-## Critical Flows
+## Critical flows
 
 ### Publish
 
@@ -56,20 +56,20 @@ creator
   -> may remain in the flow as a runtime wrapper when hook composition is enabled
 ```
 
-## Accounting Model
+## Accounting model
 
 This repo does not define treasury accounting. Its critical economic logic is publish-fee routing and the mapping from valid post data to tier creation or reuse.
 
 `CTPublisher` also relies on duplicate-content and pricing checks to stop fee evasion through batch composition or tier reuse.
 
-## Security Model
+## Security model
 
 - Fee routing is liveness-first but still value-sensitive; fallback refunds must stay correct.
 - `CTDeployer` has a larger review surface than a normal deployer because it can also participate at runtime.
 - Croptop's product boundary is partly social: until collection ownership is claimed away from `CTDeployer`, the project owner can interact through the granted permissions rather than only through the publisher surface.
 - Posting-policy bugs are product-level authorization bugs, not only metadata bugs.
 
-## Safe Change Guide
+## Safe change guide
 
 - Put generic tier logic in `nana-721-hook-v6`, not here.
 - If fee behavior changes, review payment ordering, fee-project fallback, and refund failure handling together.
@@ -77,7 +77,7 @@ This repo does not define treasury accounting. Its critical economic logic is pu
 - If `CTDeployer` changes, test both project launch and any wrapped hook flow it participates in.
 - Treat `CTProjectOwner` changes as governance changes.
 
-## Canonical Checks
+## Canonical checks
 
 - publish-path fee routing and policy enforcement:
   `test/CTPublisher.t.sol`
@@ -86,7 +86,7 @@ This repo does not define treasury accounting. Its critical economic logic is pu
 - duplicate-content and batch-fee-evasion resistance:
   `test/regression/DuplicateUriFeeEvasion.t.sol`
 
-## Source Map
+## Source map
 
 - `src/CTPublisher.sol`
 - `src/CTDeployer.sol`

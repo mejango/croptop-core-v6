@@ -17,7 +17,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 | P1 | Fee-path degradation without mint failure | The fee terminal is fail-open via try/catch, so publishing continues even if the fee project temporarily stops receiving revenue. | Terminal health monitoring, fallback-beneficiary handling, and explicit fee-routing checks. |
 | P1 | Launch-time hook permissions persist until claim | `CTDeployer` grants the deploy-time `owner` four direct-hook permissions (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`) that persist on the deployer's permission table until `claimCollectionOwnershipOf` is called. A subsequent project NFT transfer does not revoke these — the original recipient can still act on the hook during the pre-claim window. | Project NFT sellers should call `claimCollectionOwnershipOf` before transfer; buyers of pre-claim NFTs should call it immediately on receipt. Marketplaces should surface claim status. |
 
-## 1. Trust Assumptions
+## 1. Trust assumptions
 
 - **Trusted forwarder.** ERC-2771 `_msgSender()` is trusted in both publisher and deployer for permission checks, allowlists, and payment routing.
 - **CTDeployer as permanent data-hook proxy.** `CTDeployer` sets itself as the data hook for projects it deploys. `dataHookOf[projectId]` is set once and has no setter.
@@ -29,7 +29,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **JBDirectory / terminal resolution.** `CTPublisher.mintFrom` trusts `DIRECTORY.primaryTerminalOf()`.
 - **721 hook store.** `_setupPosts` trusts the hook store for tier state, removal checks, prices, and the post-payment balance check.
 
-## 2. Economic And Manipulation Risks
+## 2. Economic and manipulation risks
 
 - **Fee evasion via duplicate posts across hooks.** Duplicate-content checks are keyed per hook, so the same URI can be reused across different hooks.
 - **Fee calculation rounding.** Fee is `totalPrice / 20`, so integer division truncates small amounts.
@@ -38,7 +38,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **Fee terminal fallback refunds the caller.** If the fee project has no terminal for the selected token or cannot accept the fee, Croptop refunds `_msgSender()`. Native refunds to relayers or contracts that cannot receive ETH will make the mint revert.
 - **Split percent manipulation.** Posters can direct large shares of tier revenue away from the project if `maximumSplitPercent` is configured high.
 
-## 3. Access Control
+## 3. Access control
 
 - **Allowlist is O(n).** `_isAllowed` linearly scans the full allowlist.
 - **Categories cannot be disabled cleanly.** Once configured, a category can only be made impractical through stricter bounds.
@@ -50,19 +50,19 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **`deployProjectFor` is permissionless for new projects.** Anyone can create a project with arbitrary owners.
 - **`claimCollectionOwnershipOf` only checks current NFT ownership.** After claiming, the project owner must still grant `CTPublisher` the needed tier-adjust permission or publishing stops working.
 
-## 4. DoS Vectors
+## 4. DoS vectors
 
 - **Large batch posts.** `_setupPosts` does O(n^2) duplicate detection within a batch.
 - **External hook calls in loops.** Tier-store calls inside the post loop can revert or become gas-heavy.
 - **Terminal resolution failure.** If `DIRECTORY.primaryTerminalOf()` returns `address(0)`, payment calls revert.
 - **`adjustTiers` revert.** Hook-level tier rules can block the whole `mintFrom` call.
 
-## 5. Reentrancy Surface
+## 5. Reentrancy surface
 
 - **`mintFrom` external call chain.** The function calls into the hook and terminals. It currently relies on local-call state isolation rather than a `ReentrancyGuard`.
 - **Fee payment ordering.** The fee is sent after the main payment. This is safe under the current `amount`-based accounting model, but future mutable storage in the publisher would make the surface riskier.
 
-## 6. Integration Risks
+## 6. Integration risks
 
 - **Null data-hook forwarding in deployer.** `beforePayRecordedWith` and `beforeCashOutRecordedWith` return defaults when `dataHookOf` is null.
 - **No hook migration path.** `dataHookOf` is written once and never updated.
@@ -71,7 +71,7 @@ This file focuses on the publishing, fee-routing, and hook-composition risks tha
 - **CTProjectOwner accepts any project NFT.** Accidentally transferring a non-Croptop project there still grants publisher permissions.
 - **Fee payment destination.** If the fee project changes terminal behavior incompatibly, mints fall back to refund or revert.
 
-## 7. Accepted Behaviors
+## 7. Accepted behaviors
 
 ### 7.1 O(n^2) duplicate detection is accepted
 
