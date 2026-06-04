@@ -418,8 +418,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @notice Accepts only freshly minted project NFTs sent directly by `JBProjects`.
     /// @dev Rejecting transfers from a non-zero `from` ensures the deployer cannot be handed a project after launch.
     /// @param operator Unused; the transfer is authenticated by `msg.sender` and `from`, not the operator.
-    /// @param from Unused except to gate acceptance; a non-zero prior owner means this is not a fresh mint, so it
-    /// reverts.
+    /// @param from Unused except to gate acceptance; a non-zero prior owner means this is not a fresh mint.
     /// @param tokenId Unused; any freshly minted project NFT is accepted.
     /// @param data Unused; no payload is expected on a project mint.
     /// @return magicValue The `IERC721Receiver.onERC721Received` selector that signals a successful receipt.
