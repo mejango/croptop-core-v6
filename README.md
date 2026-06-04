@@ -14,7 +14,7 @@ Site: <https://croptop.eth.limo>
 - [AUDIT_INSTRUCTIONS.md](./AUDIT_INSTRUCTIONS.md) — what auditors should focus on
 - [SKILLS.md](./SKILLS.md) — domain knowledge for working in this repo
 - [STYLE_GUIDE.md](./STYLE_GUIDE.md) — code-style conventions
-- [CHANGELOG.md](./CHANGELOG.md) — release notes
+- [CHANGELOG.md](./CHANGELOG.md) - V5 to V6 migration changelog
 
 ## Overview
 

@@ -9,8 +9,8 @@ import {JBSplit} from "@bananapus/core-v6/src/structs/JBSplit.sol";
 /// alongside this transaction.
 /// @custom:member price The price to pay for buying the post.
 /// @custom:member category The category that the post should be published in.
-/// @custom:member splitPercent The percent of the tier's price to route to the splits (out of
-/// JBConstants.SPLITS_TOTAL_PERCENT).
+/// @custom:member splitPercent The percent of the tier price to route to splits, out of
+/// `JBConstants.SPLITS_TOTAL_PERCENT`.
 /// @custom:member splits The splits to route funds to when this tier is minted.
 struct CTPost {
     bytes32 encodedIpfsUri;
