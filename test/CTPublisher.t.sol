@@ -1147,7 +1147,8 @@ contract TestCTPublisher is Test, DeployPermit2 {
         );
 
         MockCroptopERC20 token = new MockCroptopERC20();
-        uint256 price = 1_000_000;
+        uint104 postPrice = 1_000_000;
+        uint256 price = postPrice;
         uint256 fee = price / 20;
         token.mint(poster, price + fee);
         terminal.setAccountingContext({token: address(token), decimals: 6, currency: JBCurrencyIds.USD});
@@ -1167,7 +1168,7 @@ contract TestCTPublisher is Test, DeployPermit2 {
         posts[0] = CTPost({
             encodedIpfsUri: keccak256("missing-fee-terminal"),
             totalSupply: 10,
-            price: uint104(price),
+            price: postPrice,
             category: 5,
             splitPercent: 0,
             splits: new JBSplit[](0)
