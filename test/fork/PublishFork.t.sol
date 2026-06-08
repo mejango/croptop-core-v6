@@ -298,7 +298,8 @@ contract PublishForkTest is Test, DeployPermit2 {
         });
 
         ForkPermit2Wallet permitPoster = new ForkPermit2Wallet();
-        uint256 price = 100e6;
+        uint104 postPrice = 100e6;
+        uint256 price = postPrice;
         uint256 fee = price / 20;
         uint256 totalAmount = price + fee;
 
@@ -316,7 +317,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         uint256 balanceBefore = IERC721(address(hook)).balanceOf(nftBeneficiary);
         uint256 projectBalanceBefore = jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(usdc));
-        CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
+        CTPost[] memory posts = _singlePost(TEST_URI, postPrice, POST_SUPPLY, POST_CATEGORY);
 
         permitPoster.publishWithPermit2(
             publisher, hook, posts, address(usdc), totalAmount, nftBeneficiary, feeBeneficiary, permit2Allowance, ""
@@ -347,7 +348,7 @@ contract PublishForkTest is Test, DeployPermit2 {
             projectId: 0, pricingCurrency: JBCurrencyIds.ETH, unitCurrency: JBCurrencyIds.USD, feed: ethPerUsd
         });
 
-        uint256 price = 100e6;
+        uint104 postPrice = 100e6;
         uint256 convertedPrice = 5e16;
         uint256 fee = convertedPrice / 20;
         uint256 totalAmount = convertedPrice + fee;
@@ -358,7 +359,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         uint256 balanceBefore = IERC721(address(hook)).balanceOf(nftBeneficiary);
         uint256 projectBalanceBefore = jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(weth));
-        CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
+        CTPost[] memory posts = _singlePost(TEST_URI, postPrice, POST_SUPPLY, POST_CATEGORY);
 
         vm.prank(poster);
         publisher.mintFrom(hook, posts, address(weth), totalAmount, nftBeneficiary, feeBeneficiary, "");
@@ -381,7 +382,8 @@ contract PublishForkTest is Test, DeployPermit2 {
             hookDecimals: 6
         });
 
-        uint256 price = 100e6;
+        uint104 postPrice = 100e6;
+        uint256 price = postPrice;
         uint256 fee = price / 20;
         uint256 totalAmount = price + fee;
 
@@ -391,7 +393,7 @@ contract PublishForkTest is Test, DeployPermit2 {
 
         uint256 balanceBefore = IERC721(address(hook)).balanceOf(nftBeneficiary);
         uint256 projectBalanceBefore = jbTerminalStore.balanceOf(address(jbMultiTerminal), projectId, address(usdc));
-        CTPost[] memory posts = _singlePost(TEST_URI, uint104(price), POST_SUPPLY, POST_CATEGORY);
+        CTPost[] memory posts = _singlePost(TEST_URI, postPrice, POST_SUPPLY, POST_CATEGORY);
 
         vm.prank(poster);
         publisher.mintFrom(hook, posts, address(usdc), totalAmount, nftBeneficiary, feeBeneficiary, "");
