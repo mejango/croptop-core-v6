@@ -64,8 +64,13 @@ Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not g
 ## Integration traps
 
 - Croptop publishing policy is separate from ordinary 721 tier issuance
+- allowlists are account-trust policy, not code-origin policy; a permitted account can still route through arbitrary
+  automation
 - fee routing is part of the publish path and its fallback behavior matters
 - `CTProjectOwner` intentionally changes the ownership model and should be reviewed as part of the trust model
+- category lockdown prevents new posts through that category, but it does not revoke already-published tiers
+- posting and tier-admin writes for a hook should be serialized operationally so publisher assumptions do not race owner
+  changes
 - duplicate-content, stale-tier, and fee-evasion edge cases are runtime behavior, not only UI concerns
 
 ## Where state lives
@@ -123,6 +128,7 @@ script/
 - fee routing depends on the fee project staying correctly configured
 - parking a project in `CTProjectOwner` is effectively irreversible
 - after routing ownership into `CTProjectOwner`, the old owner no longer holds the project NFT directly
+- project-NFT transfers should surface whether Croptop posting permissions remain delegated through `CTProjectOwner`
 - duplicate-content and stale-tier edge cases are economically relevant, not cosmetic
 
 ## For AI agents
