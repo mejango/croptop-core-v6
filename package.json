@@ -33,7 +33,6 @@
     "@bananapus/router-terminal-v6": "^1.0.0",
     "@bananapus/suckers-v6": "^1.0.0",
     "@openzeppelin/contracts": "5.6.1",
-    "@rev-net/core-v6": "^1.0.0",
     "@uniswap/permit2": "github:Uniswap/permit2#cc56ad0f3439c502c246fc5cfcc3db92bb8b7219"
   },
   "devDependencies": {
