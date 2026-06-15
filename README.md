@@ -67,6 +67,8 @@ Many Croptop bugs are really deployment-shape bugs or posting-policy bugs, not g
 - allowlists are account-trust policy, not code-origin policy; a permitted account can still route through arbitrary
   automation
 - fee routing is part of the publish path and its fallback behavior matters
+- `CTDeployer` advertises the resolved fee payer through `IJBPayerTracker` while forwarding a project-creation fee, so a
+  `pay`-routing fee receiver credits the launcher rather than the deployer
 - `CTProjectOwner` intentionally changes the ownership model and should be reviewed as part of the trust model
 - category lockdown prevents new posts through that category, but it does not revoke already-published tiers
 - posting and tier-admin writes for a hook should be serialized operationally so publisher assumptions do not race owner

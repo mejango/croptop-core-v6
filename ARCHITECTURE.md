@@ -51,6 +51,7 @@ poster
 ```text
 creator
   -> CTDeployer launches the project and 721-hook shape
+  -> advertises the resolved fee payer via IJBPayerTracker while forwarding the project-creation fee to JBProjects
   -> configures Croptop posting rules
   -> optionally wires omnichain sucker deployment
   -> may remain in the flow as a runtime wrapper when hook composition is enabled

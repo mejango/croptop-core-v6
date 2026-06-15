@@ -29,6 +29,8 @@ import {JBTokenAmount} from "@bananapus/core-v6/src/structs/JBTokenAmount.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers-v6/src/structs/JBSuckerDeployerConfig.sol";
 
+import {IJBPayerTracker} from "@bananapus/core-v6/src/interfaces/IJBPayerTracker.sol";
+
 import {CTDeployer} from "../src/CTDeployer.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {CTPublisher} from "../src/CTPublisher.sol";
@@ -85,6 +87,34 @@ contract MockDataHook is IJBRulesetDataHook {
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IJBRulesetDataHook).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
+}
+
+// =============================================================================
+// Mock projects contract that records the fee payer advertised during createFor
+// =============================================================================
+/// @notice Minimal `IJBProjects.createFor` stand-in that reads `IJBPayerTracker.originalPayer()` from its caller
+/// (the deployer) while the creation fee is being forwarded, capturing the payer the deployer advertises.
+contract PayerObservingProjects {
+    uint256 public immutable PROJECT_ID;
+
+    /// @notice The fee payer the calling deployer advertised during the most recent `createFor`.
+    address public observedPayer;
+
+    constructor(uint256 projectId) {
+        PROJECT_ID = projectId;
+    }
+
+    /// @dev Records the deployer's advertised payer mid-call, mirroring how a `pay`-routing fee receiver would read it.
+    function createFor(address) external payable returns (uint256) {
+        observedPayer = IJBPayerTracker(msg.sender).originalPayer();
+        return PROJECT_ID;
+    }
+
+    function ownerOf(uint256) external view returns (address) {
+        return msg.sender;
+    }
+
+    function safeTransferFrom(address, address, uint256) external {}
 }
 
 /// @title TestCTDeployer
@@ -176,6 +206,53 @@ contract TestCTDeployer is Test {
         );
 
         deployer.deployProjectFor{value: creationFee}(owner, config, suckerConfig, controller);
+    }
+
+    /// @notice The deployer advertises its resolved fee payer (the EOA caller, not the `owner` parameter) while
+    /// `JBProjects.createFor` forwards the creation fee, so a `pay`-routing fee receiver credits the end user.
+    function test_deployProjectFor_advertisesResolvedFeePayer() public {
+        // Point a fresh deployer at a projects mock that records the advertised payer during `createFor`.
+        PayerObservingProjects observingProjects = new PayerObservingProjects(deployedProjectId);
+        CTDeployer observingDeployer = new CTDeployer(
+            permissions,
+            IJBProjects(address(observingProjects)),
+            hookDeployer,
+            ICTPublisher(address(publisher)),
+            suckerRegistry,
+            address(0)
+        );
+
+        // Mock the rest of the launch path against the observing deployer's projects contract.
+        vm.mockCall(
+            address(controller),
+            abi.encodeWithSelector(IJBController.PROJECTS.selector),
+            abi.encode(address(observingProjects))
+        );
+        vm.mockCall(
+            address(hookDeployer),
+            abi.encodeWithSelector(IJB721TiersHookDeployer.deployHookFor.selector),
+            abi.encode(IJB721TiersHook(hookAddr))
+        );
+        vm.mockCall(
+            address(controller),
+            abi.encodeWithSelector(IJBController.launchRulesetsFor.selector),
+            abi.encode(uint256(1))
+        );
+
+        CTProjectConfig memory config = _defaultProjectConfig();
+        CTSuckerDeploymentConfig memory suckerConfig = _emptySuckerConfig();
+
+        // Launch as an EOA distinct from the `owner` parameter so the resolved payer cannot accidentally match `owner`.
+        address feePayer = makeAddr("feePayer");
+        vm.deal(feePayer, 1 ether);
+        vm.prank(feePayer);
+        observingDeployer.deployProjectFor{value: 0.01 ether}(owner, config, suckerConfig, controller);
+
+        assertEq(observingProjects.observedPayer(), feePayer, "createFor should see the EOA caller as the fee payer");
+        assertTrue(feePayer != owner, "fee payer must be distinct from the owner parameter");
+
+        // The transient payer is cleared once `createFor` returns.
+        assertEq(observingDeployer.originalPayer(), address(0), "originalPayer should be cleared after deployment");
     }
 
     /// @notice Verify that allowed posts from the config are forwarded to the publisher.
@@ -450,6 +527,7 @@ contract TestCTDeployer is Test {
             deployer.supportsInterface(type(IJBRulesetDataHook).interfaceId), "should support IJBRulesetDataHook"
         );
         assertTrue(deployer.supportsInterface(type(IERC721Receiver).interfaceId), "should support IERC721Receiver");
+        assertTrue(deployer.supportsInterface(type(IJBPayerTracker).interfaceId), "should support IJBPayerTracker");
         assertFalse(deployer.supportsInterface(bytes4(0xdeadbeef)), "should not support random interface");
         assertFalse(deployer.supportsInterface(bytes4(0)), "should not support zero interface");
     }

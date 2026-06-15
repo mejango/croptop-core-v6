@@ -21,6 +21,7 @@ This is a V5-to-V6 migration changelog, not a package release log or commit hist
 - Publisher mints are token-aware. `CTPublisher.mintFrom(...)` accepts a payment token and amount, supports native-token payments and ERC-20 payments, and can use Permit2 metadata for publisher-targeted ERC-20 pulls.
 - Cross-currency post pricing now reads the 721 hook's `PRICES` oracle when the payment token differs from the post's pricing currency.
 - The deployer acts as the V6 data hook entry point rather than wiring the 721 hook directly.
+- `CTDeployer` advertises the resolved fee payer through `IJBPayerTracker` while it forwards a project-creation fee to `JBProjects.createFor`, so a `pay`-routing fee receiver credits the end user who launched the project instead of the deployer.
 - V6 adds checks for duplicate posts, stale tier mappings, missing fee terminals, and terminal paths that accept payment without delivering the expected NFTs.
 
 ## ABI, Event, and Error Changes
@@ -34,6 +35,7 @@ This is a V5-to-V6 migration changelog, not a package release log or commit hist
   - `CTPublisher.mintFrom(...)` includes token-aware payment inputs and no longer matches the V5 native-payment-only shape.
 - Added view surface:
   - `PERMIT2()` on the publisher interface.
+  - `originalPayer()` on `CTDeployer`, which now implements `IJBPayerTracker` and reports the resolved creation-fee payer while `deployProjectFor` forwards the fee to `JBProjects`.
 - Indexer impact:
   - Any log or calldata decoder that embeds `CTPost`, `CTAllowedPost`, or `CTDeployerAllowedPost` must be regenerated from the V6 ABI.
   - Do not infer "all payment goes to treasury" from V5 Croptop posts once split-bearing posts are live.
