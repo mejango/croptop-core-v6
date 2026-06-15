@@ -10,11 +10,13 @@ import {JB721TiersHookFlags} from "@bananapus/721-hook-v6/src/structs/JB721Tiers
 import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook-v6/src/structs/JBDeploy721TiersHookConfig.sol";
 import {JBPermissioned} from "@bananapus/core-v6/src/abstract/JBPermissioned.sol";
 import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
+import {IJBPayerTracker} from "@bananapus/core-v6/src/interfaces/IJBPayerTracker.sol";
 import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
 import {IJBRulesetDataHook} from "@bananapus/core-v6/src/interfaces/IJBRulesetDataHook.sol";
 import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {JBCurrencyIds} from "@bananapus/core-v6/src/libraries/JBCurrencyIds.sol";
+import {JBPayerTrackerLib} from "@bananapus/core-v6/src/libraries/JBPayerTrackerLib.sol";
 import {JBBeforeCashOutRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforeCashOutRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core-v6/src/structs/JBBeforePayRecordedContext.sol";
 import {JBCashOutHookSpecification} from "@bananapus/core-v6/src/structs/JBCashOutHookSpecification.sol";
@@ -41,7 +43,14 @@ import {CTSuckerDeploymentConfig} from "./structs/CTSuckerDeploymentConfig.sol";
 /// contract set as the data hook so suckers get 0% cash-out tax and mint permission. The hook initially remains owned
 /// by this deployer (allowing the publisher to add tiers); the project owner can later claim full hook ownership via
 /// `claimCollectionOwnershipOf`.
-contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC721Receiver, ICTDeployer {
+contract CTDeployer is
+    ERC2771Context,
+    JBPermissioned,
+    IJBRulesetDataHook,
+    IERC721Receiver,
+    IJBPayerTracker,
+    ICTDeployer
+{
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -85,6 +94,16 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @notice Each project's data hook provided on deployment.
     /// @custom:param projectId The ID of the project to get the data hook for.
     mapping(uint256 projectId => IJBRulesetDataHook) public dataHookOf;
+
+    //*********************************************************************//
+    // ------------------- public transient properties ------------------- //
+    //*********************************************************************//
+
+    /// @notice The account that paid the creation fee for the project currently being deployed.
+    /// @dev Set to the resolved fee payer (this deployer's ERC-2771 caller, or that caller's upstream payer when the
+    /// caller is itself an `IJBPayerTracker`) while `JBProjects.createFor` runs, so `JBProjects` attributes the fee to
+    /// the true payer instead of this deployer. Cleared back to `address(0)` once the call returns.
+    address public transient override originalPayer;
 
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
@@ -195,8 +214,15 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
         rulesetConfigurations[0].weight = 1_000_000 * (10 ** 18);
         rulesetConfigurations[0].metadata.baseCurrency = JBCurrencyIds.ETH;
 
+        // Expose the resolved fee payer so `JBProjects` attributes the creation fee to the true payer (this deployer's
+        // caller), not this deployer. The project NFT is still minted to this deployer so it can finish wiring the hook
+        // before handing the project to `owner`. Cleared immediately after.
+        originalPayer = JBPayerTrackerLib.resolve(_msgSender());
+
         // Reserve the project ID up front so permissionless project creations cannot invalidate hook deployment.
         projectId = PROJECTS.createFor{value: msg.value}(address(this));
+
+        originalPayer = address(0);
 
         // Deploy a blank project.
         hook = DEPLOYER.deployHookFor({
@@ -452,7 +478,7 @@ contract CTDeployer is ERC2771Context, JBPermissioned, IJBRulesetDataHook, IERC7
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(ICTDeployer).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
-            || interfaceId == type(IERC721Receiver).interfaceId;
+            || interfaceId == type(IERC721Receiver).interfaceId || interfaceId == type(IJBPayerTracker).interfaceId;
     }
 
     //*********************************************************************//
