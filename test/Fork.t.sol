@@ -155,6 +155,12 @@ contract ForkTest is Test {
         CTSuckerDeploymentConfig memory suckerConfig =
             CTSuckerDeploymentConfig({deployerConfigurations: deployerConfigurations, salt: suckerSalt});
 
+        // Pre-approve the native-to-native mapping the OP sucker will request. On the mainnet (chainid 1) fork, the
+        // OP sucker peers to OP mainnet (chainid 10) — see `JBOptimismSucker.peerChainId()`.
+        uint256[] memory remoteChainIds = new uint256[](1);
+        remoteChainIds[0] = 10;
+        _allowNativeSuckerTokenMappings(remoteChainIds);
+
         // Deploy the project.
         (uint256 projectId,) = deployer.deployProjectFor(owner, config, suckerConfig, jbController);
 
@@ -231,6 +237,27 @@ contract ForkTest is Test {
 
         // Allow the deployer in the registry.
         suckerRegistry.allowSuckerDeployer(address(opSuckerDeployer));
+        vm.stopPrank();
+    }
+
+    /// @notice Pre-approve native-to-native sucker token mappings on the registry, as the registry owner.
+    /// @dev suckers-v6 1.0.2 (#180) gates `JBSuckerRegistry`'s native-to-native mappings behind owner approval via
+    /// `allowTokenMapping`. Mirrors deploy-all-v6's `_allowDefaultSuckerTokenMappings`: without this, deploying a
+    /// native-token sucker reverts with `JBSuckerRegistry_TokenMappingNotAllowed` (caught by `CTDeployer`, so no
+    /// sucker is registered).
+    /// @param remoteChainIds The peer chain IDs the test's suckers will map the native token to.
+    function _allowNativeSuckerTokenMappings(uint256[] memory remoteChainIds) internal {
+        bytes32 remoteNativeToken = bytes32(uint256(uint160(JBConstants.NATIVE_TOKEN)));
+
+        // The registry owner (set to `multisig` in `_deploySuckers`) is the only address allowed to approve mappings.
+        vm.startPrank(multisig);
+        for (uint256 i; i < remoteChainIds.length; i++) {
+            suckerRegistry.allowTokenMapping({
+                localToken: address(JBConstants.NATIVE_TOKEN),
+                remoteChainId: remoteChainIds[i],
+                remoteToken: remoteNativeToken
+            });
+        }
         vm.stopPrank();
     }
 }
