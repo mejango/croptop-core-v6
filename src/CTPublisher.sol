@@ -54,7 +54,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     error CTPublisher_EmptyEncodedIpfsUri(uint256 postIndex);
 
     /// @notice Thrown when refunding a native-token fee to the caller fails.
-    error CTPublisher_FeePaymentFailed(uint256 feeAmount);
+    error CTPublisher_FeeTerminalNotFound(address token);
 
     /// @notice Thrown when the native token sent is less than the required price plus fee.
     error CTPublisher_InsufficientEthSent(uint256 expected, uint256 sent);
@@ -83,6 +83,7 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
 
     /// @notice Thrown when the supplied amount does not equal `msg.value` for a native-token payment.
     error CTPublisher_NativeTokenAmountMismatch(uint256 amount, uint256 msgValue);
+    error CTPublisher_NoHeldFee(address token, address feeBeneficiary);
 
     /// @notice Thrown when no posts are supplied to publish.
     error CTPublisher_NoPosts(address caller);
@@ -153,6 +154,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
     /// @custom:param hook The hook for which the tier ID applies.
     /// @custom:param encodedIpfsUri The IPFS URI.
     mapping(address hook => mapping(bytes32 encodedIpfsUri => uint256)) public override tierIdForEncodedIpfsUriOf;
+
+    /// @notice Croptop fees the fee project could not take at the time, held here until a retry succeeds.
+    /// @dev Anyone can retry with `processHeldFeeOf`. A failed fee is never refunded to the poster, so the gas a
+    /// poster picks cannot waive the fee.
+    /// @custom:param token The token the fee is held in.
+    /// @custom:param feeBeneficiary The address that receives the fee project's tokens on retry.
+    mapping(address token => mapping(address feeBeneficiary => uint256 amount)) public override heldFeeOf;
 
     //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
@@ -630,12 +638,12 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
             // Get a reference to the fee project's current payment terminal.
             IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: token});
             if (address(feeTerminal) == address(0)) {
-                _refundFee({token: token, amount: payValue});
+                _holdFee({token: token, feeBeneficiary: feeBeneficiary, amount: payValue});
                 return;
             }
 
-            // Make the fee payment. If the fee sink is unavailable, refund the fee to the caller
-            // rather than trapping or silently redirecting protocol funds.
+            // Make the fee payment. If the fee project cannot take it right now, hold it for a retry rather than
+            // refunding it: the outcome of the pay can depend on the gas the poster chose.
             _prepareAllowanceFor({token: token, spender: address(feeTerminal), amount: payValue});
             try feeTerminal.pay{value: token == JBConstants.NATIVE_TOKEN ? payValue : 0}({
                 projectId: FEE_PROJECT_ID,
@@ -649,9 +657,37 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
                 _requireTemporaryAllowanceConsumed({token: token, spender: address(feeTerminal)});
             } catch {
                 _clearAllowanceFor({token: token, spender: address(feeTerminal)});
-                _refundFee({token: token, amount: payValue});
+                _holdFee({token: token, feeBeneficiary: feeBeneficiary, amount: payValue});
             }
         }
+    }
+
+    /// @notice Retries paying a held Croptop fee to the fee project.
+    /// @dev Permissionless. The pay runs with no catch, so a fee project that still cannot take it reverts this call
+    /// and the fee stays held.
+    /// @param token The token the fee is held in.
+    /// @param feeBeneficiary The address that receives the fee project's tokens.
+    function processHeldFeeOf(address token, address feeBeneficiary) external override {
+        uint256 amount = heldFeeOf[token][feeBeneficiary];
+        if (amount == 0) revert CTPublisher_NoHeldFee({token: token, feeBeneficiary: feeBeneficiary});
+        delete heldFeeOf[token][feeBeneficiary];
+
+        IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf({projectId: FEE_PROJECT_ID, token: token});
+        if (address(feeTerminal) == address(0)) revert CTPublisher_FeeTerminalNotFound({token: token});
+
+        _prepareAllowanceFor({token: token, spender: address(feeTerminal), amount: amount});
+        feeTerminal.pay{value: token == JBConstants.NATIVE_TOKEN ? amount : 0}({
+            projectId: FEE_PROJECT_ID,
+            amount: amount,
+            token: token,
+            beneficiary: feeBeneficiary,
+            minReturnedTokens: 0,
+            memo: "",
+            metadata: ""
+        });
+        _requireTemporaryAllowanceConsumed({token: token, spender: address(feeTerminal)});
+
+        emit ProcessHeldFee({token: token, feeBeneficiary: feeBeneficiary, amount: amount, caller: _msgSender()});
     }
 
     //*********************************************************************//
@@ -799,22 +835,13 @@ contract CTPublisher is JBPermissioned, ERC2771Context, ICTPublisher {
         IERC20(token).forceApprove({spender: spender, value: amount});
     }
 
-    /// @notice Refund a fee payment when the fee terminal is unavailable.
-    /// @param token The token to refund.
-    /// @param amount The amount to refund.
-    function _refundFee(address token, uint256 amount) internal {
-        if (token == JBConstants.NATIVE_TOKEN) {
-            // Native fees are held as ETH, so refund the ERC-2771-aware caller with a raw value transfer.
-            (bool success,) = _msgSender().call{value: amount}("");
-            // If the caller cannot receive ETH, revert instead of leaving the fee stranded in this contract.
-            if (!success) revert CTPublisher_FeePaymentFailed(amount);
-
-            // The ERC-20 refund path below is only for tokenized terminal tokens.
-            return;
-        }
-
-        // ERC-20 fees are already held by this contract, so return the token balance directly to the caller.
-        IERC20(token).safeTransfer({to: _msgSender(), value: amount});
+    /// @notice Hold a fee the fee project could not take, for a later `processHeldFeeOf`.
+    /// @param token The token the fee is in.
+    /// @param feeBeneficiary The address that receives the fee project's tokens on retry.
+    /// @param amount The amount to hold.
+    function _holdFee(address token, address feeBeneficiary, uint256 amount) internal {
+        heldFeeOf[token][feeBeneficiary] += amount;
+        emit HoldFee({token: token, feeBeneficiary: feeBeneficiary, amount: amount, caller: _msgSender()});
     }
 
     /// @notice Revert if a downstream terminal did not consume its exact-use ERC-20 allowance.

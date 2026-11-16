@@ -44,6 +44,20 @@ interface ICTPublisher {
     /// @param reason The low-level revert reason returned by Permit2.
     event Permit2AllowanceFailed(address indexed token, address indexed owner, bytes reason);
 
+    /// @notice Emitted when a Croptop fee the fee project could not take is held for a later retry.
+    /// @param token The token the fee is held in.
+    /// @param feeBeneficiary The address that receives the fee project's tokens on retry.
+    /// @param amount The amount held.
+    /// @param caller The poster whose mint paid the fee.
+    event HoldFee(address indexed token, address indexed feeBeneficiary, uint256 amount, address caller);
+
+    /// @notice Emitted when a held Croptop fee is retried and paid to the fee project.
+    /// @param token The token the fee was held in.
+    /// @param feeBeneficiary The address that received the fee project's tokens.
+    /// @param amount The amount paid.
+    /// @param caller The address that retried the fee.
+    event ProcessHeldFee(address indexed token, address indexed feeBeneficiary, uint256 amount, address caller);
+
     /// @notice The post allowance for a particular category on a particular hook.
     /// @param hook The hook contract for which this allowance applies.
     /// @param category The category for which this allowance applies.
@@ -89,6 +103,12 @@ interface ICTPublisher {
     // forge-lint: disable-next-line(mixed-case-function)
     function tierIdForEncodedIpfsUriOf(address hook, bytes32 encodedIpfsUri) external view returns (uint256);
 
+    /// @notice A Croptop fee held because the fee project could not take it at the time.
+    /// @param token The token the fee is held in.
+    /// @param feeBeneficiary The address that receives the fee project's tokens on retry.
+    /// @return The amount held.
+    function heldFeeOf(address token, address feeBeneficiary) external view returns (uint256);
+
     /// @notice Get the tiers for the provided encoded IPFS URIs.
     /// @param hook The hook from which to get tiers.
     /// @param encodedIpfsUris The URIs to get tiers of.
@@ -120,4 +140,9 @@ interface ICTPublisher {
     )
         external
         payable;
+
+    /// @notice Retries paying a held Croptop fee to the fee project. Reverts if it still cannot take it.
+    /// @param token The token the fee is held in.
+    /// @param feeBeneficiary The address that receives the fee project's tokens.
+    function processHeldFeeOf(address token, address feeBeneficiary) external;
 }
